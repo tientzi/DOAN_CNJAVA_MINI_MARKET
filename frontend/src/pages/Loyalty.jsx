@@ -107,133 +107,122 @@ const Loyalty = () => {
     <div className="loyalty-page container">
       {/* Header Banner - Thanh lịch, đơn giản */}
       <div className="loyalty-header">
-        <div className="header-pill">
-          <Sparkles size={15} /> MiniMart Privilege Club
-        </div>
         <h1>Khách Hàng Thân Thiết</h1>
-        <p>Tích lũy điểm khi mua sắm, nâng tầm trải nghiệm với những đặc quyền chiết khấu độc quyền.</p>
       </div>
 
-      {/* PHẦN 1: THẺ THÀNH VIÊN & TIẾN ĐỘ THĂNG HẠNG */}
+      {/* PHẦN 1: THẺ THÀNH VIÊN & TIẾN ĐỘ THĂNG HẠNG (HỢP NHẤT) */}
       <div className="loyalty-section membership-section">
-        <div className="membership-grid">
-          {/* Thẻ VIP Sang Trọng - Tối Giản */}
-          <div className={`luxury-card ${tierInfo.cardTheme}`} style={{ background: tierInfo.cardBg }}>
-            <div className="card-top">
-              <div className="brand-group">
-                <span className="brand-name">MINIMART</span>
-                <span className="brand-sub">MEMBERSHIP PASS</span>
-              </div>
-              <div className="tier-badge-pill" style={{ borderColor: tierInfo.badgeColor, color: tierInfo.badgeColor }}>
-                {tierInfo.icon}
-                <span>{tierInfo.name}</span>
-              </div>
+        <div className={`unified-luxury-card ${tierInfo.cardTheme}`} style={{ background: tierInfo.cardBg }}>
+          {/* Header thẻ: Brand & Tier Badge */}
+          <div className="unified-card-top">
+            <div className="brand-group">
+              <span className="brand-name">MINIMART</span>
+              <span className="brand-sub">PRIVILEGE MEMBERSHIP PASS</span>
             </div>
-
-            <div className="card-center">
-              <div className="privilege-label">ĐẶC QUYỀN HIỆN TẠI</div>
-              <div className="privilege-value">{tierInfo.discountText}</div>
+            <div className="tier-badge-pill" style={{ borderColor: tierInfo.badgeColor, color: tierInfo.badgeColor }}>
+              {tierInfo.icon}
+              <span>{tierInfo.name}</span>
             </div>
+          </div>
 
-            <div className="card-bottom">
-              <div className="holder-meta">
+          {/* Body thẻ: Chia làm 2 khu vực thông tin & tiến độ bên trong cùng một thẻ */}
+          <div className="unified-card-body">
+            {/* Cột 1: Thông tin chủ thẻ, quyền lợi & điểm thưởng */}
+            <div className="unified-info-col">
+              <div className="unified-meta-item">
                 <span className="meta-caption">CHỦ THẺ</span>
                 <span className="meta-text">{loyaltyData?.fullName || user?.fullName || 'Khách Hàng'}</span>
               </div>
-              <div className="points-meta">
-                <span className="meta-caption">ĐIỂM TÍCH LŨY</span>
-                <span className="meta-number">{points.toLocaleString()} <small>PTS</small></span>
+
+              <div className="unified-meta-item">
+                <span className="meta-caption">ĐẶC QUYỀN HIỆN TẠI</span>
+                <span className="privilege-value">{tierInfo.discountText}</span>
+              </div>
+
+              <div className="unified-meta-item points-meta-block">
+                <span className="meta-caption">ĐIỂM TÍCH LŨY KHẢ DỤNG</span>
+                <div className="points-display-row">
+                  <span className="points-big">{points.toLocaleString()} <small>PTS</small></span>
+                  <span className="conversion-tip">100.000đ = 1 điểm</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cột 2: Khối tiến độ thăng hạng tích hợp */}
+            <div className="unified-progress-col">
+              <div className="milestone-box-unified">
+                <span className="meta-caption">TIẾN ĐỘ THĂNG HẠNG</span>
+                {nextTier ? (
+                  <div className="milestone-text">
+                    Cần tích lũy thêm <strong>{pointsToNext.toLocaleString()} điểm</strong> để lên hạng <strong>{getTierDetails(nextTier).name}</strong>
+                  </div>
+                ) : (
+                  <div className="milestone-text vip-top">
+                    <Crown size={18} /> Chúc mừng! Bạn đang giữ hạng cao nhất <strong>Kim Cương VIP</strong>
+                  </div>
+                )}
+              </div>
+
+              {/* Thanh tiến độ */}
+              <div className="progress-track-unified">
+                <div className="progress-fill-unified" style={{ width: `${progress}%`, background: tierInfo.badgeColor }}></div>
+              </div>
+
+              <div className="progress-meta-row-unified">
+                <span className="current-step-unified">{tierInfo.name} ({progress}%)</span>
+                {nextTier && <span className="next-step-unified">Mục tiêu: {getTierDetails(nextTier).name}</span>}
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Thẻ Tiến Độ Thăng Hạng - Tinh Tế */}
-          <div className="progress-panel">
-            <div className="panel-header">
-              <h3>Tổng Quan Điểm Thưởng</h3>
-              <span className="conversion-tip">100.000đ = 1 điểm</span>
-            </div>
-
-            <div className="points-display">
-              <div className="points-big">{points.toLocaleString()}</div>
-              <div className="points-unit">Điểm khả dụng</div>
-            </div>
-
-            <div className="milestone-box">
-              {nextTier ? (
-                <div className="milestone-text">
-                  Cần tích lũy thêm <strong>{pointsToNext.toLocaleString()} điểm</strong> để lên hạng <strong>{getTierDetails(nextTier).name}</strong>
-                </div>
-              ) : (
-                <div className="milestone-text vip-top">
-                  <Crown size={16} /> Chúc mừng! Bạn đang giữ hạng cao nhất <strong>Kim Cương VIP</strong>
-                </div>
-              )}
-            </div>
-
-            {/* Progress bar */}
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-            </div>
-            <div className="progress-meta-row">
-              <span className="current-step">{tierInfo.name} ({progress}%)</span>
-              {nextTier && <span className="next-step">Mục tiêu: {getTierDetails(nextTier).name}</span>}
-            </div>
-
-            <div className="perk-note">
-              <Zap size={16} className="perk-note-icon" />
-              <span>Hệ thống tự động áp dụng ưu đãi giảm giá theo hạng thành viên của bạn trực tiếp tại trang thanh toán.</span>
-            </div>
-          </div>
+      {/* Bảng so sánh 4 hạng thành viên */}
+      <div className="tiers-block">
+        <div className="block-header">
+          <h2 className="block-title">
+            <Award size={22} /> Đặc Quyền Từng Hạng Thành Viên
+          </h2>
+          <p className="block-desc">Mỗi mốc điểm tích lũy mang lại quyền lợi và mức chiết khấu ngày một vượt trội.</p>
         </div>
 
-        {/* Bảng so sánh 4 hạng thành viên */}
-        <div className="tiers-block">
-          <div className="block-header">
-            <h2 className="block-title">
-              <Award size={22} /> Đặc Quyền Từng Hạng Thành Viên
-            </h2>
-            <p className="block-desc">Mỗi mốc điểm tích lũy mang lại quyền lợi và mức chiết khấu ngày một vượt trội.</p>
-          </div>
+        <div className="tiers-grid">
+          {loyaltyData?.allTiers?.map((t) => {
+            const details = getTierDetails(t.tierKey)
+            return (
+              <div key={t.tierKey} className={`tier-card ${t.isCurrent ? 'is-active' : ''}`}>
+                {t.isCurrent && (
+                  <div className="active-tag">Hạng của bạn</div>
+                )}
 
-          <div className="tiers-grid">
-            {loyaltyData?.allTiers?.map((t) => {
-              const details = getTierDetails(t.tierKey)
-              return (
-                <div key={t.tierKey} className={`tier-card ${t.isCurrent ? 'is-active' : ''}`}>
-                  {t.isCurrent && (
-                    <div className="active-tag">Hạng của bạn</div>
-                  )}
-
-                  <div className="tier-card-head">
-                    <div className="tier-icon-wrap" style={{ color: details.badgeColor }}>
-                      {details.icon}
-                    </div>
-                    <h4>{details.name}</h4>
-                    <div className="tier-threshold">Từ {t.minPoints.toLocaleString()} điểm</div>
+                <div className="tier-card-head">
+                  <div className="tier-icon-wrap" style={{ color: details.badgeColor }}>
+                    {details.icon}
                   </div>
-
-                  <div className="tier-card-discount">
-                    <span className="discount-label">Chiết khấu:</span>
-                    <span className="discount-value">
-                      {t.discountPercent > 0 ? `Giảm ${t.discountPercent}%` : 'Tích 1%'}
-                      {t.tierKey === 'GOLD' && ' + Giảm 30% Ship'}
-                      {t.tierKey === 'DIAMOND' && ' + Free Ship 100%'}
-                    </span>
-                  </div>
-
-                  <ul className="tier-perks">
-                    {t.benefits?.map((b, idx) => (
-                      <li key={idx}>
-                        <Check size={15} className="check-svg" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h4>{details.name}</h4>
+                  <div className="tier-threshold">Từ {t.minPoints.toLocaleString()} điểm</div>
                 </div>
-              )
-            })}
-          </div>
+
+                <div className="tier-card-discount">
+                  <span className="discount-label">Chiết khấu:</span>
+                  <span className="discount-value">
+                    {t.discountPercent > 0 ? `Giảm ${t.discountPercent}%` : 'Tích 1%'}
+                    {t.tierKey === 'GOLD' && ' + Giảm 30% Ship'}
+                    {t.tierKey === 'DIAMOND' && ' + Free Ship 100%'}
+                  </span>
+                </div>
+
+                <ul className="tier-perks">
+                  {t.benefits?.map((b, idx) => (
+                    <li key={idx}>
+                      <Check size={15} className="check-svg" />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </div>
       </div>
 

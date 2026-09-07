@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, Tag } from 'lucide-react'
+import { Plus, Edit2, Trash2, Tag, Search, X } from 'lucide-react'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const CouponManager = () => {
   const [coupons, setCoupons] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Form states
   const [showForm, setShowForm] = useState(false)
@@ -207,6 +209,60 @@ const CouponManager = () => {
         </div>
       )}
 
+      {/* Thanh tìm kiếm tương đối */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginBottom: '16px',
+        background: '#ffffff',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Tìm mã giảm giá (gõ: welcome, freeship, 10%...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 36px 9px 38px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.92rem',
+              outline: 'none'
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="btn btn-outline"
+            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+          >
+            Đặt lại
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 'auto' }}>
+          Hiển thị: <strong>{coupons.filter(cp => matchesRelative([cp.code, cp.description, cp.discountType], searchTerm)).length}</strong> / {coupons.length} mã
+        </span>
+      </div>
+
       {/* Bảng danh sách */}
       <div className="admin-table-container glass">
         <table className="admin-table">
@@ -226,30 +282,38 @@ const CouponManager = () => {
             </tr>
           </thead>
           <tbody>
-            {coupons.map(cp => (
-              <tr key={cp.id}>
-                <td>{cp.id}</td>
-                <td><strong>{cp.code}</strong></td>
-                <td>{cp.description || '—'}</td>
-                <td>{cp.discountType === 'PERCENTAGE' ? 'Phần trăm' : 'Tiền mặt'}</td>
-                <td>{cp.discountType === 'PERCENTAGE' ? `${cp.discountValue}%` : `${cp.discountValue.toLocaleString()}đ`}</td>
-                <td>{cp.minOrderAmount.toLocaleString()}đ</td>
-                <td>{cp.usedCount}</td>
-                <td>{cp.maxUses}</td>
-                <td>{new Date(cp.endDate).toLocaleDateString('vi-VN')}</td>
-                <td>
-                  <span className={`status-pill ${cp.isActive && (new Date(cp.endDate) > new Date()) ? 'active' : 'inactive'}`}>
-                    {cp.isActive && (new Date(cp.endDate) > new Date()) ? 'Đang chạy' : 'Hết hạn/Khóa'}
-                  </span>
-                </td>
-                <td>
-                  <div className="table-actions">
-                    <button onClick={() => handleEdit(cp)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(cp.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
-                  </div>
+            {coupons.filter(cp => matchesRelative([cp.code, cp.description, cp.discountType], searchTerm)).length > 0 ? (
+              coupons.filter(cp => matchesRelative([cp.code, cp.description, cp.discountType], searchTerm)).map(cp => (
+                <tr key={cp.id}>
+                  <td>{cp.id}</td>
+                  <td><strong>{cp.code}</strong></td>
+                  <td>{cp.description || '—'}</td>
+                  <td>{cp.discountType === 'PERCENTAGE' ? 'Phần trăm' : 'Tiền mặt'}</td>
+                  <td>{cp.discountType === 'PERCENTAGE' ? `${cp.discountValue}%` : `${cp.discountValue.toLocaleString()}đ`}</td>
+                  <td>{cp.minOrderAmount.toLocaleString()}đ</td>
+                  <td>{cp.usedCount}</td>
+                  <td>{cp.maxUses}</td>
+                  <td>{new Date(cp.endDate).toLocaleDateString('vi-VN')}</td>
+                  <td>
+                    <span className={`status-pill ${cp.isActive && (new Date(cp.endDate) > new Date()) ? 'active' : 'inactive'}`}>
+                      {cp.isActive && (new Date(cp.endDate) > new Date()) ? 'Đang chạy' : 'Hết hạn/Khóa'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      <button onClick={() => handleEdit(cp)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(cp.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="11" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                  Không tìm thấy mã giảm giá nào phù hợp với từ khóa "{searchTerm}".
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

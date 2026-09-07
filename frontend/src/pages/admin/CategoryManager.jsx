@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, EyeOff, Search, X } from 'lucide-react'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const CategoryManager = () => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
   
   // Form states
   const [showForm, setShowForm] = useState(false)
@@ -154,6 +156,60 @@ const CategoryManager = () => {
         </div>
       )}
 
+      {/* Thanh tìm kiếm tương đối */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginBottom: '16px',
+        background: '#ffffff',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Tìm kiếm danh mục tương đối (gõ không dấu: rau, cu, sua, banh, mi, nuoc...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 36px 9px 38px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.92rem',
+              outline: 'none'
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="btn btn-outline"
+            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+          >
+            Đặt lại
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 'auto' }}>
+          Hiển thị: <strong>{categories.filter(c => matchesRelative([c.name, c.description], searchTerm)).length}</strong> / {categories.length} danh mục
+        </span>
+      </div>
+
       {/* Bảng danh sách */}
       <div className="admin-table-container glass">
         <table className="admin-table">
@@ -168,28 +224,36 @@ const CategoryManager = () => {
             </tr>
           </thead>
           <tbody>
-            {categories.map(cat => (
-              <tr key={cat.id}>
-                <td>{cat.id}</td>
-                <td>
-                  <img src={cat.image} alt={cat.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
-                </td>
-                <td><strong>{cat.name}</strong></td>
-                <td>{cat.description || '—'}</td>
-                <td>
-                  <span className={`status-pill ${cat.isActive ? 'active' : 'inactive'}`}>
-                    {cat.isActive ? <Eye size={14} /> : <EyeOff size={14} />}
-                    {cat.isActive ? 'Đang hoạt động' : 'Tạm khóa'}
-                  </span>
-                </td>
-                <td>
-                  <div className="table-actions">
-                    <button onClick={() => handleEdit(cat)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(cat.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
-                  </div>
+            {categories.filter(c => matchesRelative([c.name, c.description], searchTerm)).length > 0 ? (
+              categories.filter(c => matchesRelative([c.name, c.description], searchTerm)).map(cat => (
+                <tr key={cat.id}>
+                  <td>{cat.id}</td>
+                  <td>
+                    <img src={cat.image} alt={cat.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
+                  </td>
+                  <td><strong>{cat.name}</strong></td>
+                  <td>{cat.description || '—'}</td>
+                  <td>
+                    <span className={`status-pill ${cat.isActive ? 'active' : 'inactive'}`}>
+                      {cat.isActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {cat.isActive ? 'Đang hoạt động' : 'Tạm khóa'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      <button onClick={() => handleEdit(cat)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(cat.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                  Không tìm thấy danh mục nào phù hợp với từ khóa "{searchTerm}".
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, Eye, EyeOff, Upload, Download, Printer } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, EyeOff, Upload, Download, Printer, Search, Filter, X } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const ProductManager = () => {
@@ -9,6 +10,10 @@ const ProductManager = () => {
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Search & Category Filter states
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('ALL')
 
   // Form states
   const [showForm, setShowForm] = useState(false)
@@ -199,9 +204,15 @@ const ProductManager = () => {
     setError('')
   }
 
+  const filteredProducts = products.filter(p => {
+    const matchCat = selectedCategory === 'ALL' || String(p.categoryId) === String(selectedCategory)
+    if (!matchCat) return false
+    return matchesRelative([p.name, p.sku, p.barcode, p.categoryName, p.brandName, p.location], searchTerm)
+  })
+
   const handleExportCSV = () => {
     const headers = ['Mã SP', 'Tên sản phẩm', 'SKU', 'Mã vạch', 'Danh mục', 'Thương hiệu', 'Giá niêm yết (VND)', 'Giá KM (VND)', 'Đơn vị tính', 'Tồn kho', 'Vị trí kệ', 'Trạng thái']
-    const rows = [...products].sort((a, b) => a.id - b.id).map(p => [
+    const rows = [...filteredProducts].sort((a, b) => a.id - b.id).map(p => [
       `SP-${p.id}`,
       p.name || '',
       p.sku || '',
@@ -279,7 +290,7 @@ const ProductManager = () => {
               </div>
               <div className="form-group">
                 <label>Mã SKU</label>
-                <input type="text" placeholder="Ví dụ: SP001" value={sku} onChange={(e) => setSku(e.target.value)} />
+                <input type="text" placeholder="Nhập mã SKU..." value={sku} onChange={(e) => setSku(e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Mã vạch (Barcode)</label>
@@ -290,7 +301,7 @@ const ProductManager = () => {
                 <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Giá khuyến mãi (đ) (Để trống nếu không giảm)</label>
+                <label>Giá khuyến mãi (đ)</label>
                 <input type="number" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
               </div>
               <div className="form-group">
@@ -309,7 +320,7 @@ const ProductManager = () => {
               </div>
               <div className="form-group">
                 <label>Vị trí kệ kho</label>
-                <input type="text" placeholder="Ví dụ: Kệ A1..." value={location} onChange={(e) => setLocation(e.target.value)} />
+                <input type="text" placeholder="Nhập vị trí kệ..." value={location} onChange={(e) => setLocation(e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Đơn vị tính</label>
@@ -317,10 +328,10 @@ const ProductManager = () => {
               </div>
               <div className="form-group">
                 <label>Trọng lượng (gram)</label>
-                <input type="number" placeholder="Để tính phí ship..." required value={weightG} onChange={(e) => setWeightG(e.target.value)} />
+                <input type="number" placeholder="Trọng lượng gram..." required value={weightG} onChange={(e) => setWeightG(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Số lượng tồn kho {editId ? '(Chỉ xem)' : 'khởi tạo'}</label>
+                <label>Số lượng tồn kho {editId ? '(Chỉ xem)' : ''}</label>
                 <input type="number" required value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} disabled={!!editId} />
               </div>
               <div className="form-group">
@@ -372,6 +383,84 @@ const ProductManager = () => {
         </div>
       )}
 
+      {/* Thanh tìm kiếm tương đối & Bộ lọc Danh mục */}
+      <div className="no-print" style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginBottom: '16px',
+        background: '#ffffff',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Tìm kiếm sản phẩm tương đối (gõ không dấu: rau, thit, coca, mi, sku...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 36px 9px 38px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.92rem',
+              outline: 'none'
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Bộ lọc theo Danh mục */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Filter size={18} style={{ color: '#64748b' }} />
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#f8fafc',
+              fontSize: '0.92rem',
+              color: '#334155',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <option value="ALL">Tất cả danh mục ({products.length})</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {(searchTerm || selectedCategory !== 'ALL') && (
+          <button
+            onClick={() => { setSearchTerm(''); setSelectedCategory('ALL') }}
+            className="btn btn-outline"
+            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+          >
+            Đặt lại
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 'auto' }}>
+          Hiển thị: <strong>{filteredProducts.length}</strong> / {products.length} sản phẩm
+        </span>
+      </div>
+
       {/* Bảng danh sách */}
       <div className="admin-table-container glass">
         <table className="admin-table">
@@ -390,36 +479,44 @@ const ProductManager = () => {
             </tr>
           </thead>
           <tbody>
-            {[...products].sort((a, b) => a.id - b.id).map(prod => (
-              <tr key={prod.id}>
-                <td>{prod.id}</td>
-                <td className="no-print">
-                  <img src={prod.mainImage} alt={prod.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
-                </td>
-                <td><strong>{prod.name}</strong></td>
-                <td>{prod.categoryName}</td>
-                <td>{prod.brandName}</td>
-                <td>{prod.price.toLocaleString()}đ</td>
-                <td>{prod.salePrice ? `${prod.salePrice.toLocaleString()}đ` : '—'}</td>
-                <td>
-                  <span className={prod.currentStock < prod.minimumStock ? 'text-danger font-bold' : ''}>
-                    {prod.currentStock}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-pill ${prod.isActive ? 'active' : 'inactive'}`}>
-                    {prod.isActive ? <Eye size={12} /> : <EyeOff size={12} />}
-                    {prod.isActive ? 'Bán trực tuyến' : 'Ẩn'}
-                  </span>
-                </td>
-                <td className="no-print">
-                  <div className="table-actions">
-                    <button onClick={() => handleEdit(prod)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(prod.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
-                  </div>
+            {filteredProducts.length > 0 ? (
+              [...filteredProducts].sort((a, b) => a.id - b.id).map(prod => (
+                <tr key={prod.id}>
+                  <td>{prod.id}</td>
+                  <td className="no-print">
+                    <img src={prod.mainImage} alt={prod.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
+                  </td>
+                  <td><strong>{prod.name}</strong></td>
+                  <td>{prod.categoryName}</td>
+                  <td>{prod.brandName}</td>
+                  <td>{prod.price.toLocaleString()}đ</td>
+                  <td>{prod.salePrice ? `${prod.salePrice.toLocaleString()}đ` : '—'}</td>
+                  <td>
+                    <span className={prod.currentStock < prod.minimumStock ? 'text-danger font-bold' : ''}>
+                      {prod.currentStock}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-pill ${prod.isActive ? 'active' : 'inactive'}`}>
+                      {prod.isActive ? <Eye size={12} /> : <EyeOff size={12} />}
+                      {prod.isActive ? 'Bán trực tuyến' : 'Ẩn'}
+                    </span>
+                  </td>
+                  <td className="no-print">
+                    <div className="table-actions">
+                      <button onClick={() => handleEdit(prod)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(prod.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                  Không tìm thấy sản phẩm nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

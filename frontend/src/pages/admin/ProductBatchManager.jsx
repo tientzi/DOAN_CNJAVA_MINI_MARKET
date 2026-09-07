@@ -342,7 +342,7 @@ const ProductBatchManager = () => {
                     min="1"
                     max="99"
                     required
-                    placeholder="Nhập % (Ví dụ: 15, 30, 50...)"
+                    placeholder="Nhập % giảm giá..."
                     value={discountPercent}
                     onChange={(e) => setDiscountPercent(e.target.value)}
                     autoFocus

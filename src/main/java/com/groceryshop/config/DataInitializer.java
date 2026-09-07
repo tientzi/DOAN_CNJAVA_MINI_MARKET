@@ -153,21 +153,26 @@ public class DataInitializer implements CommandLineRunner {
     // 3. CATEGORIES
     // =========================================================
     private void initializeCategories() {
-        createCategoryIfNotExist("Rau Củ Quả", "rau-cu-qua", "Rau xanh, củ quả tươi sạch từ nông trại đạt chuẩn VietGAP");
-        createCategoryIfNotExist("Thực Phẩm Tươi Sống", "thuc-pham-tuoi-song", "Thịt, cá, thủy hải sản tươi sống bảo quản lạnh tiêu chuẩn");
-        createCategoryIfNotExist("Sữa & Chế Phẩm Sữa", "sua-che-pham-sua", "Sữa tươi, sữa chua, phô mai bổ sung dinh dưỡng cho gia đình");
-        createCategoryIfNotExist("Mì & Thực Phẩm Khô", "mi-thuc-pham-kho", "Mì ăn liền, bún, miến, đồ hộp ăn liền tiện lợi");
-        createCategoryIfNotExist("Đồ Uống & Giải Khát", "do-uong-nuoc-giai-khat", "Nước ngọt, nước suối khoáng, nước ép hoa quả mát lạnh");
-        createCategoryIfNotExist("Bánh Kẹo & Ăn Vặt", "banh-keo-do-an-vat", "Bánh quy, snack giòn rụm, kẹo ngọt thơm ngon");
-        createCategoryIfNotExist("Gia Vị & Dầu Ăn", "gia-vi-dau-an", "Nước mắm, dầu ăn, hạt nêm, tiêu ớt nêm nếm món ngon");
-        createCategoryIfNotExist("Hóa Phẩm & Gia Dụng", "hoa-pham-nha-cua", "Nước giặt, nước rửa chén, xà phòng chăm sóc gia đình");
+        createCategoryIfNotExist("Rau Củ Quả", "rau-cu-qua", "Rau xanh, củ quả tươi sạch từ nông trại đạt chuẩn VietGAP", "/uploads/cat_rau_cu_qua.jpg");
+        createCategoryIfNotExist("Thực Phẩm Tươi Sống", "thuc-pham-tuoi-song", "Thịt, cá, thủy hải sản tươi sống bảo quản lạnh tiêu chuẩn", "/uploads/cat_thuc_pham_tuoi_song.jpg");
+        createCategoryIfNotExist("Sữa & Chế Phẩm Sữa", "sua-che-pham-sua", "Sữa tươi, sữa chua, phô mai bổ sung dinh dưỡng cho gia đình", "/uploads/cat_sua_che_pham_sua.jpg");
+        createCategoryIfNotExist("Mì & Thực Phẩm Khô", "mi-thuc-pham-kho", "Mì ăn liền, bún, miến, đồ hộp ăn liền tiện lợi", "/uploads/cat_mi_thuc_pham_kho.jpg");
+        createCategoryIfNotExist("Đồ Uống & Giải Khát", "do-uong-nuoc-giai-khat", "Nước ngọt, nước suối khoáng, nước ép hoa quả mát lạnh", "/uploads/cat_do_uong_giai_khat.jpg");
+        createCategoryIfNotExist("Bánh Kẹo & Ăn Vặt", "banh-keo-do-an-vat", "Bánh quy, snack giòn rụm, kẹo ngọt thơm ngon", "/uploads/cat_banh_keo_an_vat.jpg");
+        createCategoryIfNotExist("Gia Vị & Dầu Ăn", "gia-vi-dau-an", "Nước mắm, dầu ăn, hạt nêm, tiêu ớt nêm nếm món ngon", "/uploads/cat_gia_vi_dau_an.jpg");
+        createCategoryIfNotExist("Hóa Phẩm & Gia Dụng", "hoa-pham-nha-cua", "Nước giặt, nước rửa chén, xà phòng chăm sóc gia đình", "/uploads/cat_hoa_pham_gia_dung.jpg");
     }
 
-    private Category createCategoryIfNotExist(String name, String slug, String description) {
-        return categoryRepository.findByName(name).orElseGet(() -> {
+    private Category createCategoryIfNotExist(String name, String slug, String description, String image) {
+        return categoryRepository.findByName(name).map(c -> {
+            c.setImage(image);
+            if (c.getDescription() == null) c.setDescription(description);
+            return categoryRepository.save(c);
+        }).orElseGet(() -> {
             Category c = new Category();
             c.setName(name);
             c.setDescription(description);
+            c.setImage(image);
             return categoryRepository.save(c);
         });
     }

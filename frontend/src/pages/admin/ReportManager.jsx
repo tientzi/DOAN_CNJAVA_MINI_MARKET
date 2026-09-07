@@ -194,10 +194,9 @@ const ReportManager = () => {
                   <DollarSign size={22} />
                 </div>
               </div>
-              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {formatCurrency(data?.totalRevenue)}
               </h3>
-              <small style={{ color: '#10b981', fontWeight: 600 }}>Doanh thu ghi nhận từ đơn hoàn thành</small>
             </div>
 
             <div style={{ background: 'white', padding: '24px', borderRadius: '18px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
@@ -207,10 +206,9 @@ const ReportManager = () => {
                   <ShoppingBag size={22} />
                 </div>
               </div>
-              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {(data?.totalOrders || 0).toLocaleString()} <small style={{ fontSize: '1rem', fontWeight: 500 }}>đơn</small>
               </h3>
-              <small style={{ color: '#3b82f6', fontWeight: 600 }}>Đơn phát sinh trong kỳ lọc</small>
             </div>
 
             <div style={{ background: 'white', padding: '24px', borderRadius: '18px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
@@ -220,10 +218,9 @@ const ReportManager = () => {
                   <PackageCheck size={22} />
                 </div>
               </div>
-              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {(data?.totalProductsSold || 0).toLocaleString()} <small style={{ fontSize: '1rem', fontWeight: 500 }}>món</small>
               </h3>
-              <small style={{ color: '#f59e0b', fontWeight: 600 }}>Mặt hàng tiêu dùng & thực phẩm</small>
             </div>
 
             <div style={{ background: 'white', padding: '24px', borderRadius: '18px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
@@ -233,10 +230,9 @@ const ReportManager = () => {
                   <Users size={22} />
                 </div>
               </div>
-              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {(data?.totalCustomers || 0).toLocaleString()} <small style={{ fontSize: '1rem', fontWeight: 500 }}>người</small>
               </h3>
-              <small style={{ color: '#ec4899', fontWeight: 600 }}>Hội viên tích điểm & mua sắm</small>
             </div>
           </div>
 
@@ -245,9 +241,6 @@ const ReportManager = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>Xu Hướng Tăng Trưởng Doanh Thu</h3>
-                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                  Biểu đồ trực quan doanh thu theo các mốc thời gian trong kỳ lọc hiện tại
-                </span>
               </div>
               <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 700 }}>
                 Đơn vị: VNĐ
@@ -306,13 +299,13 @@ const ReportManager = () => {
                       </span>
                       Cơ Cấu Trạng Thái Đơn Hàng
                     </h3>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#475569' }}>
-                      {totalStatusCount} đơn
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                      Tổng: {totalStatusCount} đơn
                     </span>
                   </div>
 
-                  {/* Chart container with absolute center metric */}
-                  <div style={{ position: 'relative', width: '100%', height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Chart container with solid Pie chart */}
+                  <div style={{ position: 'relative', width: '100%', height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -321,12 +314,10 @@ const ReportManager = () => {
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          outerRadius={95}
-                          innerRadius={68}
-                          paddingAngle={3}
-                          cornerRadius={6}
+                          outerRadius={115}
+                          innerRadius={0}
                           stroke="#ffffff"
-                          strokeWidth={3}
+                          strokeWidth={2}
                         >
                           {orderStatusDistribution.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -361,61 +352,6 @@ const ReportManager = () => {
                         />
                       </PieChart>
                     </ResponsiveContainer>
-
-                    {/* Center Badge in Donut */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      textAlign: 'center',
-                      pointerEvents: 'none'
-                    }}>
-                      <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
-                        {totalStatusCount}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Tổng đơn
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Interactive Breakdown List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                    {orderStatusDistribution.map((item, idx) => {
-                      const pct = totalStatusCount > 0 ? Math.round((item.count / totalStatusCount) * 100) : 0
-                      return (
-                        <div key={idx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '6px 12px',
-                          borderRadius: '10px',
-                          background: '#f8fafc',
-                          fontSize: '0.85rem'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }}></span>
-                            <span style={{ color: '#334155', fontWeight: 600 }}>{item.name}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.count}</span>
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              fontWeight: 700, 
-                              color: item.color, 
-                              background: `${item.color}18`, 
-                              padding: '2px 8px', 
-                              borderRadius: '12px',
-                              minWidth: '40px',
-                              textAlign: 'center'
-                            }}>
-                              {pct}%
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
                   </div>
                 </div>
 
@@ -436,13 +372,13 @@ const ReportManager = () => {
                       </span>
                       Tỷ Trọng Phương Thức Thanh Toán
                     </h3>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#475569' }}>
-                      {totalPayCount} giao dịch
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                      Tổng: {totalPayCount} giao dịch
                     </span>
                   </div>
 
-                  {/* Chart container with absolute center metric */}
-                  <div style={{ position: 'relative', width: '100%', height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {/* Chart container with solid Pie chart */}
+                  <div style={{ position: 'relative', width: '100%', height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -451,12 +387,10 @@ const ReportManager = () => {
                           nameKey="name"
                           cx="50%"
                           cy="50%"
-                          outerRadius={95}
-                          innerRadius={68}
-                          paddingAngle={4}
-                          cornerRadius={6}
+                          outerRadius={115}
+                          innerRadius={0}
                           stroke="#ffffff"
-                          strokeWidth={3}
+                          strokeWidth={2}
                         >
                           {paymentMethodDistribution.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -491,61 +425,6 @@ const ReportManager = () => {
                         />
                       </PieChart>
                     </ResponsiveContainer>
-
-                    {/* Center Badge in Donut */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      textAlign: 'center',
-                      pointerEvents: 'none'
-                    }}>
-                      <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.1 }}>
-                        {totalPayCount}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Thanh toán
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Interactive Breakdown List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                    {paymentMethodDistribution.map((item, idx) => {
-                      const pct = totalPayCount > 0 ? Math.round((item.value / totalPayCount) * 100) : 0
-                      return (
-                        <div key={idx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '6px 12px',
-                          borderRadius: '10px',
-                          background: '#f8fafc',
-                          fontSize: '0.85rem'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, flexShrink: 0 }}></span>
-                            <span style={{ color: '#334155', fontWeight: 600 }}>{item.name}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.value}</span>
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              fontWeight: 700, 
-                              color: item.color, 
-                              background: `${item.color}18`, 
-                              padding: '2px 8px', 
-                              borderRadius: '12px',
-                              minWidth: '40px',
-                              textAlign: 'center'
-                            }}>
-                              {pct}%
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
                   </div>
                 </div>
               </div>

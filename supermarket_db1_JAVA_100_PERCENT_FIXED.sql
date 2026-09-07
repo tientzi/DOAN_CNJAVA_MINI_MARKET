@@ -532,11 +532,11 @@ SET IDENTITY_INSERT dbo.addresses OFF;
 -- Categories: exactly the five categories expected by DataInitializer
 SET IDENTITY_INSERT dbo.categories ON;
 INSERT INTO dbo.categories (id, name, description, image, is_active, created_at) VALUES
-(1, N'Rau Củ Quả', N'Rau củ tươi ngon VietGAP', N'https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?q=80&w=300&auto=format&fit=crop', 1, GETDATE()),
-(2, N'Thực Phẩm Khô', N'Mì ăn liền, gạo, gia vị', N'https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=300&auto=format&fit=crop', 1, GETDATE()),
-(3, N'Sữa & Bơ sữa', N'Sữa tươi tiệt trùng, bơ, sữa chua', N'https://images.unsplash.com/photo-1628088062854-d1870b4553da?q=80&w=300&auto=format&fit=crop', 1, GETDATE()),
-(4, N'Đồ Uống', N'Nước ngọt, bia, nước trái cây', N'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=300&auto=format&fit=crop', 1, GETDATE()),
-(5, N'Hóa Mỹ Phẩm', N'Dầu gội, bột giặt, nước rửa chén', N'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?q=80&w=300&auto=format&fit=crop', 1, GETDATE());
+(1, N'Rau Củ Quả', N'Rau củ tươi ngon VietGAP', N'/uploads/cat_rau_cu_qua.jpg', 1, GETDATE()),
+(2, N'Thực Phẩm Khô', N'Mì ăn liền, gạo, gia vị', N'/uploads/cat_mi_thuc_pham_kho.jpg', 1, GETDATE()),
+(3, N'Sữa & Bơ sữa', N'Sữa tươi tiệt trùng, bơ, sữa chua', N'/uploads/cat_sua_che_pham_sua.jpg', 1, GETDATE()),
+(4, N'Đồ Uống', N'Nước ngọt, bia, nước trái cây', N'/uploads/cat_do_uong_giai_khat.jpg', 1, GETDATE()),
+(5, N'Hóa Mỹ Phẩm', N'Dầu gội, bột giặt, nước rửa chén', N'/uploads/cat_hoa_pham_gia_dung.jpg', 1, GETDATE());
 SET IDENTITY_INSERT dbo.categories OFF;
 
 -- Brands: exactly the five brands expected by DataInitializer
@@ -554,16 +554,16 @@ SET IDENTITY_INSERT dbo.products ON;
 INSERT INTO dbo.products
 (id, name, description, price, sale_price, category_id, brand_id, main_image, sku, barcode, unit, weight_g, is_active, created_at, updated_at)
 VALUES
-(1, N'Xà lách thủy canh sạch', N'Xà lách tươi ngon được trồng theo phương pháp thủy canh, sạch sẽ an toàn.', 25000.00, 20000.00, 1, 1, N'/uploads/1.jpg',  N'SP001', N'8931234567901', N'Kg',   1000, 1, GETDATE(), NULL),
-(2, N'Cà chua VietGAP 1kg', N'Cà chua đỏ chín tự nhiên, nhiều dinh dưỡng, không hóa chất bảo quản.', 35000.00, 30000.00, 1, 1, N'/uploads/3.jpg',  N'SP002', N'8931234567902', N'Kg',   1000, 1, GETDATE(), NULL),
-(3, N'Mì Hảo Hảo Tôm Chua Cay', N'Mì ăn liền Hảo Hảo hương vị tôm chua cay truyền thống, thùng 30 gói.', 135000.00, 128000.00, 2, 2, N'/uploads/4.webp', N'SP003', N'8931234567903', N'Thùng', 3000, 1, GETDATE(), NULL),
-(4, N'Dầu ăn Simply Đậu Nành 1L', N'Dầu ănSimply 100% nguyên chất từ hạt đậu nành chọn lọc, tốt cho tim mạch.', 62000.00, NULL, 2, 5, N'/uploads/5.jpg', N'SP004', N'8931234567904', N'Chai',  1000, 1, GETDATE(), NULL),
-(5, N'Sữa tươi Vinamilk ít đường 1L', N'Sữa tươi tiệt trùng Vinamilk bổ sung vitamin AD3 giúp xương chắc khỏe.', 38000.00, 36000.00, 3, 3, N'/uploads/6.jpg', N'SP005', N'8931234567905', N'Hộp',  1000, 1, GETDATE(), NULL),
-(6, N'Sữa chua Vinamilk có đường hộp 100g', N'Sữa chua ăn Vinamilk thơm ngon tự nhiên, hỗ trợ tiêu hóa tốt.', 8000.00, NULL, 3, 3, N'/uploads/7.jpg', N'SP006', N'8931234567906', N'Hộp',   100, 1, GETDATE(), NULL),
-(7, N'Nước ngọt Coca Cola lon 320ml', N'Nước giải khát có ga Coca Cola sảng khoái cực độ.', 11000.00, 10000.00, 4, 4, N'/uploads/8.jpg', N'SP007', N'8931234567907', N'Lon',    320, 1, GETDATE(), NULL),
-(8, N'Bia Heineken lon 330ml', N'Bia Heineken Premium chất lượng thượng hạng từ Hà Lan.', 22000.00, 21000.00, 4, 4, N'/uploads/9.jpg', N'SP008', N'8931234567908', N'Lon',    330, 1, GETDATE(), NULL),
-(9, N'Dầu gội Clear Bạc Hà Mát Lạnh 630ml', N'Dầu gội sạch gàu số 1 Việt Nam với tinh chất bạc hà.', 175000.00, 160000.00, 5, 5, N'/uploads/10.webp', N'SP009', N'8931234567909', N'Chai',   630, 1, GETDATE(), NULL),
-(10, N'Nước lau sàn Sunlight Hoa Lilia 1kg', N'Nước lau sàn Sunlight hương hoa Lilia thơm ngát, sạch bóng.', 32000.00, NULL, 5, 5, N'/uploads/11.jpg', N'SP010', N'8931234567910', N'Chai',  1000, 1, GETDATE(), NULL);
+(1, N'Xà lách thủy canh sạch', N'Xà lách tươi ngon được trồng theo phương pháp thủy canh, sạch sẽ an toàn.', 25000.00, 20000.00, 1, 1, N'/uploads/xa_lach_thuy_canh.jpg',  N'SP001', N'8931234567901', N'Kg',   1000, 1, GETDATE(), NULL),
+(2, N'Cà chua VietGAP 1kg', N'Cà chua đỏ chín tự nhiên, nhiều dinh dưỡng, không hóa chất bảo quản.', 35000.00, 30000.00, 1, 1, N'/uploads/ca_chua_dalat.jpg',  N'SP002', N'8931234567902', N'Kg',   1000, 1, GETDATE(), NULL),
+(3, N'Mì Hảo Hảo Tôm Chua Cay', N'Mì ăn liền Hảo Hảo hương vị tôm chua cay truyền thống, thùng 30 gói.', 135000.00, 128000.00, 2, 2, N'/uploads/mi_hao_hao.jpg', N'SP003', N'8931234567903', N'Thùng', 3000, 1, GETDATE(), NULL),
+(4, N'Dầu ăn Simply Đậu Nành 1L', N'Dầu ănSimply 100% nguyên chất từ hạt đậu nành chọn lọc, tốt cho tim mạch.', 62000.00, NULL, 2, 5, N'/uploads/dau_an_simply.jpg', N'SP004', N'8931234567904', N'Chai',  1000, 1, GETDATE(), NULL),
+(5, N'Sữa tươi Vinamilk ít đường 1L', N'Sữa tươi tiệt trùng Vinamilk bổ sung vitamin AD3 giúp xương chắc khỏe.', 38000.00, 36000.00, 3, 3, N'/uploads/sua_vinamilk_1l.jpg', N'SP005', N'8931234567905', N'Hộp',  1000, 1, GETDATE(), NULL),
+(6, N'Sữa chua Vinamilk có đường hộp 100g', N'Sữa chua ăn Vinamilk thơm ngon tự nhiên, hỗ trợ tiêu hóa tốt.', 8000.00, NULL, 3, 3, N'/uploads/sua_chua_vinamilk.jpg', N'SP006', N'8931234567906', N'Hộp',   100, 1, GETDATE(), NULL),
+(7, N'Nước ngọt Coca Cola lon 320ml', N'Nước giải khát có ga Coca Cola sảng khoái cực độ.', 11000.00, 10000.00, 4, 4, N'/uploads/coca_cola.jpg', N'SP007', N'8931234567907', N'Lon',    320, 1, GETDATE(), NULL),
+(8, N'Bia Heineken lon 330ml', N'Bia Heineken Premium chất lượng thượng hạng từ Hà Lan.', 22000.00, 21000.00, 4, 4, N'/uploads/bia_heineken.jpg', N'SP008', N'8931234567908', N'Lon',    330, 1, GETDATE(), NULL),
+(9, N'Dầu gội Clear Bạc Hà Mát Lạnh 630ml', N'Dầu gội sạch gàu số 1 Việt Nam với tinh chất bạc hà.', 175000.00, 160000.00, 5, 5, N'/uploads/dau_goi_clear.webp', N'SP009', N'8931234567909', N'Chai',   630, 1, GETDATE(), NULL),
+(10, N'Nước lau sàn Sunlight Hoa Lilia 1kg', N'Nước lau sàn Sunlight hương hoa Lilia thơm ngát, sạch bóng.', 32000.00, NULL, 5, 5, N'/uploads/nuoc_lau_san_sunlight.jpg', N'SP010', N'8931234567910', N'Chai',  1000, 1, GETDATE(), NULL);
 SET IDENTITY_INSERT dbo.products OFF;
 
 -- Inventory: exactly aligned to DataInitializer
@@ -585,16 +585,16 @@ SET IDENTITY_INSERT dbo.inventory OFF;
 
 -- Product images
 INSERT INTO dbo.product_images (product_id, image_path, sort_order) VALUES
-(1, N'/uploads/1.jpg', 0),
-(2, N'/uploads/3.jpg', 0),
-(3, N'/uploads/4.webp', 0),
-(4, N'/uploads/5.jpg', 0),
-(5, N'/uploads/6.jpg', 0),
-(6, N'/uploads/7.jpg', 0),
-(7, N'/uploads/8.jpg', 0),
-(8, N'/uploads/9.jpg', 0),
-(9, N'/uploads/10.webp', 0),
-(10, N'/uploads/11.jpg', 0);
+(1, N'/uploads/xa_lach_thuy_canh.jpg', 0),
+(2, N'/uploads/ca_chua_dalat.jpg', 0),
+(3, N'/uploads/mi_hao_hao.jpg', 0),
+(4, N'/uploads/dau_an_simply.jpg', 0),
+(5, N'/uploads/sua_vinamilk_1l.jpg', 0),
+(6, N'/uploads/sua_chua_vinamilk.jpg', 0),
+(7, N'/uploads/coca_cola.jpg', 0),
+(8, N'/uploads/bia_heineken.jpg', 0),
+(9, N'/uploads/dau_goi_clear.webp', 0),
+(10, N'/uploads/nuoc_lau_san_sunlight.jpg', 0);
 
 -- Coupons: exactly compatible with Coupon.java and DataInitializer
 SET IDENTITY_INSERT dbo.coupons ON;

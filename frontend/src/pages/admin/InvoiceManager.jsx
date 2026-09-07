@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import './AdminPages.css'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
+import { matchesRelative } from '../../utils/searchUtils'
 
 const InvoiceManager = () => {
   const [invoices, setInvoices] = useState([])
@@ -41,11 +42,14 @@ const InvoiceManager = () => {
     let result = [...invoices]
 
     if (searchKeyword.trim()) {
-      const kw = searchKeyword.toLowerCase()
       result = result.filter(inv => 
-        inv.id.toString().includes(kw) ||
-        (inv.shippingName && inv.shippingName.toLowerCase().includes(kw)) ||
-        (inv.shippingPhone && inv.shippingPhone.includes(kw))
+        matchesRelative([
+          `#${inv.id}`,
+          inv.id,
+          inv.shippingName,
+          inv.shippingPhone,
+          inv.shippingAddress
+        ], searchKeyword)
       )
     }
 

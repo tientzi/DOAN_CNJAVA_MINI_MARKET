@@ -504,13 +504,6 @@ const Checkout = () => {
                 ) : (
                   <p className="no-address-warn">Bạn chưa cấu hình địa chỉ nào. Hãy bấm "Thêm địa chỉ mới" để tiến hành đặt hàng!</p>
                 )}
-                {/* Gợi ý nếu chọn địa chỉ cũ ngoài 3 quận trọng điểm (Option A) */}
-                {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && !isStandardDistrict(addresses.find(a => a.id === selectedAddressId)) && (
-                  <div style={{ marginTop: '0.85rem', padding: '0.75rem 1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.88rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Info size={18} style={{ flexShrink: 0, color: '#3b82f6' }} />
-                    <span>💡 <strong>Gợi ý:</strong> MiniMart hiện ưu tiên giao hàng siêu tốc trong 2h tại <strong>Quận Tân Phú, Quận Tân Bình, Quận 12</strong>. Bạn có thể bấm <em>"+ Thêm địa chỉ mới"</em> để chọn khu vực ưu tiên giao nhanh!</span>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -552,7 +545,7 @@ const Checkout = () => {
             <h3>Ghi chú cho shipper</h3>
             <textarea
               rows="3"
-              placeholder="Nhập ghi chú giao hàng (ví dụ: giao giờ hành chính, gọi trước khi đến...)"
+              placeholder="Nhập ghi chú giao hàng..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="note-textarea"

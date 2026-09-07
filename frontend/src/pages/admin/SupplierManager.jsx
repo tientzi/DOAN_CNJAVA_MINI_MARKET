@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { Plus, Edit2, Trash2, ShieldCheck, ShieldAlert, Search, X } from 'lucide-react'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const SupplierManager = () => {
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Form states
   const [showForm, setShowForm] = useState(false)
@@ -149,6 +151,60 @@ const SupplierManager = () => {
         </div>
       )}
 
+      {/* Thanh tìm kiếm tương đối */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginBottom: '16px',
+        background: '#ffffff',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input
+            type="text"
+            placeholder="Tìm kiếm nhà cung cấp (gõ không dấu: vietgap, acecook, sdt, dia chi...)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 36px 9px 38px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.92rem',
+              outline: 'none'
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="btn btn-outline"
+            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+          >
+            Đặt lại
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: 'auto' }}>
+          Hiển thị: <strong>{suppliers.filter(s => matchesRelative([s.name, s.contactName, s.phone, s.email, s.address], searchTerm)).length}</strong> / {suppliers.length} NCC
+        </span>
+      </div>
+
       <div className="admin-table-container glass">
         <table className="admin-table">
           <thead>
@@ -162,29 +218,32 @@ const SupplierManager = () => {
             </tr>
           </thead>
           <tbody>
-            {suppliers.map(sup => (
-              <tr key={sup.id}>
-                <td>#{sup.id}</td>
-                <td><strong>{sup.name}</strong></td>
-                <td>{sup.contactName}</td>
-                <td>{sup.phone}</td>
-                <td>
-                  <span className={`status-pill ${sup.isActive ? 'active' : 'inactive'}`}>
-                    {sup.isActive ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
-                    {sup.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                  </span>
-                </td>
-                <td>
-                  <div className="table-actions">
-                    <button onClick={() => handleEdit(sup)} className="action-btn edit"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(sup.id)} className="action-btn delete"><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {suppliers.length === 0 && (
+            {suppliers.filter(s => matchesRelative([s.name, s.contactName, s.phone, s.email, s.address], searchTerm)).length > 0 ? (
+              suppliers.filter(s => matchesRelative([s.name, s.contactName, s.phone, s.email, s.address], searchTerm)).map(sup => (
+                <tr key={sup.id}>
+                  <td>#{sup.id}</td>
+                  <td><strong>{sup.name}</strong></td>
+                  <td>{sup.contactName}</td>
+                  <td>{sup.phone}</td>
+                  <td>
+                    <span className={`status-pill ${sup.isActive ? 'active' : 'inactive'}`}>
+                      {sup.isActive ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
+                      {sup.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      <button onClick={() => handleEdit(sup)} className="action-btn edit"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(sup.id)} className="action-btn delete"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Chưa có nhà cung cấp nào</td>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                  Không tìm thấy nhà cung cấp nào phù hợp với từ khóa "{searchTerm}".
+                </td>
               </tr>
             )}
           </tbody>

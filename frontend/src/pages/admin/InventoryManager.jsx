@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../../services/api'
 import { PackageCheck, AlertTriangle, FilePlus2, Search, ArrowUpRight, ShieldCheck, Download, Printer } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const InventoryManager = () => {
@@ -56,12 +57,12 @@ const InventoryManager = () => {
 
   // Lọc dữ liệu
   const filteredList = inventory.filter(item => {
-    const productName = (item.product?.name || '').toLowerCase()
-    const sku = (item.product?.sku || '').toLowerCase()
-    const loc = (item.location || '').toLowerCase()
-    const matchSearch = productName.includes(searchTerm.toLowerCase()) || 
-                        sku.includes(searchTerm.toLowerCase()) || 
-                        loc.includes(searchTerm.toLowerCase())
+    const matchSearch = matchesRelative([
+      item.product?.name,
+      item.product?.sku,
+      item.product?.barcode,
+      item.location
+    ], searchTerm)
 
     if (!matchSearch) return false
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Eye, CheckCircle2, Truck, XCircle, FileText, ShoppingBag, MapPin, User, DollarSign, Calendar, Download, Printer } from 'lucide-react'
+import { Eye, CheckCircle2, Truck, XCircle, FileText, ShoppingBag, MapPin, User, DollarSign, Calendar, Download, Printer, Search, X } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const OrderManager = () => {
@@ -9,6 +10,7 @@ const OrderManager = () => {
   const [filteredOrders, setFilteredOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState('')
@@ -54,12 +56,25 @@ const OrderManager = () => {
   }
 
   useEffect(() => {
-    if (statusFilter === 'ALL') {
-      setFilteredOrders(orders)
-    } else {
-      setFilteredOrders(orders.filter(o => o.status === statusFilter))
+    let result = orders
+    if (statusFilter !== 'ALL') {
+      result = result.filter(o => o.status === statusFilter)
     }
-  }, [statusFilter, orders])
+    if (searchTerm.trim()) {
+      result = result.filter(o =>
+        matchesRelative([
+          `#${o.id}`,
+          o.id,
+          o.shippingName,
+          o.shippingPhone,
+          o.shippingAddress,
+          o.paymentMethod,
+          o.note
+        ], searchTerm)
+      )
+    }
+    setFilteredOrders(result)
+  }, [statusFilter, searchTerm, orders])
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     if (!window.confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng sang "${getStatusLabel(newStatus)}"?`)) return
@@ -151,6 +166,33 @@ const OrderManager = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Thanh tìm kiếm tương đối */}
+          <div className="no-print" style={{ position: 'relative', minWidth: '260px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn (#10), tên khách, SĐT..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '0.45rem 2rem 0.45rem 2rem',
+                borderRadius: '8px',
+                border: '1px solid var(--admin-border)',
+                background: 'var(--admin-card-bg)',
+                fontSize: '0.9rem',
+                width: '100%'
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
           {/* Lọc đơn hàng */}
           <div className="filter-group no-print" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', fontWeight: '600' }}>Trạng thái:</span>

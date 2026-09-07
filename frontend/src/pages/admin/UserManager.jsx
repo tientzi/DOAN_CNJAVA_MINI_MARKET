@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { User, Shield, ShieldAlert, Lock, Unlock, Mail, Phone, Calendar, Search } from 'lucide-react'
+import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const UserManager = () => {
@@ -29,16 +30,12 @@ const UserManager = () => {
   }, [])
 
   useEffect(() => {
-    const term = searchTerm.toLowerCase().trim()
-    if (!term) {
+    if (!searchTerm.trim()) {
       setFilteredUsers(users)
     } else {
       setFilteredUsers(
         users.filter(u => 
-          u.username?.toLowerCase().includes(term) ||
-          u.email?.toLowerCase().includes(term) ||
-          u.fullName?.toLowerCase().includes(term) ||
-          u.phone?.includes(term)
+          matchesRelative([u.username, u.email, u.fullName, u.phone, u.role?.name, u.membershipTier], searchTerm)
         )
       )
     }
