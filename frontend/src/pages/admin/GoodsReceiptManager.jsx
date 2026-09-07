@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, CheckCircle2, Trash2, Box, Eye, FileText } from 'lucide-react'
+import { Plus, CheckCircle2, Trash2, Box, Eye, FileText, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const GoodsReceiptManager = () => {
@@ -26,7 +27,7 @@ const GoodsReceiptManager = () => {
       const supRes = await api.get('/api/admin/suppliers')
       const prodRes = await api.get('/api/admin/products')
       
-      setReceipts(recRes.data.content)
+      setReceipts(recRes.data.content || recRes.data)
       setSuppliers(supRes.data.filter(s => s.isActive))
       setProducts(prodRes.data)
     } catch (err) {
@@ -39,6 +40,25 @@ const GoodsReceiptManager = () => {
   useEffect(() => {
     fetchData()
   }, [])
+
+  const handleExportCSV = () => {
+    const headers = ['Mã PNK', 'Ngày tạo', 'Nhà cung cấp', 'Người tạo', 'Tổng tiền (VND)', 'Trạng thái', 'Ghi chú']
+    const rows = receipts.map(r => [
+      `PNK-${r.id}`,
+      new Date(r.createdAt).toLocaleString('vi-VN'),
+      r.supplierName || '',
+      r.createdBy || '',
+      r.totalAmount || 0,
+      r.status === 'COMPLETED' ? 'Hoàn thành' : r.status === 'CANCELLED' ? 'Đã hủy' : 'Bản nháp',
+      r.note || ''
+    ])
+    exportToCSV(`Danh_Sach_Phieu_Nhap_Kho_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrintReceipt = () => {
+    if (!selectedReceipt) return
+    printDocument(`Phieu_Nhap_Kho_PNK${selectedReceipt.id}_MiniMart`)
+  }
 
   const handleAddItem = () => {
     setItems([...items, { productId: '', quantity: 1, importPrice: 0, batchName: '', expiryDate: '' }])
@@ -131,11 +151,21 @@ const GoodsReceiptManager = () => {
 
   return (
     <div className="admin-crud-page">
-      <div className="crud-header">
-        <h2>Quản lý Phiếu nhập kho</h2>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
-          <Plus size={18} /> Tạo phiếu nhập
-        </button>
+      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2>Quản lý Phiếu nhập kho</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px' }}>
+            Lập phiếu và nhập chứng từ từ Nhà cung cấp để cập nhật tồn kho chính thức.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={18} /> Tạo phiếu nhập
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -215,9 +245,27 @@ const GoodsReceiptManager = () => {
       )}
 
       {selectedReceipt && (
-        <div className="admin-form-overlay">
-          <div className="admin-popup-form form-large glass" style={{ maxWidth: '700px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="admin-form-overlay receipt-modal-overlay">
+          <div className="admin-popup-form form-large glass receipt-modal-content" style={{ maxWidth: '750px' }}>
+            {/* Header cho bản in */}
+            <div className="print-only">
+              <div className="print-doc-header">
+                <div>
+                  <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+                  <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+                </div>
+                <div className="print-doc-meta">
+                  <div>Mã chứng từ: <strong>PNK-{selectedReceipt.id}</strong></div>
+                  <div>Ngày lập: {new Date(selectedReceipt.createdAt).toLocaleString('vi-VN')}</div>
+                </div>
+              </div>
+              <div className="print-doc-title">
+                <h2>PHIẾU NHẬP KHO HÀNG HÓA</h2>
+                <p>Nhà cung cấp: <strong>{selectedReceipt.supplierName}</strong> | Trạng thái: {selectedReceipt.status === 'COMPLETED' ? 'Đã hoàn thành nhập kho' : 'Phiếu nháp'}</p>
+              </div>
+            </div>
+
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3>Chi tiết Phiếu Nhập #{selectedReceipt.id}</h3>
               {getStatusBadge(selectedReceipt.status)}
             </div>
@@ -225,7 +273,7 @@ const GoodsReceiptManager = () => {
             <div style={{ margin: '1rem 0', padding: '1rem', background: 'rgba(255,255,255,0.5)', borderRadius: '8px' }}>
               <p><strong>Nhà cung cấp:</strong> {selectedReceipt.supplierName}</p>
               <p><strong>Ngày tạo:</strong> {new Date(selectedReceipt.createdAt).toLocaleString('vi-VN')}</p>
-              <p><strong>Người tạo:</strong> {selectedReceipt.createdBy}</p>
+              <p><strong>Người tạo:</strong> {selectedReceipt.createdBy || 'Thủ kho'}</p>
               {selectedReceipt.note && <p><strong>Ghi chú:</strong> {selectedReceipt.note}</p>}
             </div>
 
@@ -245,10 +293,10 @@ const GoodsReceiptManager = () => {
                   <tr key={item.id}>
                     <td>{item.sku}</td>
                     <td>{item.productName}</td>
-                    <td>{item.quantity}</td>
-                    <td>{item.importPrice.toLocaleString()}đ</td>
+                    <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                    <td style={{ textAlign: 'right' }}>{item.importPrice.toLocaleString()}đ</td>
                     <td>{item.batchName ? `${item.batchName} (${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('vi-VN') : '-'})` : '-'}</td>
-                    <td>{(item.quantity * item.importPrice).toLocaleString()}đ</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{(item.quantity * item.importPrice).toLocaleString()}đ</td>
                   </tr>
                 ))}
               </tbody>
@@ -258,11 +306,33 @@ const GoodsReceiptManager = () => {
               <strong>Tổng tiền: <span className="text-primary">{selectedReceipt.totalAmount.toLocaleString()}đ</span></strong>
             </div>
 
-            <div className="form-actions margin-top-md" style={{ justifyContent: 'space-between' }}>
-              <div>
+            {/* Chữ ký khi in */}
+            <div className="print-only print-signatures">
+              <div className="print-sig-col">
+                <strong>Đại diện Giao Hàng (NCC)</strong>
+                <span>(Ký và ghi rõ họ tên)</span>
+                <div className="print-sig-space"></div>
+              </div>
+              <div className="print-sig-col">
+                <strong>Thủ Kho Nhận Hàng</strong>
+                <span>(Ký và ghi rõ họ tên)</span>
+                <div className="print-sig-space"></div>
+              </div>
+              <div className="print-sig-col">
+                <strong>Kế Toán / Giám Đốc</strong>
+                <span>(Ký và ghi rõ họ tên)</span>
+                <div className="print-sig-space"></div>
+              </div>
+            </div>
+
+            <div className="form-actions margin-top-md no-print" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" onClick={handlePrintReceipt} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Printer size={16} /> In Phiếu Nhập Kho
+                </button>
                 {selectedReceipt.status === 'DRAFT' && (
                   <>
-                    <button onClick={() => handleComplete(selectedReceipt.id)} className="btn btn-primary" style={{ marginRight: '0.5rem', background: 'var(--success)' }}>
+                    <button onClick={() => handleComplete(selectedReceipt.id)} className="btn btn-primary" style={{ background: 'var(--success)' }}>
                       <CheckCircle2 size={18} /> Hoàn thành & Cộng kho
                     </button>
                     <button onClick={() => handleCancel(selectedReceipt.id)} className="btn btn-outline text-danger">

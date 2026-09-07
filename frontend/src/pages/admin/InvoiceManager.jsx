@@ -5,6 +5,7 @@ import {
   CheckCircle2, Clock, XCircle, X, Store, User, Phone, MapPin, DollarSign
 } from 'lucide-react'
 import './AdminPages.css'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 
 const InvoiceManager = () => {
   const [invoices, setInvoices] = useState([])
@@ -75,22 +76,21 @@ const InvoiceManager = () => {
   }, [searchKeyword, statusFilter, methodFilter, startDate, endDate, invoices])
 
   const handlePrint = () => {
-    window.print()
+    if (selectedInvoice) {
+      printDocument(`Hoa_Don_Ban_Le_INV${selectedInvoice.id}_MiniMart`)
+    } else {
+      printDocument('Danh_Sach_Hoa_Don_MiniMart')
+    }
   }
 
   const handleExportCSV = () => {
-    if (filteredInvoices.length === 0) {
-      alert('Không có hóa đơn nào để xuất file')
-      return
-    }
-
     const headers = ['Mã HĐ', 'Mã Đơn', 'Khách hàng', 'Số điện thoại', 'Ngày tạo', 'Tổng tiền (VND)', 'Giảm giá (VND)', 'Thực thanh toán (VND)', 'Phương thức', 'Trạng thái']
     const rows = filteredInvoices.map(inv => [
       `INV-${inv.id}`,
       `#${inv.id}`,
-      `"${inv.shippingName || ''}"`,
-      `"${inv.shippingPhone || ''}"`,
-      `"${new Date(inv.createdAt).toLocaleString('vi-VN')}"`,
+      inv.shippingName || '',
+      inv.shippingPhone || '',
+      new Date(inv.createdAt).toLocaleString('vi-VN'),
       inv.totalAmount || 0,
       inv.discountAmount || 0,
       inv.finalAmount || 0,
@@ -98,15 +98,7 @@ const InvoiceManager = () => {
       inv.paymentStatus === 'COMPLETED' || inv.status === 'HOAN_THANH' ? 'Đã thanh toán' : 'Chờ thanh toán'
     ])
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `Bao_Cao_Hoa_Don_MiniMart_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    exportToCSV(`Bao_Cao_Hoa_Don_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
   }
 
   const getPaymentStatusBadge = (inv) => {
@@ -129,9 +121,12 @@ const InvoiceManager = () => {
             Hệ thống lưu trữ chứng từ thanh toán bán lẻ. Hóa đơn được bảo vệ toàn vẹn (Chỉ xem và xuất, không được xóa).
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Danh Sách
           </button>
         </div>
       </div>
@@ -406,8 +401,27 @@ const InvoiceManager = () => {
                 </div>
               </div>
 
+              {/* Chữ ký hóa đơn khi in */}
+              <div className="print-only print-signatures" style={{ marginTop: '2rem' }}>
+                <div className="print-sig-col">
+                  <strong>Khách hàng</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+                <div className="print-sig-col">
+                  <strong>Người lập hóa đơn</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+                <div className="print-sig-col">
+                  <strong>Thủ quỹ / Thu ngân</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+              </div>
+
               {/* Footer Note */}
-              <div style={{ textAlign: 'center', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px dashed #cbd5e1', color: '#94a3b8', fontSize: '0.8rem' }}>
+              <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #cbd5e1', color: '#94a3b8', fontSize: '0.8rem' }}>
                 <p style={{ margin: '0 0 2px 0' }}>Cảm ơn quý khách đã mua sắm tại Siêu thị MiniMart!</p>
                 <p style={{ margin: 0 }}>Hóa đơn điện tử có giá trị lưu hành nội bộ và bảo hành sản phẩm.</p>
               </div>

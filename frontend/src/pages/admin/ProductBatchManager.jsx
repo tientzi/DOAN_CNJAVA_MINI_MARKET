@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Calendar, AlertTriangle, Percent, Tag, Check, X, ArrowRight } from 'lucide-react'
+import { Calendar, AlertTriangle, Percent, Tag, Check, X, ArrowRight, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const ProductBatchManager = () => {
@@ -119,14 +120,62 @@ const ProductBatchManager = () => {
 
   const displayList = activeTab === 'ALL' ? batches : expiringBatches
 
+  const handleExportCSV = () => {
+    const headers = ['Mã Lô', 'Mã SKU', 'Tên sản phẩm', 'Tên Lô', 'Số lượng còn', 'Hạn sử dụng', 'Mức giảm giá (%)', 'Trạng thái']
+    const rows = displayList.map(b => [
+      `#${b.id}`,
+      b.productSku || '',
+      b.productName || '',
+      b.batchName || 'Lô mặc định',
+      b.quantity || 0,
+      b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('vi-VN') : 'Không có',
+      b.saleDiscountPercent ? `${b.saleDiscountPercent}%` : '0%',
+      isExpired(b.expiryDate) ? 'Đã hết hạn' : isExpiringSoon(b.expiryDate) ? 'Sắp hết hạn' : 'Còn hạn'
+    ])
+    exportToCSV(`Bao_Cao_Lo_Hang_${activeTab}_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrint = () => {
+    const title = activeTab === 'EXPIRING' 
+      ? 'Báo cáo Lô hàng Cận Date (< 30 ngày) - Siêu thị MiniMart' 
+      : 'Báo cáo Toàn bộ Lô hàng & HSD - Siêu thị MiniMart'
+    printDocument(title)
+  }
+
   return (
     <div className="admin-crud-page">
-      <div className="crud-header">
+      {/* Header cho bản in */}
+      <div className="print-only">
+        <div className="print-doc-header">
+          <div>
+            <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+            <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+          </div>
+          <div className="print-doc-meta">
+            <div>Ngày in: {new Date().toLocaleString('vi-VN')}</div>
+            <div>Báo cáo: {activeTab === 'EXPIRING' ? 'Cảnh báo lô hàng cận date (< 30 ngày)' : 'Toàn bộ danh sách lô hàng'}</div>
+          </div>
+        </div>
+        <div className="print-doc-title">
+          <h2>BÁO CÁO THEO DÕI LÔ HÀNG & HẠN SỬ DỤNG</h2>
+          <p>Tổng số lô ghi nhận: {displayList.length} lô hàng</p>
+        </div>
+      </div>
+
+      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2>Quản lý Lô & Hạn sử dụng (Sale Cận Date)</h2>
           <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px' }}>
             Theo dõi hạn sử dụng các lô hàng và chủ động áp dụng mức giảm giá tùy ý để xả hàng cận date.
           </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Báo Cáo Lô
+          </button>
         </div>
       </div>
 
@@ -226,6 +275,25 @@ const ProductBatchManager = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Chữ ký khi in */}
+      <div className="print-only print-signatures">
+        <div className="print-sig-col">
+          <strong>Người Kiểm Kê Lô</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Thủ Kho Quản Lý</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Ban Giám Đốc</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
       </div>
 
       {/* MODAL THIẾT LẬP MỨC SALE TÙY Ý CÓ PREVIEW */}

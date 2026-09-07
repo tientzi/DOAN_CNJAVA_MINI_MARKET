@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, Eye, EyeOff, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, EyeOff, Upload, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const ProductManager = () => {
@@ -198,17 +199,71 @@ const ProductManager = () => {
     setError('')
   }
 
+  const handleExportCSV = () => {
+    const headers = ['Mã SP', 'Tên sản phẩm', 'SKU', 'Mã vạch', 'Danh mục', 'Thương hiệu', 'Giá niêm yết (VND)', 'Giá KM (VND)', 'Đơn vị tính', 'Tồn kho', 'Vị trí kệ', 'Trạng thái']
+    const rows = [...products].sort((a, b) => a.id - b.id).map(p => [
+      `SP-${p.id}`,
+      p.name || '',
+      p.sku || '',
+      p.barcode || '',
+      p.categoryName || '',
+      p.brandName || '',
+      p.price || 0,
+      p.salePrice || '',
+      p.unit || 'Cái',
+      p.currentStock || 0,
+      p.location || '',
+      p.isActive ? 'Đang kinh doanh' : 'Tạm ẩn'
+    ])
+    exportToCSV(`Bang_Gia_SanPham_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrint = () => {
+    printDocument('Bang_Gia_Niem_Yet_SanPham_MiniMart')
+  }
+
   if (loading) {
     return <div className="loading-state">Đang tải sản phẩm...</div>
   }
 
   return (
     <div className="admin-crud-page">
-      <div className="crud-header">
-        <h2>Quản lý Sản phẩm</h2>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
-          <Plus size={18} /> Thêm sản phẩm
-        </button>
+      {/* Header cho bản in */}
+      <div className="print-only">
+        <div className="print-doc-header">
+          <div>
+            <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+            <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+          </div>
+          <div className="print-doc-meta">
+            <div>Ngày in: {new Date().toLocaleString('vi-VN')}</div>
+            <div>Tổng số mặt hàng: {products.length} sản phẩm</div>
+          </div>
+        </div>
+        <div className="print-doc-title">
+          <h2>BẢNG GIÁ NIÊM YẾT SẢN PHẨM</h2>
+          <p>Hệ thống Siêu thị Tiện lợi MiniMart</p>
+        </div>
+      </div>
+
+      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2>Quản lý Sản phẩm</h2>
+          <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+            Quản lý thông tin hàng hóa, định giá niêm yết và trạng thái hiển thị bán hàng.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Bảng Giá
+          </button>
+          <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={18} /> Thêm sản phẩm
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -323,7 +378,7 @@ const ProductManager = () => {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Ảnh chính</th>
+              <th className="no-print">Ảnh chính</th>
               <th>Tên sản phẩm</th>
               <th>Danh mục</th>
               <th>Thương hiệu</th>
@@ -331,14 +386,14 @@ const ProductManager = () => {
               <th>Giá KM</th>
               <th>Tồn kho</th>
               <th>Trạng thái</th>
-              <th>Thao tác</th>
+              <th className="no-print">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {[...products].sort((a, b) => a.id - b.id).map(prod => (
               <tr key={prod.id}>
                 <td>{prod.id}</td>
-                <td>
+                <td className="no-print">
                   <img src={prod.mainImage} alt={prod.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
                 </td>
                 <td><strong>{prod.name}</strong></td>
@@ -357,7 +412,7 @@ const ProductManager = () => {
                     {prod.isActive ? 'Bán trực tuyến' : 'Ẩn'}
                   </span>
                 </td>
-                <td>
+                <td className="no-print">
                   <div className="table-actions">
                     <button onClick={() => handleEdit(prod)} className="action-btn edit" title="Sửa"><Edit2 size={16} /></button>
                     <button onClick={() => handleDelete(prod.id)} className="action-btn delete" title="Xóa"><Trash2 size={16} /></button>
@@ -367,6 +422,25 @@ const ProductManager = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Chữ ký khi in */}
+      <div className="print-only print-signatures">
+        <div className="print-sig-col">
+          <strong>Người Lập Bảng Giá</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Trưởng Bộ Phận Hàng Hóa</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Ban Giám Đốc</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
       </div>
     </div>
   )

@@ -102,6 +102,11 @@ public class OrderService {
             finalAmount = BigDecimal.ZERO;
         }
 
+        String pm = orderDTO.getPaymentMethod();
+        if (pm == null || pm.trim().isEmpty() || "undefined".equalsIgnoreCase(pm.trim())) {
+            pm = "COD";
+        }
+
         Order order = Order.builder()
                 .user(user)
                 .totalAmount(totalAmount)
@@ -111,7 +116,7 @@ public class OrderService {
                 .shippingName(orderDTO.getShippingName())
                 .shippingPhone(orderDTO.getShippingPhone())
                 .shippingAddress(orderDTO.getShippingAddress())
-                .paymentMethod(orderDTO.getPaymentMethod())
+                .paymentMethod(pm)
                 .couponCode(orderDTO.getCouponCode())
                 .note(orderDTO.getNote())
                 .build();

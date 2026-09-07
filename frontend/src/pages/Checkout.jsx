@@ -3,8 +3,62 @@ import { useNavigate } from 'react-router-dom'
 import { CartContext } from '../contexts/CartContext'
 import { AuthContext } from '../contexts/AuthContext'
 import api from '../services/api'
-import { MapPin, Plus, CheckCircle, Wallet, Tag, QrCode, X, Copy, Check, Smartphone, Banknote, CreditCard } from 'lucide-react'
+import { MapPin, Plus, CheckCircle, Wallet, Tag, QrCode, X, Copy, Check, Smartphone, Banknote, CreditCard, Info } from 'lucide-react'
 import './Checkout.css'
+
+export const DISTRICT_WARDS = {
+  'Quận Tân Phú': [
+    'Phường Tây Thạnh',
+    'Phường Sơn Kỳ',
+    'Phường Tân Sơn Nhì',
+    'Phường Tân Quý',
+    'Phường Tân Thành',
+    'Phường Phú Thọ Hòa',
+    'Phường Phú Thạnh',
+    'Phường Phú Trung',
+    'Phường Hòa Thạnh',
+    'Phường Hiệp Tân',
+    'Phường Tân Thới Hòa'
+  ],
+  'Quận Tân Bình': [
+    'Phường 1',
+    'Phường 2',
+    'Phường 3',
+    'Phường 4',
+    'Phường 5',
+    'Phường 6',
+    'Phường 7',
+    'Phường 8',
+    'Phường 9',
+    'Phường 10',
+    'Phường 11',
+    'Phường 12',
+    'Phường 13',
+    'Phường 14',
+    'Phường 15'
+  ],
+  'Quận 12': [
+    'Phường Thạnh Xuân',
+    'Phường Thạnh Lộc',
+    'Phường Hiệp Thành',
+    'Phường Thới An',
+    'Phường Tân Chánh Hiệp',
+    'Phường An Phú Đông',
+    'Phường Tân Thới Hiệp',
+    'Phường Trung Mỹ Tây',
+    'Phường Tân Hưng Thuận',
+    'Phường Đông Hưng Thuận',
+    'Phường Tân Thới Nhất'
+  ]
+}
+
+export const isStandardDistrict = (addr) => {
+  if (!addr) return true
+  const str = `${addr.district || ''} ${addr.detailAddress || ''} ${addr.ward || ''} ${addr.province || ''}`.toLowerCase()
+  return str.includes('tân phú') || str.includes('tan phu') ||
+         str.includes('tân bình') || str.includes('tan binh') ||
+         str.includes('quận 12') || str.includes('quan 12') || str.includes('q12') || str.includes('q.12')
+}
 
 const DEFAULT_METHODS = [
   {
@@ -56,10 +110,12 @@ const Checkout = () => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [receiverName, setReceiverName] = useState('')
   const [receiverPhone, setReceiverPhone] = useState('')
-  const [province, setProvince] = useState('')
-  const [district, setDistrict] = useState('')
-  const [ward, setWard] = useState('')
-  const [detailAddress, setDetailAddress] = useState('')
+  const [province] = useState('TP Hồ Chí Minh')
+  const [district, setDistrict] = useState('Quận Tân Phú')
+  const [ward, setWard] = useState('Phường Tây Thạnh')
+  const [customWard, setCustomWard] = useState('')
+  const [houseNumber, setHouseNumber] = useState('')
+  const [streetName, setStreetName] = useState('')
   const [isDefault, setIsDefault] = useState(false)
   
   // Coupon
@@ -102,14 +158,30 @@ const Checkout = () => {
     try {
       const response = await api.get('/api/public/payment-methods')
       if (response.data && response.data.length > 0) {
-        const activeOnes = response.data.filter(m => m.isEnabled)
-        setPaymentMethods(activeOnes)
+        const normalized = response.data.map(m => ({
+          ...m,
+          methodCode: m.methodCode || m.methodKey || m.code || 'COD',
+          methodName: m.methodName || m.name || (m.methodKey === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : (m.methodKey || 'Thanh toán'))
+        }))
+        const activeOnes = normalized.filter(m => m.isEnabled)
         if (activeOnes.length > 0) {
-          setPaymentMethod(activeOnes[0].methodCode)
+          setPaymentMethods(activeOnes)
+          setPaymentMethod(prev => {
+            const exists = activeOnes.some(a => a.methodCode === prev)
+            return exists ? prev : activeOnes[0].methodCode
+          })
+        } else {
+          setPaymentMethods(DEFAULT_METHODS)
+          setPaymentMethod('COD')
         }
+      } else {
+        setPaymentMethods(DEFAULT_METHODS)
+        setPaymentMethod('COD')
       }
     } catch (err) {
       console.warn('Dùng cấu hình thanh toán mặc định', err)
+      setPaymentMethods(DEFAULT_METHODS)
+      setPaymentMethod('COD')
     }
   }
 
@@ -125,19 +197,53 @@ const Checkout = () => {
   const handleAddAddress = async (e) => {
     e.preventDefault()
     setError('')
-    if (!/^\d{10}$/.test(receiverPhone)) {
+    if (!receiverName.trim()) {
+      setError('Vui lòng nhập họ tên người nhận')
+      return
+    }
+    if (!/^\d{10}$/.test(receiverPhone.trim())) {
       setError('Số điện thoại phải có đúng 10 chữ số')
       return
     }
+    if (!houseNumber.trim()) {
+      setError('Vui lòng nhập số nhà cụ thể')
+      return
+    }
+    if (!streetName.trim()) {
+      setError('Vui lòng nhập tên đường')
+      return
+    }
+
+    const finalWard = ward === 'KHAC' ? customWard.trim() : ward
+    if (!finalWard) {
+      setError('Vui lòng chọn hoặc nhập tên Phường / Xã')
+      return
+    }
+
+    const cleanHouse = houseNumber.trim().toLowerCase().startsWith('số')
+      ? houseNumber.trim()
+      : `Số ${houseNumber.trim()}`
+    const combinedDetail = `${cleanHouse}, ${streetName.trim()}`
+
     try {
       const response = await api.post('/api/addresses', {
-        receiverName, receiverPhone, province, district, ward, detailAddress, isDefault
+        receiverName: receiverName.trim(),
+        receiverPhone: receiverPhone.trim(),
+        province: 'TP Hồ Chí Minh',
+        district,
+        ward: finalWard,
+        detailAddress: combinedDetail,
+        isDefault
       })
       setAddresses(prev => [...prev, response.data])
       setSelectedAddressId(response.data.id)
       setShowAddForm(false)
-      setReceiverName(''); setReceiverPhone(''); setProvince('')
-      setDistrict(''); setWard(''); setDetailAddress(''); setIsDefault(false)
+      setReceiverName('')
+      setReceiverPhone('')
+      setHouseNumber('')
+      setStreetName('')
+      setCustomWard('')
+      setIsDefault(false)
     } catch (err) {
       setError(err.response?.data?.error || 'Không thể thêm địa chỉ mới.')
     }
@@ -159,14 +265,19 @@ const Checkout = () => {
 
   const submitOrder = async () => {
     const addr = addresses.find(a => a.id === selectedAddressId)
+    if (!addr) {
+      setError('Vui lòng chọn hoặc thêm địa chỉ nhận hàng')
+      return
+    }
     const fullAddrString = `${addr.detailAddress}, ${addr.ward}, ${addr.district}, ${addr.province}`
+    const effectivePayment = paymentMethod || 'COD'
     setLoading(true)
     try {
       await api.post('/api/orders', {
         shippingName: addr.receiverName,
         shippingPhone: addr.receiverPhone,
         shippingAddress: fullAddrString,
-        paymentMethod,
+        paymentMethod: effectivePayment,
         couponCode: appliedCoupon || null,
         note
       })
@@ -205,8 +316,8 @@ const Checkout = () => {
       return
     }
 
-    const currentMethod = paymentMethods.find(m => m.methodCode === paymentMethod)
-    if (paymentMethod !== 'COD' && currentMethod) {
+    const currentMethod = paymentMethods.find(m => m.methodCode === paymentMethod) || { methodCode: 'COD' }
+    if (paymentMethod && paymentMethod !== 'COD' && currentMethod) {
       const randCode = Date.now().toString().slice(-6)
       const transferSyntax = currentMethod.transferSyntax 
         ? currentMethod.transferSyntax.replace('{MA_DON}', randCode)
@@ -269,28 +380,89 @@ const Checkout = () => {
                 <h4>Nhập thông tin địa chỉ mới</h4>
                 <div className="form-grid-addr">
                   <div className="form-group">
-                    <label>Họ tên người nhận</label>
-                    <input type="text" required value={receiverName} onChange={(e) => setReceiverName(e.target.value)} />
+                    <label>Họ tên người nhận <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="VD: Nguyễn Văn A"
+                      value={receiverName} 
+                      onChange={(e) => setReceiverName(e.target.value)} 
+                    />
                   </div>
                   <div className="form-group">
-                    <label>Số điện thoại</label>
-                    <input type="text" required value={receiverPhone} onChange={(e) => setReceiverPhone(e.target.value)} />
+                    <label>Số điện thoại (10 số) <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="tel" 
+                      required 
+                      placeholder="VD: 0912345678"
+                      value={receiverPhone} 
+                      onChange={(e) => setReceiverPhone(e.target.value)} 
+                    />
                   </div>
                   <div className="form-group">
                     <label>Tỉnh / Thành phố</label>
-                    <input type="text" required value={province} onChange={(e) => setProvince(e.target.value)} />
+                    <select value={province} disabled style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }}>
+                      <option value="TP Hồ Chí Minh">TP Hồ Chí Minh</option>
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label>Quận / Huyện (VD: Quận Tân Phú, Quận Tân Bình, Quận 12...)</label>
-                    <input type="text" required value={district} onChange={(e) => setDistrict(e.target.value)} />
+                    <label>Quận trọng điểm phục vụ <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select 
+                      value={district} 
+                      onChange={(e) => {
+                        const newD = e.target.value
+                        setDistrict(newD)
+                        const firstWard = DISTRICT_WARDS[newD] ? DISTRICT_WARDS[newD][0] : ''
+                        setWard(firstWard)
+                        setCustomWard('')
+                      }}
+                    >
+                      <option value="Quận Tân Phú">Quận Tân Phú (Kho chính)</option>
+                      <option value="Quận Tân Bình">Quận Tân Bình</option>
+                      <option value="Quận 12">Quận 12</option>
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label>Phường / Xã</label>
-                    <input type="text" required value={ward} onChange={(e) => setWard(e.target.value)} />
+                    <label>Phường / Xã <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select 
+                      value={ward} 
+                      onChange={(e) => setWard(e.target.value)}
+                    >
+                      {(DISTRICT_WARDS[district] || []).map(w => (
+                        <option key={w} value={w}>{w}</option>
+                      ))}
+                      <option value="KHAC">Khác (Tự nhập tay)...</option>
+                    </select>
+                    {ward === 'KHAC' && (
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="Nhập tên Phường / Xã cụ thể..."
+                        value={customWard}
+                        onChange={(e) => setCustomWard(e.target.value)}
+                        style={{ marginTop: '6px' }}
+                      />
+                    )}
                   </div>
                   <div className="form-group">
-                    <label>Địa chỉ chi tiết (Số nhà, tên đường...)</label>
-                    <input type="text" required value={detailAddress} onChange={(e) => setDetailAddress(e.target.value)} />
+                    <label>Tên đường <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="VD: Lũy Bán Bích, Thoại Ngọc Hầu, Tô Ký..."
+                      value={streetName} 
+                      onChange={(e) => setStreetName(e.target.value)} 
+                    />
+                  </div>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>Số nhà cụ thể (hoặc số phòng, tầng) <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="VD: 120/4B, Số 45A, Căn hộ B3-02..."
+                      value={houseNumber} 
+                      onChange={(e) => setHouseNumber(e.target.value)} 
+                    />
                   </div>
                 </div>
                 <div className="form-checkbox-addr">
@@ -307,27 +479,37 @@ const Checkout = () => {
             ) : (
               <div className="addresses-list">
                 {addresses.length > 0 ? (
-                  addresses.map(addr => (
-                    <div
-                      key={addr.id}
-                      className={`address-item-card ${selectedAddressId === addr.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedAddressId(addr.id)}
-                    >
-                      <div className="addr-check">
-                        <CheckCircle size={20} className="check-icon" />
-                      </div>
-                      <div className="addr-info">
-                        <div className="addr-meta">
-                          <strong>{addr.receiverName}</strong>
-                          <span className="addr-phone">{addr.receiverPhone}</span>
-                          {addr.isDefault && <span className="default-tag">Mặc định</span>}
+                  addresses.map(addr => {
+                    const isSelected = selectedAddressId === addr.id
+                    return (
+                      <div
+                        key={addr.id}
+                        className={`address-item-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => setSelectedAddressId(addr.id)}
+                      >
+                        <div className="addr-check">
+                          <CheckCircle size={20} className="check-icon" />
                         </div>
-                        <p>{`${addr.detailAddress}, ${addr.ward}, ${addr.district}, ${addr.province}`}</p>
+                        <div className="addr-info">
+                          <div className="addr-meta">
+                            <strong>{addr.receiverName}</strong>
+                            <span className="addr-phone">{addr.receiverPhone}</span>
+                            {addr.isDefault && <span className="default-tag">Mặc định</span>}
+                          </div>
+                          <p>{`${addr.detailAddress}, ${addr.ward}, ${addr.district}, ${addr.province}`}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 ) : (
                   <p className="no-address-warn">Bạn chưa cấu hình địa chỉ nào. Hãy bấm "Thêm địa chỉ mới" để tiến hành đặt hàng!</p>
+                )}
+                {/* Gợi ý nếu chọn địa chỉ cũ ngoài 3 quận trọng điểm (Option A) */}
+                {selectedAddressId && addresses.find(a => a.id === selectedAddressId) && !isStandardDistrict(addresses.find(a => a.id === selectedAddressId)) && (
+                  <div style={{ marginTop: '0.85rem', padding: '0.75rem 1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.88rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Info size={18} style={{ flexShrink: 0, color: '#3b82f6' }} />
+                    <span>💡 <strong>Gợi ý:</strong> MiniMart hiện ưu tiên giao hàng siêu tốc trong 2h tại <strong>Quận Tân Phú, Quận Tân Bình, Quận 12</strong>. Bạn có thể bấm <em>"+ Thêm địa chỉ mới"</em> để chọn khu vực ưu tiên giao nhanh!</span>
+                  </div>
                 )}
               </div>
             )}

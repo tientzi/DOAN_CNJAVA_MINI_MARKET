@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { ClipboardList, ArrowUpRight, ArrowDownRight, RefreshCw, AlertCircle } from 'lucide-react'
+import { ClipboardList, ArrowUpRight, ArrowDownRight, RefreshCw, AlertCircle, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const InventoryLedgerManager = () => {
@@ -13,8 +14,8 @@ const InventoryLedgerManager = () => {
     setLoading(true)
     try {
       const response = await api.get(`/api/admin/inventory-ledger?page=${pageNumber}&size=20`)
-      setLedgers(response.data.content)
-      setTotalPages(response.data.totalPages)
+      setLedgers(response.data.content || response.data)
+      setTotalPages(response.data.totalPages || 1)
     } catch (err) {
       console.error('Không thể lấy lịch sử kho', err)
     } finally {
@@ -48,13 +49,59 @@ const InventoryLedgerManager = () => {
     }
   }
 
+  const handleExportCSV = () => {
+    const headers = ['Mã GD', 'Thời gian', 'Sản phẩm', 'Loại biến động', 'Thay đổi', 'Tồn trước', 'Tồn sau', 'Ghi chú', 'Người thực hiện']
+    const rows = ledgers.map(l => [
+      `#${l.id}`,
+      new Date(l.createdAt).toLocaleString('vi-VN'),
+      l.productName || '',
+      getChangeTypeLabel(l.changeType),
+      l.quantityChange > 0 ? `+${l.quantityChange}` : l.quantityChange,
+      l.previousStock || 0,
+      l.newStock || 0,
+      l.note || '',
+      l.createdBy || ''
+    ])
+    exportToCSV(`So_Cai_Kho_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrint = () => {
+    printDocument('Sổ Cái Biến Động Kho - Siêu thị MiniMart')
+  }
+
   return (
     <div className="admin-crud-page">
-      <div className="crud-header">
+      {/* Header cho bản in */}
+      <div className="print-only">
+        <div className="print-doc-header">
+          <div>
+            <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+            <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+          </div>
+          <div className="print-doc-meta">
+            <div>Ngày in: {new Date().toLocaleString('vi-VN')}</div>
+            <div>Báo cáo: Sổ cái biến động kho</div>
+          </div>
+        </div>
+        <div className="print-doc-title">
+          <h2>SỔ CÁI BIẾN ĐỘNG KHO HÀNG (INVENTORY LEDGER)</h2>
+          <p>Trang {page + 1} / {totalPages || 1}</p>
+        </div>
+      </div>
+
+      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <h2><ClipboardList size={24} style={{ marginRight: '8px', verticalAlign: 'middle' }}/> Lịch sử Kho (Inventory Ledger)</h2>
-        <button onClick={() => fetchLedgers(page)} className="btn btn-outline">
-          <RefreshCw size={16} /> Làm mới
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Sổ Cái Kho
+          </button>
+          <button onClick={() => fetchLedgers(page)} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={16} /> Làm mới
+          </button>
+        </div>
       </div>
 
       <div className="admin-table-container glass">
@@ -132,6 +179,25 @@ const InventoryLedgerManager = () => {
             )}
           </>
         )}
+      </div>
+
+      {/* Chữ ký khi in */}
+      <div className="print-only print-signatures">
+        <div className="print-sig-col">
+          <strong>Người lập biểu</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Thủ kho</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Kế toán trưởng</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
       </div>
     </div>
   )

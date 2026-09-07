@@ -12,6 +12,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
+bin/
 
 ### IntelliJ IDEA ###
 .idea
@@ -44,6 +45,7 @@ dist/
 .maven-local/
 .metals/
 .bloop/
+.github/modernize/
 
 ### OS files ###
 Thumbs.db

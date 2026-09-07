@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../services/api'
-import { PackageCheck, AlertTriangle, FilePlus2, Search, ArrowUpRight, ShieldCheck } from 'lucide-react'
+import { PackageCheck, AlertTriangle, FilePlus2, Search, ArrowUpRight, ShieldCheck, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const InventoryManager = () => {
@@ -24,6 +25,30 @@ const InventoryManager = () => {
   useEffect(() => {
     fetchInventory()
   }, [])
+
+  const handleExportCSV = () => {
+    const headers = ['Mã SP (ID)', 'Mã SKU', 'Tên sản phẩm', 'Danh mục', 'Tồn hiện tại', 'Tồn tối thiểu', 'Vị trí kệ', 'Trạng thái tồn kho']
+    const rows = filteredList.map(item => {
+      let status = 'Đủ hàng'
+      if (item.currentStock <= 0) status = 'Hết hàng'
+      else if (item.currentStock < item.minimumStock) status = 'Sắp hết hàng'
+      return [
+        item.product?.id || '',
+        item.product?.sku || '',
+        item.product?.name || '',
+        item.product?.category?.name || '',
+        item.currentStock || 0,
+        item.minimumStock || 0,
+        item.location || '',
+        status
+      ]
+    })
+    exportToCSV(`Bao_Cao_Ton_Kho_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrint = () => {
+    printDocument('Báo cáo Tồn kho - Siêu thị MiniMart')
+  }
 
   if (loading) {
     return <div className="loading-state">Đang tải thông tin kho...</div>
@@ -52,6 +77,24 @@ const InventoryManager = () => {
 
   return (
     <div className="admin-crud-page">
+      {/* Header chỉ hiển thị khi in */}
+      <div className="print-only">
+        <div className="print-doc-header">
+          <div>
+            <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+            <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+          </div>
+          <div className="print-doc-meta">
+            <div>Ngày in: {new Date().toLocaleString('vi-VN')}</div>
+            <div>Báo cáo: Tồn kho & Định mức dự trữ</div>
+          </div>
+        </div>
+        <div className="print-doc-title">
+          <h2>BÁO CÁO TỒN KHO HÀNG HÓA</h2>
+          <p>Tổng số mặt hàng: {filteredList.length} | Tổng lượng hàng tồn: {totalItems.toLocaleString()} đơn vị</p>
+        </div>
+      </div>
+
       <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2>Quản lý Tồn kho (Chỉ xem)</h2>
@@ -59,9 +102,17 @@ const InventoryManager = () => {
             🔒 Quy trình chuẩn siêu thị: Số lượng tồn chỉ tăng thông qua Phiếu Nhập Kho để đảm bảo tính minh bạch.
           </p>
         </div>
-        <Link to="/admin/goods-receipts" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-          <FilePlus2 size={18} /> Tạo phiếu nhập kho để tăng tồn
-        </Link>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Báo Cáo Tồn Kho
+          </button>
+          <Link to="/admin/goods-receipts" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <FilePlus2 size={18} /> Tạo phiếu nhập kho
+          </Link>
+        </div>
       </div>
 
       {/* Thẻ thống kê */}
@@ -204,6 +255,25 @@ const InventoryManager = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Chữ ký khi in */}
+      <div className="print-only print-signatures">
+        <div className="print-sig-col">
+          <strong>Người lập biểu</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Thủ kho</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Ban Giám Đốc</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
       </div>
     </div>
   )

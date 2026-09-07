@@ -473,3 +473,228 @@
   color: var(--admin-text-secondary);
   font-size: 1.1rem;
 }
+
+/* =========================================================
+   PRINT STYLES & PRINTABLE DOCUMENT TEMPLATES
+   ========================================================= */
+
+.print-only {
+  display: none !important;
+}
+
+.print-doc-header {
+  border-bottom: 2px solid #1e293b;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.print-brand-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.print-brand-subtitle {
+  font-size: 0.85rem;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.print-doc-meta {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.print-doc-title {
+  text-align: center;
+  margin: 1rem 0 1.25rem 0;
+}
+
+.print-doc-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase;
+  margin: 0 0 4px 0;
+}
+
+.print-doc-title p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.print-signatures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+.print-sig-col strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.print-sig-col span {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.print-sig-space {
+  height: 65px;
+}
+
+/* Biểu mẫu in phiếu đóng gói/giao hàng (Packing Slip) */
+.printable-slip {
+  background: #fff;
+  color: #000;
+  border: 2px dashed #94a3b8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 15mm 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ẩn tất cả thành phần điều hướng và nút thao tác */
+  .admin-sidebar,
+  .admin-header,
+  .btn,
+  button,
+  .crud-header .btn,
+  .crud-header button,
+  .admin-filters-card,
+  .add-addr-btn,
+  .action-col,
+  th:last-child:not(.print-include-col),
+  td:last-child:not(.print-include-col),
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hiển thị các khối chỉ dành cho in */
+  .print-only {
+    display: block !important;
+  }
+
+  .print-only-flex {
+    display: flex !important;
+  }
+
+  /* Reset layout cha */
+  .admin-layout,
+  .admin-container,
+  .admin-content,
+  .admin-crud-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* Reset các thẻ Card & Glassmorphism */
+  .glass,
+  .card,
+  .admin-table-container {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Tiêu chuẩn bảng in */
+  .admin-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    border: 1px solid #475569 !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+    font-size: 9.5pt !important;
+  }
+
+  .admin-table th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    text-align: center !important;
+  }
+
+  .admin-table tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Reset Modal khi người dùng in trực tiếp từ modal */
+  .invoice-modal-overlay,
+  .receipt-modal-overlay,
+  .order-modal-overlay,
+  .modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .invoice-modal-content,
+  .receipt-modal-content,
+  .order-modal-content,
+  .modal-content {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .printable-slip {
+    border: 1.5px solid #000 !important;
+    padding: 1rem !important;
+    margin: 0 !important;
+  }
+
+  .status-pill {
+    border: 1px solid #64748b !important;
+    background: transparent !important;
+    color: #000 !important;
+    font-weight: 600 !important;
+  }
+}

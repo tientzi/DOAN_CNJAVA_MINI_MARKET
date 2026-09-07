@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Eye, CheckCircle2, Truck, XCircle, FileText, ShoppingBag, MapPin, User, DollarSign, Calendar } from 'lucide-react'
+import { Eye, CheckCircle2, Truck, XCircle, FileText, ShoppingBag, MapPin, User, DollarSign, Calendar, Download, Printer } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const OrderManager = () => {
@@ -28,6 +29,29 @@ const OrderManager = () => {
   useEffect(() => {
     fetchOrders()
   }, [])
+
+  const handleExportCSV = () => {
+    const headers = ['Mã Đơn', 'Ngày tạo', 'Khách hàng', 'Số điện thoại', 'Địa chỉ giao hàng', 'Tổng tiền (VND)', 'Giảm giá (VND)', 'Thực trả (VND)', 'Phương thức', 'Trạng thái', 'Ghi chú']
+    const rows = filteredOrders.map(o => [
+      `#${o.id}`,
+      new Date(o.createdAt).toLocaleString('vi-VN'),
+      o.shippingName || '',
+      o.shippingPhone || '',
+      o.shippingAddress || '',
+      o.totalAmount || 0,
+      o.discountAmount || 0,
+      o.finalAmount || 0,
+      o.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : 'Chuyển khoản (VietQR/MoMo)',
+      getStatusLabel(o.status),
+      o.note || ''
+    ])
+    exportToCSV(`Danh_Sach_Don_Hang_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+  }
+
+  const handlePrintOrderSlip = () => {
+    if (!selectedOrder) return
+    printDocument(`Phieu_Giao_Hang_DH${selectedOrder.id}_MiniMart`)
+  }
 
   useEffect(() => {
     if (statusFilter === 'ALL') {
@@ -118,31 +142,46 @@ const OrderManager = () => {
 
   return (
     <div className="admin-crud-page">
-      <div className="crud-header">
-        <h2>Quản lý Đơn hàng</h2>
-        
-        {/* Lọc đơn hàng */}
-        <div className="filter-group" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', fontWeight: '600' }}>Lọc trạng thái:</span>
-          <select 
-            value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              background: 'var(--admin-card-bg)',
-              color: 'var(--admin-text-primary)',
-              border: '1px solid var(--admin-border)',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="ALL">Tất cả đơn hàng</option>
-            <option value="CHO_XAC_NHAN">Chờ xác nhận</option>
-            <option value="DA_XAC_NHAN">Đã xác nhận</option>
-            <option value="DANG_GIAO">Đang giao hàng</option>
-            <option value="HOAN_THANH">Hoàn thành</option>
-            <option value="HUY">Đã hủy</option>
-          </select>
+      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2>Quản lý Đơn hàng</h2>
+          <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+            Theo dõi, xác nhận đơn hàng và in phiếu đóng gói cho Shipper giao hàng.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Lọc đơn hàng */}
+          <div className="filter-group no-print" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', fontWeight: '600' }}>Trạng thái:</span>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                background: 'var(--admin-card-bg)',
+                color: 'var(--admin-text-primary)',
+                border: '1px solid var(--admin-border)',
+                padding: '0.45rem 0.8rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              <option value="ALL">Tất cả đơn hàng</option>
+              <option value="CHO_XAC_NHAN">Chờ xác nhận</option>
+              <option value="DA_XAC_NHAN">Đã xác nhận</option>
+              <option value="DANG_GIAO">Đang giao hàng</option>
+              <option value="HOAN_THANH">Hoàn thành</option>
+              <option value="HUY">Đã hủy</option>
+            </select>
+          </div>
+
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={() => printDocument('Danh_Sach_Don_Hang_MiniMart')} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Danh Sách
+          </button>
         </div>
       </div>
 
@@ -209,21 +248,55 @@ const OrderManager = () => {
 
       {/* Modal chi tiết đơn hàng */}
       {selectedOrder && (
-        <div className="admin-form-overlay">
-          <div className="admin-popup-form glass" style={{ maxWidth: '800px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0 }}>Chi tiết đơn hàng #{selectedOrder.id}</h3>
-              <button 
-                onClick={() => setSelectedOrder(null)} 
-                className="btn btn-outline" 
-                style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-              >
-                Đóng lại
-              </button>
+        <div className="admin-form-overlay order-modal-overlay">
+          <div className="admin-popup-form glass order-modal-content" style={{ maxWidth: '820px' }}>
+            {/* Header chỉ hiển thị khi in phiếu giao hàng */}
+            <div className="print-only">
+              <div className="print-doc-header">
+                <div>
+                  <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+                  <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+                </div>
+                <div className="print-doc-meta">
+                  <div>Mã đơn: <strong>#{selectedOrder.id}</strong></div>
+                  <div>Ngày đặt: {formatDate(selectedOrder.createdAt)}</div>
+                  <div>In lúc: {new Date().toLocaleString('vi-VN')}</div>
+                </div>
+              </div>
+              <div className="print-doc-title">
+                <h2>PHIẾU GIAO HÀNG & ĐÓNG GÓI (ORDER SLIP)</h2>
+                <p>Phương thức: <strong>{selectedOrder.paymentMethod === 'COD' ? 'THU HỘ TIỀN MẶT (COD)' : 'ĐÃ THANH TOÁN (VietQR / MoMo)'}</strong></p>
+              </div>
+
+              <div style={{ border: '1px solid #333', padding: '10px 14px', borderRadius: '6px', marginBottom: '14px', fontSize: '10pt', background: '#f8fafc' }}>
+                <div><strong>Người nhận:</strong> {selectedOrder.shippingName} — <strong>SĐT:</strong> {selectedOrder.shippingPhone}</div>
+                <div style={{ marginTop: '3px' }}><strong>Địa chỉ nhận:</strong> {selectedOrder.shippingAddress}</div>
+                {selectedOrder.note && <div style={{ marginTop: '3px' }}><strong>Ghi chú giao:</strong> {selectedOrder.note}</div>}
+              </div>
             </div>
 
-            {/* Quy trình đơn hàng (Stepper) */}
-            <div className="order-stepper-container" style={{ margin: '1.5rem 0 2rem 0' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0 }}>Chi tiết đơn hàng #{selectedOrder.id}</h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  onClick={handlePrintOrderSlip} 
+                  className="btn btn-outline" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                >
+                  <Printer size={15} /> In Phiếu Giao Hàng
+                </button>
+                <button 
+                  onClick={() => setSelectedOrder(null)} 
+                  className="btn btn-outline" 
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                >
+                  Đóng lại
+                </button>
+              </div>
+            </div>
+
+            {/* Quy trình đơn hàng (Stepper) - Ẩn khi in */}
+            <div className="order-stepper-container no-print" style={{ margin: '1.5rem 0 2rem 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
                 {/* Line background */}
                 <div style={{
@@ -320,83 +393,63 @@ const OrderManager = () => {
               </div>
             </div>
 
-            {/* Chi tiết người nhận & thanh toán */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-              <div className="glass" style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-                <h4 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--admin-primary)' }}>
-                  <User size={16} /> Thông tin khách hàng
+            {/* Thông tin đơn hàng & Người nhận */}
+            <div className="order-detail-cards-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="card glass" style={{ padding: '1rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <User size={16} /> Thông tin người nhận
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
+                <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
                   <div><strong>Họ tên:</strong> {selectedOrder.shippingName}</div>
-                  <div><strong>Điện thoại:</strong> {selectedOrder.shippingPhone}</div>
-                  <div style={{ display: 'flex', gap: '0.25rem' }}>
-                    <MapPin size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span><strong>Địa chỉ:</strong> {selectedOrder.shippingAddress}</span>
+                  <div><strong>Số điện thoại:</strong> {selectedOrder.shippingPhone}</div>
+                  <div>
+                    <MapPin size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                    <strong>Địa chỉ:</strong> {selectedOrder.shippingAddress}
                   </div>
-                  {selectedOrder.shipperName && (
-                    <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                      <strong style={{ color: '#3b82f6' }}>🚚 Người giao hàng:</strong> {selectedOrder.shipperName}
-                      {selectedOrder.shipperPhone && <span style={{ marginLeft: '4px' }}>({selectedOrder.shipperPhone})</span>}
-                      {selectedOrder.deliveryNote && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Ghi chú: {selectedOrder.deliveryNote}</div>}
-                    </div>
-                  )}
                 </div>
               </div>
 
-              <div className="glass" style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-                <h4 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--admin-warning)' }}>
+              <div className="card glass" style={{ padding: '1rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <DollarSign size={16} /> Thông tin thanh toán
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
-                  <div><strong>Phương thức:</strong> {selectedOrder.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : selectedOrder.paymentMethod === 'MOMO' ? 'Ví MoMo / Chuyển khoản QR' : 'Chuyển khoản ngân hàng'}</div>
-                  <div><strong>Tạm tính:</strong> {selectedOrder.totalAmount?.toLocaleString()}đ</div>
-                  {selectedOrder.discountAmount > 0 && (
-                    <div style={{ color: 'var(--admin-danger)' }}><strong>Giảm giá (Coupon):</strong> -{selectedOrder.discountAmount?.toLocaleString()}đ ({selectedOrder.couponCode})</div>
-                  )}
-                  <div style={{ fontSize: '1.1rem', color: 'var(--admin-success)' }}><strong>Tổng thanh toán:</strong> {selectedOrder.finalAmount?.toLocaleString()}đ</div>
+                <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
+                  <div><strong>Tổng tiền hàng:</strong> {selectedOrder.totalAmount?.toLocaleString()}đ</div>
+                  <div><strong>Giảm giá:</strong> -{selectedOrder.discountAmount?.toLocaleString()}đ</div>
+                  <div style={{ fontSize: '1rem', color: 'var(--admin-primary)', fontWeight: 'bold' }}>
+                    <strong>Thực thanh toán:</strong> {selectedOrder.finalAmount?.toLocaleString()}đ
+                  </div>
                   <div>
-                    <strong>Trạng thái thanh toán: </strong>
-                    <span className={`status-pill ${selectedOrder.paymentStatus === 'COMPLETED' ? 'active' : selectedOrder.paymentStatus === 'FAILED' ? 'inactive' : 'warning'}`}>
-                      {selectedOrder.paymentStatus === 'COMPLETED' ? 'Đã thanh toán' : selectedOrder.paymentStatus === 'FAILED' ? 'Thất bại' : 'Chờ xác nhận'}
-                    </span>
-                    {selectedOrder.paymentStatus !== 'COMPLETED' && selectedOrder.paymentMethod === 'MOMO' && (
-                      <button
-                        onClick={() => handleConfirmPayment(selectedOrder.id)}
-                        className="btn btn-sm"
-                        style={{ marginLeft: '8px', padding: '3px 8px', fontSize: '12px', background: '#d97706', color: '#fff' }}
-                      >
-                        ✓ Xác nhận đã nhận MoMo
-                      </button>
-                    )}
+                    <strong>Phương thức:</strong> {selectedOrder.paymentMethod === 'COD' ? 'Tiền mặt khi nhận (COD)' : 'Chuyển khoản (VietQR / MoMo)'}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Ghi chú */}
+            {/* Ghi chú đơn hàng nếu có */}
             {selectedOrder.note && (
-              <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', borderLeft: '3px solid var(--admin-warning)', fontSize: '0.9rem' }}>
-                <strong>Ghi chú từ khách hàng:</strong> {selectedOrder.note}
+              <div className="card glass" style={{ padding: '0.75rem 1rem', marginBottom: '1.5rem', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                <strong>Ghi chú:</strong> {selectedOrder.note}
               </div>
             )}
 
             {/* Bảng sản phẩm trong đơn */}
             <h4 style={{ margin: '0 0 0.75rem 0' }}>Sản phẩm trong đơn ({selectedOrder.items?.length || 0})</h4>
-            <div className="admin-table-container glass" style={{ marginBottom: '2rem' }}>
+            <div className="admin-table-container glass" style={{ marginBottom: '1.5rem' }}>
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Ảnh</th>
+                    <th className="no-print">Ảnh</th>
                     <th>Tên sản phẩm</th>
-                    <th>Giá</th>
-                    <th>Số lượng</th>
-                    <th>Thành tiền</th>
+                    <th>Đơn giá</th>
+                    <th style={{ textAlign: 'center' }}>Số lượng</th>
+                    <th style={{ textAlign: 'right' }}>Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedOrder.items && selectedOrder.items.map(item => (
                     <tr key={item.id}>
-                      <td>
+                      <td className="no-print">
                         <img 
                           src={item.productImage} 
                           alt={item.productName} 
@@ -405,23 +458,59 @@ const OrderManager = () => {
                         />
                       </td>
                       <td><strong>{item.productName}</strong></td>
-                      <td>{item.price?.toLocaleString()}đ</td>
-                      <td>{item.quantity}</td>
-                      <td><strong>{(item.price * item.quantity)?.toLocaleString()}đ</strong></td>
+                      <td style={{ textAlign: 'right' }}>{item.price?.toLocaleString()}đ</td>
+                      <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{(item.price * item.quantity)?.toLocaleString()}đ</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Các nút xử lý trạng thái theo luồng tuần tự */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--admin-border)', paddingTop: '1.5rem' }}>
+            {/* Khối in tiền COD và Chữ ký cho bản in */}
+            <div className="print-only">
+              <div style={{ marginTop: '1rem', borderTop: '2px solid #333', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: 'bold' }}>
+                <span>SỐ TIỀN THU HỘ (COD):</span>
+                <span style={{ color: '#dc2626' }}>
+                  {selectedOrder.paymentMethod === 'COD' ? `${selectedOrder.finalAmount?.toLocaleString()}đ` : '0đ (ĐÃ THANH TOÁN)'}
+                </span>
+              </div>
+
+              <div className="print-signatures">
+                <div className="print-sig-col">
+                  <strong>Người đóng gói</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+                <div className="print-sig-col">
+                  <strong>Shipper giao hàng</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+                <div className="print-sig-col">
+                  <strong>Khách hàng nhận</strong>
+                  <span>(Ký và ghi rõ họ tên)</span>
+                  <div className="print-sig-space"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Các nút xử lý trạng thái theo luồng tuần tự (ẩn khi in) */}
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--admin-border)', paddingTop: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem' }}>
                 <Calendar size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
                 <span>Đặt lúc: {formatDate(selectedOrder.createdAt)}</span>
               </div>
               
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button 
+                  onClick={handlePrintOrderSlip} 
+                  className="btn btn-outline" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Printer size={16} /> In Phiếu Giao Hàng
+                </button>
+
                 {selectedOrder.status === 'CHO_XAC_NHAN' && (
                   <>
                     <button 
@@ -444,13 +533,13 @@ const OrderManager = () => {
                 )}
 
                 {selectedOrder.status === 'DA_XAC_NHAN' && (
-                  <span style={{ color: 'var(--admin-warning)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                  <span style={{ color: 'var(--admin-warning)', fontStyle: 'italic', fontSize: '0.9rem', alignSelf: 'center' }}>
                     Chờ Shipper nhận đơn và giao hàng...
                   </span>
                 )}
                 
                 {(selectedOrder.status === 'DA_NHAN_DON' || selectedOrder.status === 'DANG_GIAO') && (
-                  <span style={{ color: 'var(--admin-warning)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                  <span style={{ color: 'var(--admin-warning)', fontStyle: 'italic', fontSize: '0.9rem', alignSelf: 'center' }}>
                     Đang được giao bởi Shipper...
                   </span>
                 )}

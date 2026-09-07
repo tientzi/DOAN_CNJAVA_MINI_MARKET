@@ -1,5 +1,6 @@
 package com.groceryshop.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Nationalized;
@@ -54,6 +55,16 @@ public class PaymentMethodConfig {
     private LocalDateTime updatedAt;
 
     // Helper compatibility methods
+    @JsonProperty("methodCode")
+    public String getMethodCode() {
+        return methodKey;
+    }
+
+    @JsonProperty("methodName")
+    public String getMethodName() {
+        return name;
+    }
+
     public String getCode() {
         return methodKey;
     }

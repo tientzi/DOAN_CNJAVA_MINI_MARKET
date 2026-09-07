@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { 
   Truck, MapPin, CheckCircle2, AlertTriangle, RefreshCw, 
-  User, Phone, Calendar, ArrowRight, ShieldCheck, Clock, Check, Zap
+  User, Phone, Calendar, ArrowRight, ShieldCheck, Clock, Check, Zap, Download, Printer
 } from 'lucide-react'
+import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const DeliveryManager = () => {
@@ -172,15 +173,77 @@ const DeliveryManager = () => {
     }
   }
 
+  const handleExportCSV = () => {
+    if (activeTab === 'ASSIGN') {
+      const headers = ['Mã Đơn', 'Ngày đặt', 'Khách hàng', 'Số điện thoại', 'Địa chỉ nhận', 'Khu vực nhận diện', 'Tổng tiền (VND)', 'Phương thức', 'Trạng thái']
+      const rows = filteredUnassigned.map(o => [
+        `#${o.id}`,
+        new Date(o.createdAt).toLocaleString('vi-VN'),
+        o.shippingName || '',
+        o.shippingPhone || '',
+        o.shippingAddress || '',
+        o.detectedDistrict || 'Khu vực khác',
+        o.finalAmount || 0,
+        o.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : 'Chuyển khoản VietQR',
+        'Chờ phân bổ'
+      ])
+      exportToCSV(`Bang_Ke_Don_Cho_Giao_${selectedDistrict.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+    } else {
+      const headers = ['Mã Đơn', 'Khách hàng', 'Số điện thoại', 'Địa chỉ giao hàng', 'Khu vực', 'Shipper phụ trách', 'SĐT Shipper', 'Tổng tiền (VND)', 'Trạng thái giao hàng']
+      const rows = trackingOrders.map(o => [
+        `#${o.id}`,
+        o.shippingName || '',
+        o.shippingPhone || '',
+        o.shippingAddress || '',
+        o.detectedDistrict || 'Khu vực khác',
+        o.shipperName || '',
+        o.shipperPhone || '',
+        o.finalAmount || 0,
+        o.status === 'DANG_GIAO' ? 'Đang giao hàng' : o.status === 'DA_NHAN_DON' ? 'Shipper đã nhận' : o.status
+      ])
+      exportToCSV(`Bang_Ke_Theo_Doi_Giao_Hang_${new Date().toISOString().slice(0, 10)}`, headers, rows)
+    }
+  }
+
+  const handlePrint = () => {
+    const title = activeTab === 'ASSIGN' 
+      ? `Bang_Ke_Don_Hang_Cho_Phan_Bo_${selectedDistrict}` 
+      : 'Bang_Ke_Theo_Doi_Giao_Hang_MiniMart'
+    printDocument(title)
+  }
+
   return (
     <div className="admin-page-container">
+      {/* Header cho bản in */}
+      <div className="print-only">
+        <div className="print-doc-header">
+          <div>
+            <h1 className="print-brand-title">SIÊU THỊ TIỆN LỢI MINIMART</h1>
+            <p className="print-brand-subtitle">Hotline: 1900 8888 - Địa chỉ: TP. Hồ Chí Minh</p>
+          </div>
+          <div className="print-doc-meta">
+            <div>Ngày lập: {new Date().toLocaleString('vi-VN')}</div>
+            <div>Khu vực: <strong>{selectedDistrict}</strong></div>
+          </div>
+        </div>
+        <div className="print-doc-title">
+          <h2>BẢNG KÊ ĐIỀU PHỐI GIAO HÀNG (DELIVERY MANIFEST)</h2>
+          <p>{activeTab === 'ASSIGN' ? `Danh sách đơn hàng chờ giao theo khu vực: ${selectedDistrict}` : 'Bảng theo dõi hành trình giao hàng của Shipper'}</p>
+        </div>
+      </div>
       {/* Header */}
       <div className="admin-page-header">
         <div>
           <h2>Quản lý Giao hàng & Phân bổ Khu vực</h2>
           <p className="subtitle">Tự động nhận diện 3 khu vực (Tân Phú, Tân Bình, Quận 12) và phân bổ nhanh cho Shipper</p>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '8px' }}>
+        <div className="header-actions no-print" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={16} /> Xuất Excel / CSV
+          </button>
+          <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={16} /> In Bảng Kê
+          </button>
           <button 
             onClick={handleAutoDispatch} 
             disabled={autoDispatching || unassignedOrders.length === 0} 
@@ -513,6 +576,24 @@ const DeliveryManager = () => {
           </div>
         </div>
       )}
+      {/* Chữ ký khi in */}
+      <div className="print-only print-signatures">
+        <div className="print-sig-col">
+          <strong>Điều Phối Viên Kho</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Đội Trưởng Shipper</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+        <div className="print-sig-col">
+          <strong>Quản Lý Ca Trực</strong>
+          <span>(Ký và ghi rõ họ tên)</span>
+          <div className="print-sig-space"></div>
+        </div>
+      </div>
     </div>
   )
 }
