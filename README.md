@@ -55,38 +55,117 @@ Hệ thống được thiết kế đặc thù cho các chuỗi siêu thị mini
 
 ---
 
-## 🏗️ Kiến Trúc & Luồng Hoạt Động
+## 🏗️ Kiến Trúc Ứng Dụng & Mô Hình Spring Boot MVC
 
-Dự án áp dụng mô hình phân tách độc lập (Decoupled Fullstack):
+Dự án được xây dựng dựa trên nền tảng **Spring Boot MVC** cốt lõi kết hợp mô hình phân tách độc lập hiện đại (**Decoupled Client-Server / Single Page Application**). Hệ thống tối ưu hóa toàn diện trải nghiệm người dùng so với mô hình MVC nguyên khối truyền thống, đồng thời giữ vững tính chuẩn mực, an toàn và dễ mở rộng của một ứng dụng doanh nghiệp chuẩn Java.
+
+### 1. Phân Tích Các Thành Phần Mô Hình MVC Trong Dự Án
+
+Mô hình **MVC (Model - View - Controller)** trong dự án được tổ chức bài bản như sau:
+
 ```
-                       +-----------------------------------+
-                       |         React 18 SPA (Client)     |
-                       |  - User Website (/products, ...)  |
-                       |  - Admin Console (/admin/...)     |
-                       |  - Shipper Portal (/shipper)      |
-                       +-----------------+-----------------+
-                                         |
-                            (JSON / HTTP REST Requests)
-                                         |
-                                         v
-                       +-----------------+-----------------+
-                       |    Spring Boot 3.2 REST API Server |
-                       |  - Security Filter (JWT / OAuth2) |
-                       |  - Controllers & Services Layer   |
-                       |  - Gemini AI Integration Service  |
-                       +-----------------+-----------------+
-                                         |
-                                (Spring Data JPA)
-                                         |
-                                         v
-                       +-----------------+-----------------+
-                       |      Microsoft SQL Server DB      |
-                       |   (22 Tables - UTF-8 / NVARCHAR)  |
-                       +-----------------------------------+
++---------------------------------------------------------------------------------------------------+
+|                                        VIEW (Giao Diện)                                           |
+|   React 18 SPA (Client-Side Rendering) - Quản lý giao diện, trạng thái (State) & Router mượt mà   |
++-------------------------------------------------+-------------------------------------------------+
+                                                  |  (Gọi bất đồng bộ HTTP Request kèm Bearer JWT)
+                                                  v
++---------------------------------------------------------------------------------------------------+
+|                                    CONTROLLER (Bộ Điều Phối)                                      |
+|   Spring Boot MVC Core: DispatcherServlet -> Security Filter -> 24 REST Controllers (@RestController)   |
+|   - Định tuyến endpoint, xác thực phân quyền, Validate dữ liệu và phản hồi dữ liệu chuẩn JSON    |
++-------------------------------------------------+-------------------------------------------------+
+                                                  |  (Gọi xử lý nghiệp vụ)
+                                                  v
++---------------------------------------------------------------------------------------------------+
+|                                      MODEL (Dữ Liệu & Nghiệp Vụ)                                   |
+|   - Tầng DTO: Đóng gói và chuẩn hóa dữ liệu trao đổi (Data Transfer Objects)                     |
+|   - Tầng Service: Xử lý toàn bộ logic nghiệp vụ (Tồn kho, VIP Loyalty, Shipper, Gemini AI...)    |
+|   - Tầng Repository & Entity: Spring Data JPA / Hibernate tương tác với Microsoft SQL Server     |
++---------------------------------------------------------------------------------------------------+
 ```
 
-* **Chế độ Phát triển (Dev Mode)**: Frontend chạy trên Vite Dev Server (`http://localhost:5173`) và tự động chuyển tiếp các request `/api` và `/uploads` về Backend (`http://localhost:8080`) qua Vite Proxy.
-* **Chế độ Sản xuất (Production / Integrated Mode)**: Frontend được build trực tiếp vào thư mục `src/main/resources/static`. Controller `SpaController.java` điều hướng toàn bộ các route giao diện về `index.html`, cho phép toàn bộ hệ thống hoạt động thống nhất trên duy nhất 1 cổng `http://localhost:8080`.
+#### 📦 Model (M - Dữ Liệu & Nghiệp Vụ)
+Nằm trọn vẹn tại tầng Backend Java Spring Boot:
+* **Entities (`com.groceryshop.entity.*`)**: 22 lớp thực thể ánh xạ trực tiếp với các bảng CSDL SQL Server thông qua JPA/Hibernate (VD: `Product`, `Order`, `Inventory`, `ProductBatch`, `User`,...).
+* **Repositories (`com.groceryshop.repository.*`)**: Kế thừa `JpaRepository` của Spring Data JPA, cung cấp sẵn các phương thức CRUD và truy vấn nâng cao (`findBy...`, `@Query`).
+* **Services (`com.groceryshop.service.*`)**: Đóng gói toàn bộ logic nghiệp vụ cốt lõi của siêu thị:
+  - Tự động trừ kho và lưu vết sổ cái kho khi đơn hàng được xác nhận.
+  - Phân loại hạng thẻ và tính toán chiết khấu khách hàng VIP Loyalty.
+  - Thuật toán tự động nhận diện khu vực và điều phối đơn hàng cho Shipper theo quận.
+  - Xử lý xả hàng cận date và kết nối API Google Gemini AI.
+* **DTOs (`com.groceryshop.dto.*`)**: Đóng vai trò lớp vỏ bọc an toàn, chỉ truyền tải dữ liệu cần thiết giữa Controller và View, che giấu các thông tin nhạy cảm của Model CSDL.
+
+#### 🎮 Controller (C - Bộ Điều Khiển)
+Sử dụng nền tảng **Spring MVC** (`spring-boot-starter-web`) với bộ điều phối trung tâm `DispatcherServlet`:
+* **24 REST Controllers (`com.groceryshop.controller.*`)**: Được đánh dấu bằng `@RestController`. Tiếp nhận các yêu cầu HTTP (GET, POST, PUT, PATCH, DELETE) từ View, kiểm tra dữ liệu đầu vào (`@Valid`), xác thực phân quyền với Spring Security (`@PreAuthorize`) và gọi tầng Service tương ứng.
+* **Định Dạng Dữ Liệu Trao Đổi**: Dữ liệu phản hồi được tuần tự hóa tự động (Serialization) thành chuẩn **JSON**, giúp hệ thống nhẹ, nhanh và dễ dàng mở rộng sang các nền tảng khác như Mobile App.
+* **SPA Fallback Controller ([SpaController.java](file:///d:/NAM%20CUOI/CNJAVA/DOAN_COVEON=%29%29/Mini_mart-main_CNJAVA/src/main/java/com/groceryshop/controller/SpaController.java))**: Sử dụng annotation `@Controller` của Spring MVC để định tuyến tất cả các route giao diện người dùng về file `index.html` của React khi người dùng F5 hoặc gõ trực tiếp URL.
+
+#### 🖥️ View (V - Giao Diện Người Dùng)
+Được hiện đại hóa hoàn toàn bằng **React 18 Single Page Application (SPA)**:
+* Thay thế cơ chế render HTML cũ kỹ tại máy chủ (Server-Side Rendering với JSP hay Thymeleaf), View của hệ thống chạy trực tiếp trên trình duyệt của người dùng (Client-Side Rendering).
+* **Ưu điểm vượt trội**: Chuyển trang tức thì mà không cần tải lại toàn bộ trang web (Zero Page Reload), trạng thái giỏ hàng và dữ liệu người dùng được lưu trữ và phản hồi tức thời nhờ React Context API (`AuthContext`, `CartContext`).
+* View giao tiếp 100% với Controller thông qua các cuộc gọi bất đồng bộ (**Asynchronous AJAX / Axios**).
+
+---
+
+### 2. So Sánh Mô Hình Spring Boot MVC Truyền Thống vs Mô Hình Của Dự Án
+
+| Tiêu Chí Đánh Giá | Spring Boot MVC Cổ Điển (JSP / Thymeleaf) | Mô Hình Spring Boot MVC Hiện Đại Của Dự Án (REST API + React SPA) |
+| :--- | :--- | :--- |
+| **Cơ chế Render View** | Máy chủ render ra file HTML tĩnh rồi gửi về Client (Server-Side Rendering). | Trình duyệt Client tự render động dựa trên dữ liệu JSON (Client-Side Rendering). |
+| **Tốc độ chuyển trang** | Mỗi thao tác chuyển trang đều khiến trình duyệt tải lại từ đầu (chớp trắng màn hình). | Chuyển trang mượt mà tức thì bằng React Router DOM v6, không tải lại trang. |
+| **Tải trọng máy chủ** | Máy chủ vừa phải tính toán logic vừa phải gánh việc sinh mã HTML giao diện. | Máy chủ chỉ tập trung xử lý dữ liệu và phản hồi JSON nhẹ, tiết kiệm đáng kể RAM/CPU và băng thông. |
+| **Khả năng mở rộng** | Rất khó tái sử dụng để làm ứng dụng di động (Mobile App iOS / Android). | **Cực kỳ linh hoạt**: Tầng REST API sẵn sàng phục vụ song song cho cả Web, Mobile App và hệ thống bên ngoài. |
+| **Độ bảo mật** | Dùng Session lưu trên bộ nhớ server (dễ cạn kiệt tài nguyên khi đông người dùng). | Sử dụng **Stateless JWT Token** chuẩn doanh nghiệp, an toàn và dễ dàng mở rộng theo chiều ngang. |
+
+---
+
+### 3. Sơ Đồ Luồng Xử Lý Yêu Cầu Chi Tiết (Request Processing Flow)
+
+```
+[ Người Dùng Thao Tác Trên Giao Diện React SPA ]
+                       │
+                       ▼ (Gửi HTTP Request + Bearer JWT qua Axios)
+         [ Spring Security Filter Chain ]
+                       │ (Xác thực JWT Token & Phân quyền Role: ADMIN / SHIPPER / USER)
+                       ▼
+            [ Spring MVC DispatcherServlet ]
+                       │ (Ánh xạ request đến đúng Controller xử lý)
+                       ▼
+              [ @RestController ]
+                       │ (Validate dữ liệu đầu vào với @Valid)
+                       ▼
+                 [ Service Layer ]
+                       │ (Thực thi các nghiệp vụ: Đơn hàng, Tồn kho, VIP Loyalty...)
+                       ▼
+                [ Repository Layer ]
+                       │ (Spring Data JPA / Hibernate)
+                       ▼
+            [ Microsoft SQL Server DB ]
+                       │ (Thực thi SQL và trả dữ liệu Entity)
+                       ▼
+  [ Service chuyển đổi Entity sang DTO & Trả về Controller ]
+                       │
+                       ▼ (Serialization)
+ [ Phản hồi JSON Response về Client qua mã HTTP 200 OK / 201 Created... ]
+                       │
+                       ▼
+[ React 18 cập nhật State và Re-render Component mượt mà trên màn hình ]
+```
+
+---
+
+### 4. Hai Chế Độ Vận Hành Hệ Thống
+
+1. **Chế độ Tích Hợp Đóng Gói (Production / Integrated Mode)**:
+   - Toàn bộ mã nguồn React được biên dịch (build) thành các file tĩnh HTML/CSS/JS nằm trong thư mục `src/main/resources/static`.
+   - Spring Boot khởi chạy ứng dụng Web toàn diện trên duy nhất một cổng `http://localhost:8080`, phục vụ trọn vẹn cả tầng REST API lẫn giao diện người dùng.
+2. **Chế độ Phát Triển Tách Biệt (Development Mode)**:
+   - Backend chạy Spring Boot tại `http://localhost:8080`.
+   - Frontend chạy Vite Dev Server tại `http://localhost:5173` với tính năng Hot Module Replacement (HMR) cập nhật code tức thì.
+   - Vite Proxy được cấu hình sẵn sàng chuyển tiếp toàn bộ request `/api` và `/uploads` sang port 8080 mà không gặp bất kỳ rào cản CORS nào.
 
 ---
 
