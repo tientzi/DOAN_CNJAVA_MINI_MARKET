@@ -8,19 +8,19 @@ Hệ thống được thiết kế đặc thù cho các chuỗi siêu thị mini
 
 ## 📑 MỤC LỤC
 
-1. [🛠️ Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng)
-2. [🏗️ Kiến Trúc & Luồng Hoạt Động](#️-kiến-trúc--luồng-hoạt-động)
-3. [✨ Tính Năng Nổi Bật](#-tính-năng-nổi-bật)
-4. [👥 Chi Tiết Các Phân Hệ Chức Năng](#-chi-tiết-các-phân-hệ-chức-năng)
+1. [ Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng)
+2. [ Kiến Trúc & Luồng Hoạt Động](#️-kiến-trúc--luồng-hoạt-động)
+3. [ Tính Năng Nổi Bật](#-tính-năng-nổi-bật)
+4. [ Chi Tiết Các Phân Hệ Chức Năng](#-chi-tiết-các-phân-hệ-chức-năng)
    - [1. Phân Hệ Khách Hàng (User / Client)](#1-phân-hệ-khách-hàng-user--client)
    - [2. Phân Hệ Quản Trị Viên (Admin Console)](#2-phân-hệ-quản-trị-viên-admin-console)
    - [3. Phân Hệ Nhân Viên Giao Hàng (Shipper Console)](#3-phân-hệ-nhân-viên-giao-hàng-shipper-console)
-5. [🗄️ Cấu Trúc Cơ Sở Dữ Liệu (Database Schema)](#️-cấu-trúc-cơ-sở-dữ-liệu-database-schema)
-6. [📂 Cấu Trúc Thư Mục Dự Án](#-cấu-trúc-thư-mục-dự-án)
-7. [🔑 Tài Khoản Trải Nghiệm Mặc Định](#-tài-khoản-trải-nghiệm-mặc-định)
-8. [🚀 Hướng Dẫn Cài Đặt & Khởi Chạy](#-hướng-dẫn-cài-đặt--khởi-chạy)
-9. [📡 Danh Sách RESTful API Chính](#-danh-sách-restful-api-chính)
-10. [⚙️ Cấu Hình Môi Trường & Lưu Ý Quan Trọng](#️-cấu-hình-môi-trường--lưu-ý-quan-trọng)
+5. [ Cấu Trúc Cơ Sở Dữ Liệu (Database Schema)](#️-cấu-trúc-cơ-sở-dữ-liệu-database-schema)
+6. [ Cấu Trúc Thư Mục Dự Án](#-cấu-trúc-thư-mục-dự-án)
+7. [ Tài Khoản Trải Nghiệm Mặc Định](#-tài-khoản-trải-nghiệm-mặc-định)
+8. [ Hướng Dẫn Cài Đặt & Khởi Chạy](#-hướng-dẫn-cài-đặt--khởi-chạy)
+9. [ Danh Sách RESTful API Chính](#-danh-sách-restful-api-chính)
+10. [ Cấu Hình Môi Trường & Lưu Ý Quan Trọng](#️-cấu-hình-môi-trường--lưu-ý-quan-trọng)
 
 ---
 
