@@ -56,10 +56,12 @@ const InvoiceManager = () => {
     if (statusFilter !== 'ALL') {
       if (statusFilter === 'PAID') {
         result = result.filter(inv => inv.paymentStatus === 'COMPLETED' || inv.status === 'HOAN_THANH')
+      } else if (statusFilter === 'APPROVED_COD') {
+        result = result.filter(inv => inv.paymentStatus === 'APPROVED_COD')
       } else if (statusFilter === 'PENDING') {
-        result = result.filter(inv => inv.paymentStatus !== 'COMPLETED' && inv.status !== 'HUY')
+        result = result.filter(inv => (inv.paymentStatus === 'PENDING' || inv.status === 'CHO_XAC_NHAN') && inv.status !== 'HUY')
       } else if (statusFilter === 'CANCELLED') {
-        result = result.filter(inv => inv.status === 'HUY')
+        result = result.filter(inv => inv.status === 'HUY' || inv.paymentStatus === 'FAILED')
       }
     }
 
@@ -99,20 +101,25 @@ const InvoiceManager = () => {
       inv.discountAmount || 0,
       inv.finalAmount || 0,
       inv.paymentMethod === 'COD' ? 'Tiền mặt COD' : 'Chuyển khoản VietQR',
-      inv.paymentStatus === 'COMPLETED' || inv.status === 'HOAN_THANH' ? 'Đã thanh toán' : 'Chờ thanh toán'
+      inv.paymentStatus === 'APPROVED_COD' ? 'Đã duyệt COD (Thu khi giao)' :
+      inv.paymentStatus === 'COMPLETED' || inv.status === 'HOAN_THANH' ? 'Đã thanh toán' :
+      inv.status === 'HUY' ? 'Đã hủy' : 'Chờ Admin duyệt'
     ])
 
     exportToCSV(`Bao_Cao_Hoa_Don_MiniMart_${new Date().toISOString().slice(0, 10)}`, headers, rows)
   }
 
   const getPaymentStatusBadge = (inv) => {
-    if (inv.status === 'HUY') {
+    if (inv.status === 'HUY' || inv.paymentStatus === 'FAILED') {
       return <span className="status-pill inactive"><XCircle size={14} /> Đã hủy</span>
+    }
+    if (inv.paymentStatus === 'APPROVED_COD') {
+      return <span className="status-pill" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}><CheckCircle2 size={14} /> Đã duyệt COD (Thu khi giao)</span>
     }
     if (inv.paymentStatus === 'COMPLETED' || inv.status === 'HOAN_THANH') {
       return <span className="status-pill active" style={{ background: '#dcfce7', color: '#15803d' }}><CheckCircle2 size={14} /> Đã thanh toán</span>
     }
-    return <span className="status-pill warning" style={{ background: '#fef3c7', color: '#b45309' }}><Clock size={14} /> Chờ thanh toán</span>
+    return <span className="status-pill warning" style={{ background: '#fef3c7', color: '#b45309' }}><Clock size={14} /> Chờ Admin duyệt</span>
   }
 
   return (
@@ -154,8 +161,9 @@ const InvoiceManager = () => {
           style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--admin-border)', background: 'var(--admin-card-bg)', color: 'var(--admin-text-primary)' }}
         >
           <option value="ALL">Tất cả thanh toán</option>
-          <option value="PAID">Đã thanh toán</option>
-          <option value="PENDING">Chờ thanh toán</option>
+          <option value="PAID">Đã thanh toán (QR)</option>
+          <option value="APPROVED_COD">Đã duyệt COD (Thu khi giao)</option>
+          <option value="PENDING">Chờ Admin duyệt</option>
           <option value="CANCELLED">Đã hủy</option>
         </select>
 

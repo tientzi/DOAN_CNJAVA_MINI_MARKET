@@ -39,6 +39,16 @@ public class SupplierController {
         return ResponseEntity.ok(supplierService.updateSupplier(id, supplierDTO));
     }
 
+    @PutMapping("/{id}/toggle-status")
+    public ResponseEntity<SupplierDTO> toggleSupplierStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(supplierService.toggleSupplierStatus(id));
+    }
+
+    @GetMapping("/{id}/products")
+    public ResponseEntity<List<com.groceryshop.dto.SupplierProductDTO>> getProductsBySupplier(@PathVariable Long id) {
+        return ResponseEntity.ok(supplierService.getProductsBySupplier(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
         supplierService.deleteSupplier(id);

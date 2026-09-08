@@ -14,6 +14,8 @@ public class GoodsReceiptItemDTO {
     private Long productId;
     private String productName;
     private String sku;
+    private Long brandId;
+    private String brandName;
     private Integer quantity;
     private BigDecimal importPrice;
     private String batchName;

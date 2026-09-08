@@ -7,6 +7,7 @@ import './AdminPages.css'
 const GoodsReceiptManager = () => {
   const [receipts, setReceipts] = useState([])
   const [suppliers, setSuppliers] = useState([])
+  const [brands, setBrands] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   
@@ -14,7 +15,7 @@ const GoodsReceiptManager = () => {
   const [showForm, setShowForm] = useState(false)
   const [supplierId, setSupplierId] = useState('')
   const [note, setNote] = useState('')
-  const [items, setItems] = useState([]) // { productId, quantity, importPrice }
+  const [items, setItems] = useState([]) // { brandId, productId, quantity, importPrice, batchName, expiryDate }
   
   // Selected Receipt state
   const [selectedReceipt, setSelectedReceipt] = useState(null)
@@ -25,10 +26,12 @@ const GoodsReceiptManager = () => {
     try {
       const recRes = await api.get('/api/admin/goods-receipts')
       const supRes = await api.get('/api/admin/suppliers')
+      const brandRes = await api.get('/api/admin/brands')
       const prodRes = await api.get('/api/admin/products')
       
       setReceipts(recRes.data.content || recRes.data)
       setSuppliers(supRes.data.filter(s => s.isActive))
+      setBrands(brandRes.data.filter(b => b.isActive != null ? b.isActive : true))
       setProducts(prodRes.data)
     } catch (err) {
       console.error(err)
@@ -61,7 +64,7 @@ const GoodsReceiptManager = () => {
   }
 
   const handleAddItem = () => {
-    setItems([...items, { productId: '', quantity: 1, importPrice: 0, batchName: '', expiryDate: '' }])
+    setItems([...items, { brandId: '', productId: '', quantity: 1, importPrice: 0, batchName: '', expiryDate: '' }])
   }
 
   const handleRemoveItem = (index) => {
@@ -72,7 +75,14 @@ const GoodsReceiptManager = () => {
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items]
-    newItems[index][field] = value
+    newItems[index] = { ...newItems[index], [field]: value }
+    if (field === 'brandId' && value) {
+      // Nếu sản phẩm hiện tại không thuộc brandId mới thì reset productId
+      const curProd = products.find(p => String(p.id) === String(newItems[index].productId))
+      if (curProd && String(curProd.brandId) !== String(value)) {
+        newItems[index].productId = ''
+      }
+    }
     setItems(newItems)
   }
 
@@ -93,6 +103,7 @@ const GoodsReceiptManager = () => {
     try {
       await api.post('/api/admin/goods-receipts', {
         supplierId: Number(supplierId),
+        brandId: null,
         note,
         items: items.map(item => ({
           productId: Number(item.productId),
@@ -155,14 +166,14 @@ const GoodsReceiptManager = () => {
         <div>
           <h2>Quản lý Phiếu nhập kho</h2>
           <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px' }}>
-            Lập phiếu và nhập chứng từ từ Nhà cung cấp để cập nhật tồn kho chính thức.
+            Lập phiếu và nhập chứng từ từ Nhà cung cấp để cập nhật tồn kho chính thức. Hỗ trợ nhập đa thương hiệu trên một phiếu.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Download size={16} /> Xuất Excel / CSV
           </button>
-          <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={() => { handleAddItem(); setShowForm(true); }} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={18} /> Tạo phiếu nhập
           </button>
         </div>
@@ -170,73 +181,117 @@ const GoodsReceiptManager = () => {
 
       {showForm && (
         <div className="admin-form-overlay">
-          <div className="admin-popup-form form-large glass" style={{ maxWidth: '800px' }}>
+          <div className="admin-popup-form form-large glass" style={{ maxWidth: '950px' }}>
             <h3>Tạo phiếu nhập kho mới</h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+              Một phiếu nhập từ một Nhà cung cấp có thể chứa nhiều mặt hàng của các thương hiệu khác nhau.
+            </p>
             {error && <div className="form-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
-              <div className="form-grid-2">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label>Nhà cung cấp *</label>
                   <select required value={supplierId} onChange={e => setSupplierId(e.target.value)}>
-                    <option value="">-- Chọn NCC --</option>
+                    <option value="">-- Chọn Nhà cung cấp --</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Ghi chú</label>
-                  <input type="text" value={note} onChange={e => setNote(e.target.value)} />
+                  <input type="text" placeholder="VD: Nhập đợt hàng tiêu dùng tháng 9..." value={note} onChange={e => setNote(e.target.value)} />
                 </div>
               </div>
 
               <div className="receipt-items-container margin-top-md" style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h4>Chi tiết hàng hóa</h4>
-                  <button type="button" onClick={handleAddItem} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}>
-                    <Plus size={14} /> Thêm dòng
+                  <div>
+                    <h4 style={{ margin: 0 }}>Chi tiết hàng hóa nhập kho</h4>
+                    <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                      Chọn Thương hiệu để lọc nhanh sản phẩm, hoặc để trống để chọn toàn bộ sản phẩm.
+                    </span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={handleAddItem} 
+                    className="btn btn-outline" 
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.875rem' }}
+                  >
+                    <Plus size={14} /> Thêm sản phẩm
                   </button>
                 </div>
                 
-                {items.length === 0 && <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>Chưa có sản phẩm nào được chọn.</p>}
+                {items.length === 0 && (
+                  <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>
+                    Chưa có sản phẩm nào. Hãy bấm "Thêm sản phẩm" để thêm mặt hàng vào phiếu.
+                  </p>
+                )}
                 
                 {items.map((item, index) => (
-                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1fr 1fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'end' }}>
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 0.8fr 1.2fr 1.1fr 1.1fr auto', gap: '0.5rem', marginBottom: '0.65rem', alignItems: 'end' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>Sản phẩm *</label>
-                      <select required value={item.productId} onChange={e => handleItemChange(index, 'productId', e.target.value)}>
-                        <option value="">-- Chọn sản phẩm --</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Thương hiệu (Lọc)</label>
+                      <select 
+                        value={item.brandId || ''} 
+                        onChange={e => handleItemChange(index, 'brandId', e.target.value)}
+                        style={{ fontSize: '0.85rem' }}
+                      >
+                        <option value="">-- Tất cả TH --</option>
+                        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>Số lượng *</label>
-                      <input type="number" required min="1" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} />
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Sản phẩm *</label>
+                      <select 
+                        required 
+                        value={item.productId} 
+                        onChange={e => {
+                          const pId = e.target.value
+                          handleItemChange(index, 'productId', pId)
+                          if (pId && !item.brandId) {
+                            const pObj = products.find(p => String(p.id) === String(pId))
+                            if (pObj && pObj.brandId) {
+                              handleItemChange(index, 'brandId', pObj.brandId)
+                            }
+                          }
+                        }}
+                        style={{ fontSize: '0.85rem' }}
+                      >
+                        <option value="">-- Chọn sản phẩm --</option>
+                        {products
+                          .filter(p => !item.brandId || String(p.brandId) === String(item.brandId))
+                          .map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku || 'SKU-' + p.id})</option>)}
+                      </select>
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>Giá nhập (đ) *</label>
-                      <input type="number" required min="0" value={item.importPrice} onChange={e => handleItemChange(index, 'importPrice', e.target.value)} />
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Số lượng *</label>
+                      <input type="number" required min="1" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', e.target.value)} style={{ fontSize: '0.85rem' }} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>Số lô (Tùy chọn)</label>
-                      <input type="text" placeholder="VD: L01-2023" value={item.batchName} onChange={e => handleItemChange(index, 'batchName', e.target.value)} />
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Giá nhập (đ) *</label>
+                      <input type="number" required min="0" value={item.importPrice} onChange={e => handleItemChange(index, 'importPrice', e.target.value)} style={{ fontSize: '0.85rem' }} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>HSD (Tùy chọn)</label>
-                      <input type="date" value={item.expiryDate} onChange={e => handleItemChange(index, 'expiryDate', e.target.value)} />
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Số lô (Tùy chọn)</label>
+                      <input type="text" placeholder="VD: L01-2024" value={item.batchName} onChange={e => handleItemChange(index, 'batchName', e.target.value)} style={{ fontSize: '0.85rem' }} />
                     </div>
-                    <button type="button" onClick={() => handleRemoveItem(index)} className="btn btn-outline text-danger" style={{ padding: '0.5rem' }}>
-                      <Trash2 size={18} />
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>HSD (Tùy chọn)</label>
+                      <input type="date" value={item.expiryDate} onChange={e => handleItemChange(index, 'expiryDate', e.target.value)} style={{ fontSize: '0.85rem' }} />
+                    </div>
+                    <button type="button" onClick={() => handleRemoveItem(index)} className="btn btn-outline text-danger" style={{ padding: '0.45rem', marginBottom: '2px' }} title="Xóa dòng">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 ))}
                 
-                <div style={{ marginTop: '1rem', textAlign: 'right', fontWeight: 'bold' }}>
-                  Tổng cộng: {items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.importPrice)), 0).toLocaleString()}đ
+                <div style={{ marginTop: '1rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1rem' }}>
+                  Tổng cộng: {items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.importPrice || 0)), 0).toLocaleString()}đ
                 </div>
               </div>
 
               <div className="form-actions margin-top-md">
-                <button type="submit" className="btn btn-primary">Lưu nháp</button>
+                <button type="submit" className="btn btn-primary">Lưu nháp phiếu nhập</button>
                 <button type="button" onClick={handleCloseForm} className="btn btn-outline">Hủy</button>
               </div>
             </form>
@@ -272,6 +327,7 @@ const GoodsReceiptManager = () => {
             
             <div style={{ margin: '1rem 0', padding: '1rem', background: 'rgba(255,255,255,0.5)', borderRadius: '8px' }}>
               <p><strong>Nhà cung cấp:</strong> {selectedReceipt.supplierName}</p>
+              <p><strong>Thương hiệu:</strong> <span style={{ color: '#2563eb', fontWeight: 600 }}>{selectedReceipt.brandName || 'Đa thương hiệu'}</span></p>
               <p><strong>Ngày tạo:</strong> {new Date(selectedReceipt.createdAt).toLocaleString('vi-VN')}</p>
               <p><strong>Người tạo:</strong> {selectedReceipt.createdBy || 'Thủ kho'}</p>
               {selectedReceipt.note && <p><strong>Ghi chú:</strong> {selectedReceipt.note}</p>}
@@ -280,6 +336,7 @@ const GoodsReceiptManager = () => {
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Thương hiệu</th>
                   <th>SKU</th>
                   <th>Sản phẩm</th>
                   <th>SL</th>
@@ -291,6 +348,11 @@ const GoodsReceiptManager = () => {
               <tbody>
                 {selectedReceipt.items.map(item => (
                   <tr key={item.id}>
+                    <td>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2563eb' }}>
+                        {item.brandName || '—'}
+                      </span>
+                    </td>
                     <td>{item.sku}</td>
                     <td>{item.productName}</td>
                     <td style={{ textAlign: 'center' }}>{item.quantity}</td>
@@ -354,6 +416,7 @@ const GoodsReceiptManager = () => {
               <th>ID</th>
               <th>Ngày tạo</th>
               <th>Nhà cung cấp</th>
+              <th>Thương hiệu</th>
               <th>Tổng tiền</th>
               <th>Trạng thái</th>
               <th>Thao tác</th>
@@ -365,6 +428,7 @@ const GoodsReceiptManager = () => {
                 <td>#{rec.id}</td>
                 <td>{new Date(rec.createdAt).toLocaleDateString('vi-VN')}</td>
                 <td><strong>{rec.supplierName}</strong></td>
+                <td><span style={{ color: '#2563eb', fontWeight: 500 }}>{rec.brandName || 'Đa thương hiệu'}</span></td>
                 <td>{rec.totalAmount.toLocaleString()}đ</td>
                 <td>{getStatusBadge(rec.status)}</td>
                 <td>
@@ -376,7 +440,7 @@ const GoodsReceiptManager = () => {
             ))}
             {receipts.length === 0 && (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Chưa có phiếu nhập kho nào</td>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>Chưa có phiếu nhập kho nào</td>
               </tr>
             )}
           </tbody>

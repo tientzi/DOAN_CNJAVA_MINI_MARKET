@@ -92,28 +92,36 @@ const PaymentManager = () => {
   const [txFilter, setTxFilter] = useState('ALL')
   const [approvingId, setApprovingId] = useState(null)
 
-  const handleApprovePayment = async (txId) => {
-    if (!window.confirm(`Xác nhận duyệt thanh toán cho giao dịch #${txId}?`)) return
-    setApprovingId(txId)
+  const handleApprovePayment = async (tx) => {
+    const isCod = tx.paymentMethod === 'COD' || tx.paymentMethod === 'TIEN_MAT'
+    const confirmPrompt = isCod
+      ? `Xác nhận DUYỆT ĐƠN HÀNG COD #${tx.orderId}?\nĐơn hàng sẽ chuyển sang "Đã xác nhận" và sẵn sàng xuất hiện trong Quản lý giao hàng để phân công shipper.`
+      : `Xác nhận DUYỆT THANH TOÁN QR cho đơn #${tx.orderId} (Số tiền: ${tx.amount?.toLocaleString()}đ)?\nThanh toán sẽ thành "Hoàn thành" và đơn hàng chuyển sang "Đã xác nhận" để giao hàng.`
+      
+    if (!window.confirm(confirmPrompt)) return
+    setApprovingId(tx.id)
     try {
-      await api.post(`/api/admin/payments/transactions/${txId}/approve`)
-      setSuccessMsg(`✅ Đã duyệt thanh toán thành công cho giao dịch #${txId}!`)
-      setTimeout(() => setSuccessMsg(''), 3000)
+      const res = await api.post(`/api/admin/payments/transactions/${tx.id}/approve`)
+      setSuccessMsg(`✅ ${res.data?.message || 'Đã duyệt giao dịch thành công!'}`)
+      setTimeout(() => setSuccessMsg(''), 3500)
       fetchPaymentData()
     } catch (err) {
-      alert('Lỗi khi duyệt thanh toán: ' + (err.response?.data?.error || err.message))
+      alert('Lỗi khi duyệt: ' + (err.response?.data?.error || err.message))
     } finally {
       setApprovingId(null)
     }
   }
 
-  const handleRejectPayment = async (txId) => {
-    const reason = window.prompt('Nhập lý do từ chối giao dịch (vd: Chưa nhận được tiền, Sai nội dung):')
+  const handleRejectPayment = async (tx) => {
+    const reason = window.prompt(
+      `⚠️ CẢNH BÁO: Từ chối sẽ HỦY ĐƠN HÀNG #${tx.orderId}, tự động hoàn trả số lượng tồn kho và lô hạn sử dụng.\n\nNhập lý do từ chối (vd: Chưa nhận được chuyển khoản, Khách hủy đơn, Sai thông tin):`,
+      'Chưa nhận được chuyển khoản hoặc thông tin sai'
+    )
     if (reason === null) return
     try {
-      await api.post(`/api/admin/payments/transactions/${txId}/reject`, { reason })
-      setSuccessMsg(`Đã từ chối giao dịch #${txId}!`)
-      setTimeout(() => setSuccessMsg(''), 3000)
+      const res = await api.post(`/api/admin/payments/transactions/${tx.id}/reject`, { reason })
+      setSuccessMsg(`⚠️ ${res.data?.message || 'Đã từ chối giao dịch và hoàn kho thành công!'}`)
+      setTimeout(() => setSuccessMsg(''), 4000)
       fetchPaymentData()
     } catch (err) {
       alert('Lỗi khi từ chối giao dịch: ' + (err.response?.data?.error || err.message))
@@ -403,7 +411,7 @@ const PaymentManager = () => {
       {activeTab === 'LOGS' && (
         <div>
           {/* Sub-filter bar */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <button 
               className={`btn ${txFilter === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setTxFilter('ALL')}
@@ -419,18 +427,25 @@ const PaymentManager = () => {
               ⏳ Chờ duyệt ({transactions.filter(t => t.paymentStatus === 'PENDING').length})
             </button>
             <button 
+              className={`btn ${txFilter === 'APPROVED_COD' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setTxFilter('APPROVED_COD')}
+              style={{ padding: '6px 14px', fontSize: '0.85rem', color: txFilter === 'APPROVED_COD' ? '#fff' : '#0284c7', borderColor: '#0284c7' }}
+            >
+              🚚 Đã duyệt COD ({transactions.filter(t => t.paymentStatus === 'APPROVED_COD').length})
+            </button>
+            <button 
               className={`btn ${txFilter === 'COMPLETED' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setTxFilter('COMPLETED')}
               style={{ padding: '6px 14px', fontSize: '0.85rem', color: txFilter === 'COMPLETED' ? '#fff' : '#16a34a', borderColor: '#16a34a' }}
             >
-              ✓ Đã duyệt ({transactions.filter(t => t.paymentStatus === 'COMPLETED').length})
+              ✓ Đã thanh toán QR ({transactions.filter(t => t.paymentStatus === 'COMPLETED').length})
             </button>
             <button 
               className={`btn ${txFilter === 'FAILED' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setTxFilter('FAILED')}
               style={{ padding: '6px 14px', fontSize: '0.85rem', color: txFilter === 'FAILED' ? '#fff' : '#dc2626', borderColor: '#dc2626' }}
             >
-              ✕ Thất bại ({transactions.filter(t => t.paymentStatus === 'FAILED').length})
+              ✕ Thất bại / Hủy ({transactions.filter(t => t.paymentStatus === 'FAILED').length})
             </button>
           </div>
 
@@ -451,49 +466,90 @@ const PaymentManager = () => {
               <tbody>
                 {transactions
                   .filter(tx => txFilter === 'ALL' || tx.paymentStatus === txFilter)
-                  .map((tx) => (
-                    <tr key={tx.id}>
-                      <td><code>PAY-{String(tx.id).padStart(4, '0')}</code></td>
-                      <td><strong>#{tx.orderId}</strong></td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{tx.customerName}</div>
-                        {tx.customerPhone && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{tx.customerPhone}</div>}
-                      </td>
-                      <td>{tx.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : tx.paymentMethod === 'MOMO' ? 'Ví MoMo' : 'Chuyển khoản QR'}</td>
-                      <td><strong style={{ color: '#0284c7' }}>{tx.amount?.toLocaleString()}đ</strong></td>
-                      <td>
-                        <span className={`status-pill ${tx.paymentStatus === 'COMPLETED' ? 'active' : tx.paymentStatus === 'FAILED' ? 'danger' : 'warning'}`}>
-                          {tx.paymentStatus === 'COMPLETED' ? 'Đã duyệt' : tx.paymentStatus === 'FAILED' ? 'Từ chối' : 'Chờ duyệt'}
-                        </span>
-                      </td>
-                      <td>{tx.paidAt ? new Date(tx.paidAt).toLocaleString('vi-VN') : tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—'}</td>
-                      <td>
-                        {tx.paymentStatus === 'PENDING' ? (
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => handleApprovePayment(tx.id)}
-                              disabled={approvingId === tx.id}
-                              style={{ padding: '4px 10px', fontSize: '0.8rem', background: '#16a34a', borderColor: '#16a34a' }}
-                            >
-                              ✓ Duyệt
-                            </button>
-                            <button
-                              className="btn btn-outline"
-                              onClick={() => handleRejectPayment(tx.id)}
-                              style={{ padding: '4px 10px', fontSize: '0.8rem', color: '#dc2626', borderColor: '#dc2626' }}
-                            >
-                              ✕ Từ chối
-                            </button>
-                          </div>
-                        ) : tx.paymentStatus === 'COMPLETED' ? (
-                          <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 600 }}>Đã thanh toán ✓</span>
-                        ) : (
-                          <span style={{ fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>Đã từ chối ✕</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  .map((tx) => {
+                    const isCod = tx.paymentMethod === 'COD' || tx.paymentMethod === 'TIEN_MAT'
+                    return (
+                      <tr key={tx.id}>
+                        <td><code>PAY-{String(tx.id).padStart(4, '0')}</code></td>
+                        <td><strong>#{tx.orderId}</strong></td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{tx.customerName}</div>
+                          {tx.customerPhone && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{tx.customerPhone}</div>}
+                        </td>
+                        <td>
+                          <span style={{ 
+                            padding: '3px 8px', 
+                            borderRadius: '6px', 
+                            fontSize: '0.82rem',
+                            background: isCod ? '#fef3c7' : '#e0e7ff',
+                            color: isCod ? '#b45309' : '#3730a3',
+                            fontWeight: 600
+                          }}>
+                            {isCod ? 'Tiền mặt (COD)' : tx.paymentMethod === 'MOMO' ? 'Ví MoMo' : 'Chuyển khoản QR'}
+                          </span>
+                        </td>
+                        <td><strong style={{ color: '#0284c7' }}>{tx.amount?.toLocaleString()}đ</strong></td>
+                        <td>
+                          {tx.paymentStatus === 'COMPLETED' && (
+                            <span className="status-pill active">
+                              ✓ Đã thanh toán QR
+                            </span>
+                          )}
+                          {tx.paymentStatus === 'APPROVED_COD' && (
+                            <span className="status-pill" style={{ background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                              🚚 Đã duyệt COD
+                            </span>
+                          )}
+                          {tx.paymentStatus === 'PENDING' && (
+                            <span className="status-pill warning">
+                              ⏳ Chờ duyệt
+                            </span>
+                          )}
+                          {tx.paymentStatus === 'FAILED' && (
+                            <span className="status-pill danger">
+                              ✕ Từ chối / Đã hủy
+                            </span>
+                          )}
+                        </td>
+                        <td>{tx.paidAt ? new Date(tx.paidAt).toLocaleString('vi-VN') : tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                        <td>
+                          {tx.paymentStatus === 'PENDING' ? (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => handleApprovePayment(tx)}
+                                disabled={approvingId === tx.id}
+                                style={{ 
+                                  padding: '5px 10px', 
+                                  fontSize: '0.8rem', 
+                                  background: isCod ? '#0284c7' : '#16a34a', 
+                                  borderColor: isCod ? '#0284c7' : '#16a34a',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                title={isCod ? 'Duyệt đơn COD và chuyển sang Quản lý giao hàng' : 'Xác nhận đã nhận chuyển khoản QR'}
+                              >
+                                {isCod ? '✓ Duyệt đơn COD' : '✓ Duyệt tiền QR'}
+                              </button>
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => handleRejectPayment(tx)}
+                                style={{ padding: '5px 10px', fontSize: '0.8rem', color: '#dc2626', borderColor: '#dc2626', whiteSpace: 'nowrap' }}
+                                title="Từ chối thanh toán và tự động hủy đơn, hoàn trả kho"
+                              >
+                                ✕ Từ chối
+                              </button>
+                            </div>
+                          ) : tx.paymentStatus === 'APPROVED_COD' ? (
+                            <span style={{ fontSize: '0.85rem', color: '#0284c7', fontWeight: 600 }}>Chờ thu tiền khi giao 🚚</span>
+                          ) : tx.paymentStatus === 'COMPLETED' ? (
+                            <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: 600 }}>Đã nhận tiền ✓</span>
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>Đã từ chối (Đã hoàn kho) ✕</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 {transactions.filter(tx => txFilter === 'ALL' || tx.paymentStatus === txFilter).length === 0 && (
                   <tr>
                     <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>

@@ -14,6 +14,8 @@ public class GoodsReceiptDTO {
     private Long id;
     private Long supplierId;
     private String supplierName;
+    private Long brandId;
+    private String brandName;
     private BigDecimal totalAmount;
     private String note;
     private String status;

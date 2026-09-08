@@ -235,6 +235,16 @@ public class ProductService {
     }
 
     @Transactional
+    public ProductDTO toggleProductStatus(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
+        boolean current = product.getIsActive() != null ? product.getIsActive() : true;
+        product.setIsActive(!current);
+        Product updated = productRepository.save(product);
+        return EntityMapper.toProductDTO(updated);
+    }
+
+    @Transactional
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));

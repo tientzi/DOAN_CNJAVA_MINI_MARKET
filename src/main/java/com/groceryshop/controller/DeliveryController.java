@@ -77,7 +77,7 @@ public class DeliveryController {
     @GetMapping("/unassigned")
     public ResponseEntity<List<OrderDTO>> getUnassignedOrders() {
         List<Order> orders = orderRepository.findAll().stream()
-                .filter(o -> o.getShipper() == null && List.of("DA_XAC_NHAN", "CHO_XAC_NHAN").contains(o.getStatus()))
+                .filter(o -> o.getShipper() == null && "DA_XAC_NHAN".equals(o.getStatus()))
                 .sorted(Comparator.comparing(Order::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
 

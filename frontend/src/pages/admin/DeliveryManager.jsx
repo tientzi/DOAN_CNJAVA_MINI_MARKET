@@ -447,9 +447,14 @@ const DeliveryManager = () => {
                           <td>{order.shippingPhone}</td>
                           <td style={{ maxWidth: '280px', fontSize: '0.88rem' }}>{order.shippingAddress}</td>
                           <td>
-                            <strong style={{ color: isCod ? '#b45309' : '#059669' }}>
-                              {isCod ? `${(order.finalAmount || 0).toLocaleString()}đ` : '0đ (Đã TT)'}
-                            </strong>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <strong style={{ color: isCod ? '#b45309' : '#059669' }}>
+                                {isCod ? `${(order.finalAmount || 0).toLocaleString()}đ (Thu COD)` : '0đ (Đã TT QR)'}
+                              </strong>
+                              <span style={{ fontSize: '0.75rem', color: isCod ? '#0369a1' : '#15803d', fontWeight: 600 }}>
+                                {isCod ? '🚚 Đã duyệt COD' : '✓ Đã duyệt tiền QR'}
+                              </span>
+                            </div>
                           </td>
                           <td style={{ fontSize: '0.82rem', color: '#64748b' }}>{order.note || '—'}</td>
                         </tr>

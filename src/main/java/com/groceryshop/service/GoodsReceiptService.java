@@ -43,6 +43,9 @@ public class GoodsReceiptService {
     private UserRepository userRepository;
 
     @Autowired
+    private com.groceryshop.repository.BrandRepository brandRepository;
+
+    @Autowired
     private InventoryLedgerService ledgerService;
 
     @Autowired
@@ -66,6 +69,11 @@ public class GoodsReceiptService {
         Supplier supplier = supplierRepository.findById(dto.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
 
+        Brand brand = null;
+        if (dto.getBrandId() != null) {
+            brand = brandRepository.findById(dto.getBrandId()).orElse(null);
+        }
+
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BadRequestException("Phiếu nhập phải có ít nhất 1 sản phẩm");
         }
@@ -74,6 +82,7 @@ public class GoodsReceiptService {
 
         GoodsReceipt receipt = GoodsReceipt.builder()
                 .supplier(supplier)
+                .brand(brand)
                 .totalAmount(totalAmount)
                 .note(dto.getNote())
                 .status("DRAFT")

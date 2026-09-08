@@ -24,4 +24,9 @@ public class UserController {
         userService.toggleUserStatus(id);
         return ResponseEntity.ok().body("{\"message\": \"Cập nhật trạng thái tài khoản thành công\"}");
     }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<?> getUserDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserDetails(id));
+    }
 }

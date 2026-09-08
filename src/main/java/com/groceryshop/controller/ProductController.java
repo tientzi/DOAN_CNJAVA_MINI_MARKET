@@ -57,6 +57,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateProduct(id, dto));
     }
 
+    @PatchMapping("/api/admin/products/{id}/toggle-status")
+    public ResponseEntity<ProductDTO> toggleProductStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.toggleProductStatus(id));
+    }
+
     @DeleteMapping("/api/admin/products/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

@@ -29,6 +29,9 @@ public class PaymentConfigController {
     @Autowired
     private com.groceryshop.service.FileStorageService fileStorageService;
 
+    @Autowired
+    private com.groceryshop.service.OrderService orderService;
+
     /**
      * Public API cho trang Checkout: Chỉ lấy các phương thức đang BẬT
      */
@@ -114,6 +117,8 @@ public class PaymentConfigController {
             map.put("id", p.getId());
             map.put("orderId", p.getOrder() != null ? p.getOrder().getId() : null);
             map.put("customerName", p.getOrder() != null ? p.getOrder().getShippingName() : "—");
+            map.put("orderStatus", p.getOrder() != null ? p.getOrder().getStatus() : null);
+            map.put("deliveryNote", p.getOrder() != null ? p.getOrder().getDeliveryNote() : null);
             map.put("paymentMethod", p.getPaymentMethod());
             map.put("paymentStatus", p.getPaymentStatus());
             map.put("amount", p.getAmount());
@@ -140,8 +145,13 @@ public class PaymentConfigController {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch thanh toán #" + id));
 
-        payment.setPaymentStatus("COMPLETED");
-        payment.setPaidAt(LocalDateTime.now());
+        boolean isCod = "TIEN_MAT".equalsIgnoreCase(payment.getPaymentMethod()) || "COD".equalsIgnoreCase(payment.getPaymentMethod());
+        if (isCod) {
+            payment.setPaymentStatus("APPROVED_COD");
+        } else {
+            payment.setPaymentStatus("COMPLETED");
+            payment.setPaidAt(LocalDateTime.now());
+        }
         paymentRepository.save(payment);
 
         Order order = payment.getOrder();
@@ -152,8 +162,8 @@ public class PaymentConfigController {
         }
 
         Map<String, Object> res = new HashMap<>();
-        res.put("message", "Đã duyệt thanh toán thành công!");
-        res.put("paymentStatus", "COMPLETED");
+        res.put("message", isCod ? "Đã duyệt đơn hàng Tiền mặt (COD) thành công!" : "Đã duyệt thanh toán QR thành công!");
+        res.put("paymentStatus", payment.getPaymentStatus());
         return ResponseEntity.ok(res);
     }
 
@@ -169,16 +179,20 @@ public class PaymentConfigController {
         payment.setPaymentStatus("FAILED");
         paymentRepository.save(payment);
 
-        String reason = payload != null ? payload.getOrDefault("reason", "Chưa nhận được chuyển khoản hoặc nội dung sai") : "Chưa nhận được tiền";
+        String reason = payload != null ? payload.getOrDefault("reason", "Chưa nhận được tiền hoặc thông tin thanh toán không hợp lệ") : "Chưa nhận được tiền";
         Order order = payment.getOrder();
         if (order != null) {
+            order.setStatus("HUY");
             order.setDeliveryNote("[Từ chối thanh toán]: " + reason);
             order.setUpdatedAt(LocalDateTime.now());
             orderRepository.save(order);
+
+            // Tự động hoàn lại tồn kho, lô hàng và mã giảm giá
+            orderService.restoreInventoryAndCoupon(order, null, "Từ chối thanh toán đơn #" + order.getId() + ": " + reason);
         }
 
         Map<String, Object> res = new HashMap<>();
-        res.put("message", "Đã từ chối giao dịch thanh toán!");
+        res.put("message", "Đã từ chối thanh toán, hủy đơn và hoàn trả kho thành công!");
         res.put("paymentStatus", "FAILED");
         return ResponseEntity.ok(res);
     }

@@ -48,7 +48,7 @@ const AdminLayout = () => {
         { path: '/admin/inventory', name: 'Tồn kho', icon: <PackageCheck size={18} /> },
         { path: '/admin/inventory-ledger', name: 'Lịch sử kho', icon: <ClipboardList size={18} /> },
         { path: '/admin/goods-receipts', name: 'Phiếu nhập kho', icon: <FileText size={18} /> },
-        { path: '/admin/suppliers', name: 'Nhà cung cấp', icon: <Building2 size={18} /> },
+        { path: '/admin/suppliers', name: 'Nhà cung cấp & Thương hiệu', icon: <Building2 size={18} /> },
       ]
     },
     {

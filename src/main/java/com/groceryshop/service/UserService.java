@@ -3,6 +3,11 @@ package com.groceryshop.service;
 import com.groceryshop.dto.RegisterRequest;
 import com.groceryshop.dto.UserDTO;
 import com.groceryshop.dto.ProfileUpdateRequest;
+import com.groceryshop.dto.UserDetailDTO;
+import com.groceryshop.dto.AddressDTO;
+import com.groceryshop.dto.OrderDTO;
+import com.groceryshop.dto.LoyaltyDTO;
+import com.groceryshop.entity.Order;
 import com.groceryshop.entity.Role;
 import com.groceryshop.entity.User;
 import com.groceryshop.exception.BadRequestException;
@@ -10,6 +15,8 @@ import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.mapper.EntityMapper;
 import com.groceryshop.repository.RoleRepository;
 import com.groceryshop.repository.UserRepository;
+import com.groceryshop.repository.AddressRepository;
+import com.groceryshop.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +32,12 @@ public class UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Transactional
     public UserDTO registerUser(RegisterRequest request) {
@@ -227,4 +240,67 @@ public class UserService {
                 .allTiers(allTiers)
                 .build();
     }
+
+    public UserDetailDTO getUserDetails(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với id: " + userId));
+
+        // 1. Thông tin Loyalty Tier
+        LoyaltyDTO loyaltyInfo = getLoyaltyInfo(userId);
+
+        // 2. Danh sách địa chỉ nhận hàng
+        List<AddressDTO> addresses = addressRepository.findByUserId(userId).stream()
+                .map(EntityMapper::toAddressDTO)
+                .collect(Collectors.toList());
+
+        // 3. Lịch sử và thống kê đơn hàng
+        List<Order> orders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        long totalOrders = orders.size();
+        long completedOrders = orders.stream()
+                .filter(o -> "COMPLETED".equalsIgnoreCase(o.getStatus()) 
+                        || "HOAN_THANH".equalsIgnoreCase(o.getStatus())
+                        || "DA_GIAO".equalsIgnoreCase(o.getStatus()) 
+                        || "DA_THANH_TOAN".equalsIgnoreCase(o.getStatus()))
+                .count();
+        long cancelledOrders = orders.stream()
+                .filter(o -> "CANCELLED".equalsIgnoreCase(o.getStatus()) 
+                        || "HUY".equalsIgnoreCase(o.getStatus())
+                        || "DA_HUY".equalsIgnoreCase(o.getStatus()))
+                .count();
+        double totalSpent = orders.stream()
+                .filter(o -> !"CANCELLED".equalsIgnoreCase(o.getStatus()) 
+                        && !"HUY".equalsIgnoreCase(o.getStatus())
+                        && !"DA_HUY".equalsIgnoreCase(o.getStatus()) 
+                        && (o.getFinalAmount() != null || o.getTotalAmount() != null))
+                .mapToDouble(o -> o.getFinalAmount() != null ? o.getFinalAmount().doubleValue() : o.getTotalAmount().doubleValue())
+                .sum();
+
+        List<OrderDTO> recentOrders = orders.stream()
+                .limit(10)
+                .map(EntityMapper::toOrderDTO)
+                .collect(Collectors.toList());
+
+        return UserDetailDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .roleName(user.getRole() != null ? user.getRole().getName() : "ROLE_USER")
+                .isActive(user.getIsActive())
+                .loyaltyPoints(user.getLoyaltyPoints())
+                .membershipTier(user.getMembershipTier())
+                .provider(user.getProvider())
+                .avatarUrl(user.getAvatarUrl())
+                .createdAt(user.getCreatedAt())
+                .loyaltyInfo(loyaltyInfo)
+                .addresses(addresses)
+                .totalOrders(totalOrders)
+                .totalSpent(totalSpent)
+                .completedOrders(completedOrders)
+                .cancelledOrders(cancelledOrders)
+                .recentOrders(recentOrders)
+                .build();
+    }
 }
+

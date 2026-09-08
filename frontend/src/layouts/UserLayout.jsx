@@ -4,6 +4,7 @@ import { AuthContext } from '../contexts/AuthContext'
 import { CartContext } from '../contexts/CartContext'
 import { ShoppingCart, User as UserIcon, LogOut, Search, Store, Crown } from 'lucide-react'
 import ChatBot from '../components/ChatBot'
+import CustomerFeedbackWidget from '../components/CustomerFeedbackWidget'
 import './Layouts.css'
 
 const UserLayout = () => {
@@ -135,6 +136,7 @@ const UserLayout = () => {
           <p>&copy; 2026 MiniMart Supermarket. All rights reserved.</p>
         </div>
       </footer>
+      <CustomerFeedbackWidget />
       <ChatBot />
     </div>
   )

@@ -57,4 +57,5 @@ Desktop.ini
 # *.sql (Cho phép push file sql lên git)
 .env
 file_bao_cao/*.mp4
+uploads/
 

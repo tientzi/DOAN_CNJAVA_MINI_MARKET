@@ -223,6 +223,21 @@ public class OrderService {
         order.setStatus("HUY");
         Order updatedOrder = orderRepository.save(order);
 
+        restoreInventoryAndCoupon(order, order.getUser(), "Hoàn trả do khách hàng hủy đơn #" + order.getId());
+
+        if (order.getPayment() != null) {
+            Payment payment = order.getPayment();
+            payment.setPaymentStatus("FAILED");
+            paymentRepository.save(payment);
+        }
+
+        return EntityMapper.toOrderDTO(updatedOrder);
+    }
+
+    @Transactional
+    public void restoreInventoryAndCoupon(Order order, User performer, String reason) {
+        if (order == null || order.getItems() == null) return;
+
         for (OrderItem item : order.getItems()) {
             if (item.getProduct() != null) {
                 Inventory inventory = item.getProduct().getInventory();
@@ -230,10 +245,10 @@ public class OrderService {
                     inventory.setCurrentStock(inventory.getCurrentStock() + item.getQuantity());
                     inventoryRepository.save(inventory);
                     
-                    // Add back to batch (just add to the earliest valid batch, or any batch)
+                    // Add back to batch (add to the earliest valid batch)
                     List<ProductBatch> batches = productBatchRepository.findByProductIdAndQuantityGreaterThanOrderByExpiryDateAsc(item.getProduct().getId(), -1);
                     if (!batches.isEmpty()) {
-                        ProductBatch firstBatch = batches.get(0); // Add back to the closest expiry batch
+                        ProductBatch firstBatch = batches.get(0);
                         firstBatch.setQuantity(firstBatch.getQuantity() + item.getQuantity());
                         productBatchRepository.save(firstBatch);
                     }
@@ -243,8 +258,8 @@ public class OrderService {
                         "RETURN", 
                         item.getQuantity(), 
                         order.getId(), 
-                        "Hoàn trả do hủy đơn #" + order.getId(), 
-                        order.getUser()
+                        (reason != null && !reason.trim().isEmpty()) ? reason : ("Hoàn trả do hủy đơn #" + order.getId()), 
+                        performer
                     );
                 }
             }
@@ -258,14 +273,6 @@ public class OrderService {
                 }
             });
         }
-
-        if (order.getPayment() != null) {
-            Payment payment = order.getPayment();
-            payment.setPaymentStatus("FAILED");
-            paymentRepository.save(payment);
-        }
-
-        return EntityMapper.toOrderDTO(updatedOrder);
     }
 
     @Transactional
@@ -299,40 +306,7 @@ public class OrderService {
         order.setStatus(newStatus);
 
         if (newStatus.equals("HUY")) {
-            for (OrderItem item : order.getItems()) {
-                if (item.getProduct() != null) {
-                    Inventory inventory = item.getProduct().getInventory();
-                    if (inventory != null) {
-                        inventory.setCurrentStock(inventory.getCurrentStock() + item.getQuantity());
-                        inventoryRepository.save(inventory);
-                        
-                        // Add back to batch (just add to the earliest valid batch)
-                        List<ProductBatch> batches = productBatchRepository.findByProductIdAndQuantityGreaterThanOrderByExpiryDateAsc(item.getProduct().getId(), -1);
-                        if (!batches.isEmpty()) {
-                            ProductBatch firstBatch = batches.get(0);
-                            firstBatch.setQuantity(firstBatch.getQuantity() + item.getQuantity());
-                            productBatchRepository.save(firstBatch);
-                        }
-                        
-                        ledgerService.recordLog(
-                            inventory, 
-                            "RETURN", 
-                            item.getQuantity(), 
-                            order.getId(), 
-                            "Hoàn trả do hủy đơn (Admin/Shipper) #" + order.getId(), 
-                            null
-                        );
-                    }
-                }
-            }
-            if (order.getCouponCode() != null) {
-                couponRepository.findByCode(order.getCouponCode()).ifPresent(coupon -> {
-                    if (coupon.getUsedCount() > 0) {
-                        coupon.setUsedCount(coupon.getUsedCount() - 1);
-                        couponRepository.save(coupon);
-                    }
-                });
-            }
+            restoreInventoryAndCoupon(order, null, "Hoàn trả do hủy đơn (Admin/Shipper) #" + order.getId());
             if (order.getPayment() != null) {
                 Payment payment = order.getPayment();
                 payment.setPaymentStatus("FAILED");

@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, Long> {
     Page<GoodsReceipt> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    boolean existsBySupplierId(Long supplierId);
 }

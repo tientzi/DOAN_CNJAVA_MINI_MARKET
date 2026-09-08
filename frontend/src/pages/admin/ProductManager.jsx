@@ -172,6 +172,15 @@ const ProductManager = () => {
     setShowForm(true)
   }
 
+  const handleToggleStatus = async (id) => {
+    try {
+      await api.patch(`/api/admin/products/${id}/toggle-status`)
+      fetchData()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Không thể đổi trạng thái sản phẩm')
+    }
+  }
+
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return
     try {
@@ -293,10 +302,6 @@ const ProductManager = () => {
                 <input type="text" placeholder="Nhập mã SKU..." value={sku} onChange={(e) => setSku(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Mã vạch (Barcode)</label>
-                <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-              </div>
-              <div className="form-group">
                 <label>Giá bán (đ)</label>
                 <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} />
               </div>
@@ -319,12 +324,12 @@ const ProductManager = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Vị trí kệ kho</label>
-                <input type="text" placeholder="Nhập vị trí kệ..." value={location} onChange={(e) => setLocation(e.target.value)} />
-              </div>
-              <div className="form-group">
                 <label>Đơn vị tính</label>
-                <input type="text" placeholder="Kg, Hộp, Chai..." required value={unit} onChange={(e) => setUnit(e.target.value)} />
+                <select required value={unit} onChange={(e) => setUnit(e.target.value)}>
+                  {['Cái', 'Chai', 'Lon', 'Gói', 'Hộp', 'Túi', 'Thùng', 'Lốc', 'Kg', 'Gram', 'Bó', 'Khay', 'Vỉ'].map(u => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>Trọng lượng (gram)</label>
@@ -497,10 +502,16 @@ const ProductManager = () => {
                     </span>
                   </td>
                   <td>
-                    <span className={`status-pill ${prod.isActive ? 'active' : 'inactive'}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(prod.id)}
+                      className={`status-pill ${prod.isActive ? 'active' : 'inactive'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}
+                      title="Bấm để bật/tắt hiển thị bán hàng"
+                    >
                       {prod.isActive ? <Eye size={12} /> : <EyeOff size={12} />}
                       {prod.isActive ? 'Bán trực tuyến' : 'Ẩn'}
-                    </span>
+                    </button>
                   </td>
                   <td className="no-print">
                     <div className="table-actions">
