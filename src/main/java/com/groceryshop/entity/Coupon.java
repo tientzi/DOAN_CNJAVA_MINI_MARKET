@@ -47,6 +47,13 @@ public class Coupon {
     @Column(name = "max_uses")
     private Integer maxUses;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "applicable_category_id")
+    private Category applicableCategory;
+
+    @Column(name = "max_discount_amount", precision = 18, scale = 2)
+    private BigDecimal maxDiscountAmount;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 

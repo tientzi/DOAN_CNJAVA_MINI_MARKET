@@ -17,4 +17,6 @@ public class CartItemDTO {
     private BigDecimal productSalePrice;
     private Integer quantity;
     private Integer maxStock;
+    private Long categoryId;
+    private String categoryName;
 }

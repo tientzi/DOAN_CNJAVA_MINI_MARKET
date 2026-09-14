@@ -76,19 +76,61 @@ const OrderManager = () => {
     setFilteredOrders(result)
   }, [statusFilter, searchTerm, orders])
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    if (!window.confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng sang "${getStatusLabel(newStatus)}"?`)) return
+  const renderPaymentBadge = (payStatus, payMethod) => {
+    const isCod = payMethod === 'COD' || payMethod === 'TIEN_MAT'
+    if (payStatus === 'COMPLETED') {
+      return (
+        <span className="status-pill active" style={{ fontSize: '0.75rem', padding: '2px 7px', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', display: 'inline-block' }}>
+          Đã thanh toán
+        </span>
+      )
+    }
+    if (payStatus === 'APPROVED_COD') {
+      return (
+        <span className="status-pill" style={{ fontSize: '0.75rem', padding: '2px 7px', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', display: 'inline-block' }}>
+          Đã duyệt COD
+        </span>
+      )
+    }
+    if (payStatus === 'FAILED') {
+      return (
+        <span className="status-pill inactive" style={{ fontSize: '0.75rem', padding: '2px 7px', display: 'inline-block' }}>
+          Thanh toán hủy
+        </span>
+      )
+    }
+    return (
+      <span className="status-pill warning" style={{ fontSize: '0.75rem', padding: '2px 7px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', display: 'inline-block' }}>
+        {isCod ? 'Chờ duyệt COD' : 'Chờ duyệt QR'}
+      </span>
+    )
+  }
+
+  const handleUpdateStatus = async (orderId, newStatus, targetOrder = null) => {
+    const currentOrd = targetOrder || orders.find(o => o.id === orderId) || selectedOrder
+    const isCod = currentOrd?.paymentMethod === 'COD' || currentOrd?.paymentMethod === 'TIEN_MAT'
+
+    let confirmMsg = `Bạn có chắc muốn cập nhật trạng thái đơn hàng sang "${getStatusLabel(newStatus)}"?`
+    if (newStatus === 'DA_XAC_NHAN') {
+      confirmMsg = isCod
+        ? `Xác nhận DUYỆT ĐƠN HÀNG COD #${orderId}?\n• Đơn hàng chuyển sang "Đã xác nhận".\n• Tự động duyệt thanh toán COD (thu tiền khi giao nhận).\n• Đơn hàng sẵn sàng để phân công Shipper giao ngay.`
+        : `Xác nhận DUYỆT ĐƠN HÀNG & THANH TOÁN QR #${orderId}?\n• Đơn hàng chuyển sang "Đã xác nhận".\n• Tự động xác nhận ĐÃ THANH TOÁN (Số tiền: ${currentOrd?.finalAmount?.toLocaleString()}đ).\n• Đơn hàng sẵn sàng để phân công Shipper giao ngay.`
+    } else if (newStatus === 'HUY') {
+      confirmMsg = `⚠️ CẢNH BÁO: Xác nhận HỦY ĐƠN HÀNG #${orderId}?\n• Đơn hàng và thanh toán sẽ hủy (FAILED).\n• Tự động hoàn trả tồn kho theo từng lô hạn dùng.`
+    }
+
+    if (!window.confirm(confirmMsg)) return
     setUpdating(true)
     setError('')
     try {
       const response = await api.put(`/api/admin/orders/${orderId}/status`, { status: newStatus })
-      // Cập nhật state cục bộ
       const updatedOrder = response.data
       setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o))
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(updatedOrder)
       }
-      alert('Cập nhật trạng thái thành công!')
+      fetchOrders()
+      alert(newStatus === 'DA_XAC_NHAN' ? '✅ Đã duyệt đơn hàng và thanh toán thành công!' : 'Cập nhật trạng thái thành công!')
     } catch (err) {
       console.error(err)
       alert(err.response?.data?.error || 'Lỗi khi cập nhật trạng thái đơn hàng')
@@ -101,7 +143,7 @@ const OrderManager = () => {
     if (!window.confirm(`Xác nhận đơn hàng #${orderId} đã nhận được tiền chuyển khoản MoMo / Ngân hàng?`)) return
     try {
       const res = await api.patch(`/api/admin/orders/${orderId}/confirm-payment`)
-      alert('Đã xác nhận thanh toán MoMo thành công!')
+      alert('Đã xác nhận thanh toán thành công!')
       fetchOrders()
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(res.data)
@@ -258,14 +300,19 @@ const OrderManager = () => {
                   </td>
                   <td>{order.shippingPhone}</td>
                   <td><strong>{order.finalAmount?.toLocaleString()}đ</strong></td>
-                  <td>{order.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : 'Chuyển khoản'}</td>
+                  <td>
+                    <div style={{ fontWeight: '500' }}>{order.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : 'Chuyển khoản'}</div>
+                    <div style={{ marginTop: '4px' }}>
+                      {renderPaymentBadge(order.paymentStatus, order.paymentMethod)}
+                    </div>
+                  </td>
                   <td>
                     <span className={`status-pill ${getStatusPillClass(order.status)}`}>
                       {getStatusLabel(order.status)}
                     </span>
                   </td>
                   <td>
-                    <div className="table-actions">
+                    <div className="table-actions" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                       <button 
                         onClick={() => setSelectedOrder(order)} 
                         className="action-btn view" 
@@ -273,6 +320,29 @@ const OrderManager = () => {
                       >
                         <Eye size={16} />
                       </button>
+                      {order.status === 'CHO_XAC_NHAN' && (
+                        <button
+                          onClick={() => handleUpdateStatus(order.id, 'DA_XAC_NHAN', order)}
+                          disabled={updating}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '5px 9px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.25)'
+                          }}
+                          title="Duyệt đơn hàng và xác nhận thanh toán (1-chạm)"
+                        >
+                          <CheckCircle2 size={13} /> Duyệt đơn
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -464,6 +534,9 @@ const OrderManager = () => {
                   <div>
                     <strong>Phương thức:</strong> {selectedOrder.paymentMethod === 'COD' ? 'Tiền mặt khi nhận (COD)' : 'Chuyển khoản (VietQR / MoMo)'}
                   </div>
+                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong>Trạng thái TT:</strong> {renderPaymentBadge(selectedOrder.paymentStatus, selectedOrder.paymentMethod)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -556,18 +629,18 @@ const OrderManager = () => {
                 {selectedOrder.status === 'CHO_XAC_NHAN' && (
                   <>
                     <button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, 'DA_XAC_NHAN')} 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, 'DA_XAC_NHAN', selectedOrder)} 
                       disabled={updating}
                       className="btn btn-primary"
-                      style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}
+                      style={{ background: 'linear-gradient(135deg, #10b981, #059669)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <CheckCircle2 size={16} /> Xác nhận đơn
+                      <CheckCircle2 size={16} /> Duyệt đơn & Xác nhận thanh toán
                     </button>
                     <button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, 'HUY')} 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, 'HUY', selectedOrder)} 
                       disabled={updating}
                       className="btn btn-outline"
-                      style={{ borderColor: 'var(--admin-danger)', color: 'var(--admin-danger)' }}
+                      style={{ borderColor: 'var(--admin-danger)', color: 'var(--admin-danger)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <XCircle size={16} /> Hủy đơn
                     </button>

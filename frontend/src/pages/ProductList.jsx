@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { CartContext } from '../contexts/CartContext'
 import { AuthContext } from '../contexts/AuthContext'
-import { Filter, RotateCcw } from 'lucide-react'
+import { Filter, RotateCcw, LayoutGrid } from 'lucide-react'
 import { ProductCard } from './Home'
 import ProductModal from '../components/ProductModal'
 import './ProductList.css'
@@ -141,7 +141,10 @@ const ProductList = () => {
                 checked={categoryId === ''}
                 onChange={() => updateFilters('categoryId', '')}
               />
-              <span>Tất cả danh mục</span>
+              <div className="filter-cat-thumb-box all-cat">
+                <LayoutGrid size={15} />
+              </div>
+              <span className="filter-cat-name">Tất cả danh mục</span>
             </label>
             {categories.map(cat => (
               <label key={cat.id} className="filter-option-item">
@@ -151,7 +154,15 @@ const ProductList = () => {
                   checked={categoryId === cat.id.toString()}
                   onChange={() => updateFilters('categoryId', cat.id.toString())}
                 />
-                <span>{cat.name}</span>
+                <div className="filter-cat-thumb-box">
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="filter-cat-thumb"
+                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=80&auto=format&fit=crop' }}
+                  />
+                </div>
+                <span className="filter-cat-name">{cat.name}</span>
               </label>
             ))}
           </div>

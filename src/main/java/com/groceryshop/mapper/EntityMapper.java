@@ -94,6 +94,8 @@ public class EntityMapper {
                 .productSalePrice(product != null ? product.getSalePrice() : null)
                 .quantity(item.getQuantity())
                 .maxStock(product != null && product.getInventory() != null ? product.getInventory().getCurrentStock() : 0)
+                .categoryId(product != null && product.getCategory() != null ? product.getCategory().getId() : null)
+                .categoryName(product != null && product.getCategory() != null ? product.getCategory().getName() : null)
                 .build();
     }
 
@@ -213,6 +215,9 @@ public class EntityMapper {
                 .usedCount(coupon.getUsedCount())
                 .maxUses(coupon.getMaxUses())
                 .isActive(coupon.getIsActive())
+                .applicableCategoryId(coupon.getApplicableCategory() != null ? coupon.getApplicableCategory().getId() : null)
+                .applicableCategoryName(coupon.getApplicableCategory() != null ? coupon.getApplicableCategory().getName() : null)
+                .maxDiscountAmount(coupon.getMaxDiscountAmount())
                 .build();
     }
 
@@ -230,6 +235,7 @@ public class EntityMapper {
                 .usedCount(dto.getUsedCount())
                 .maxUses(dto.getMaxUses())
                 .isActive(dto.getIsActive())
+                .maxDiscountAmount(dto.getMaxDiscountAmount())
                 .build();
     }
 

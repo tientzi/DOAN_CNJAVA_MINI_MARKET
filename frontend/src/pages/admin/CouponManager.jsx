@@ -6,6 +6,7 @@ import './AdminPages.css'
 
 const CouponManager = () => {
   const [coupons, setCoupons] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -22,6 +23,8 @@ const CouponManager = () => {
   const [minOrderAmount, setMinOrderAmount] = useState(0)
   const [maxUses, setMaxUses] = useState(100)
   const [isActive, setIsActive] = useState(true)
+  const [applicableCategoryId, setApplicableCategoryId] = useState('')
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState('')
   const [error, setError] = useState('')
 
   const fetchCoupons = async () => {
@@ -35,8 +38,18 @@ const CouponManager = () => {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/api/public/categories')
+      setCategories(res.data || [])
+    } catch (err) {
+      console.error('Lỗi khi lấy danh mục', err)
+    }
+  }
+
   useEffect(() => {
     fetchCoupons()
+    fetchCategories()
   }, [])
 
   const handleSubmit = async (e) => {
@@ -73,7 +86,9 @@ const CouponManager = () => {
       endDate: formattedEndDate,
       minOrderAmount: Number(minOrderAmount),
       maxUses: Number(maxUses),
-      isActive
+      isActive,
+      applicableCategoryId: applicableCategoryId ? Number(applicableCategoryId) : null,
+      maxDiscountAmount: (discountType === 'PERCENTAGE' && maxDiscountAmount) ? Number(maxDiscountAmount) : null
     }
 
     try {
@@ -108,6 +123,8 @@ const CouponManager = () => {
     setMinOrderAmount(cp.minOrderAmount)
     setMaxUses(cp.maxUses)
     setIsActive(cp.isActive)
+    setApplicableCategoryId(cp.applicableCategoryId || '')
+    setMaxDiscountAmount(cp.maxDiscountAmount || '')
     setShowForm(true)
   }
 
@@ -133,6 +150,8 @@ const CouponManager = () => {
     setMinOrderAmount(0)
     setMaxUses(100)
     setIsActive(true)
+    setApplicableCategoryId('')
+    setMaxDiscountAmount('')
     setError('')
   }
 
@@ -183,6 +202,26 @@ const CouponManager = () => {
                 <label>Ngày hết hạn hiệu lực</label>
                 <input type="datetime-local" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
+              <div className="form-group">
+                <label>Áp dụng cho danh mục</label>
+                <select value={applicableCategoryId} onChange={(e) => setApplicableCategoryId(e.target.value)}>
+                  <option value="">Toàn bộ đơn hàng (Tất cả sản phẩm)</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {discountType === 'PERCENTAGE' && (
+                <div className="form-group">
+                  <label>Giảm tối đa (VNĐ) <small style={{ color: 'var(--primary)', fontWeight: 600 }}>(Mức trần %)</small></label>
+                  <input
+                    type="number"
+                    placeholder="VD: 50000 (để trống nếu không giới hạn)"
+                    value={maxDiscountAmount}
+                    onChange={(e) => setMaxDiscountAmount(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>Số lượt sử dụng tối đa</label>
                 <input type="number" required value={maxUses} onChange={(e) => setMaxUses(e.target.value)} />
@@ -271,8 +310,10 @@ const CouponManager = () => {
               <th>ID</th>
               <th>Mã</th>
               <th>Mô tả</th>
+              <th>Áp dụng cho</th>
               <th>Loại giảm</th>
               <th>Giá trị giảm</th>
+              <th>Giảm tối đa</th>
               <th>Đơn tối thiểu</th>
               <th>Đã dùng</th>
               <th>Lượt tối đa</th>
@@ -288,8 +329,22 @@ const CouponManager = () => {
                   <td>{cp.id}</td>
                   <td><strong>{cp.code}</strong></td>
                   <td>{cp.description || '—'}</td>
+                  <td>
+                    {cp.applicableCategoryName ? (
+                      <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600 }}>
+                        {cp.applicableCategoryName}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Toàn bộ đơn</span>
+                    )}
+                  </td>
                   <td>{cp.discountType === 'PERCENTAGE' ? 'Phần trăm' : 'Tiền mặt'}</td>
                   <td>{cp.discountType === 'PERCENTAGE' ? `${cp.discountValue}%` : `${cp.discountValue.toLocaleString()}đ`}</td>
+                  <td>
+                    {cp.maxDiscountAmount ? (
+                      <strong style={{ color: '#ea580c' }}>{Number(cp.maxDiscountAmount).toLocaleString()}đ</strong>
+                    ) : '—'}
+                  </td>
                   <td>{cp.minOrderAmount.toLocaleString()}đ</td>
                   <td>{cp.usedCount}</td>
                   <td>{cp.maxUses}</td>

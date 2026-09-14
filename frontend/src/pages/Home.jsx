@@ -8,7 +8,6 @@ import ProductModal from '../components/ProductModal'
 import './Home.css'
 
 const Home = () => {
-  const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -22,9 +21,7 @@ const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const catRes = await api.get('/api/public/categories')
         const prodRes = await api.get('/api/public/products')
-        setCategories(catRes.data)
         setProducts(prodRes.data)
       } catch (err) {
         console.error('Không thể lấy dữ liệu', err)
@@ -81,10 +78,10 @@ const Home = () => {
     .filter(p => !saleIds.has(p.id) && !newIds.has(p.id))
     .slice(0, 4)
 
-
   return (
     <div className="home-page">
-      <section className="hero-banner glass">
+      {/* Hero Banner toàn chiều rộng */}
+      <div className="hero-banner glass">
         <div className="banner-content">
           <span className="banner-tag"><Sparkles size={16} /> Giá rẻ mỗi ngày</span>
           <h1>Thực Phẩm Tươi Sạch <br />Cho Bữa Ăn Gia Đình</h1>
@@ -97,7 +94,7 @@ const Home = () => {
         <div className="banner-image-container">
           <img src="/uploads/banner_hero.png" alt="MiniMart Fresh Banner" className="banner-image" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600&auto=format&fit=crop' }} />
         </div>
-      </section>
+      </div>
 
       <section className="features-badges">
         <div className="feature-badge-item">
@@ -120,20 +117,6 @@ const Home = () => {
             <h4>Giao nhanh 2h</h4>
             <p>Freeship đơn từ 200k</p>
           </div>
-        </div>
-      </section>
-
-      <section className="categories-section">
-        <h2 className="section-title">Danh mục sản phẩm</h2>
-        <div className="categories-grid">
-          {categories.map(cat => (
-            <Link key={cat.id} to={`/products?categoryId=${cat.id}`} className="category-card glass">
-              <div className="category-img-box">
-                <img src={cat.image} alt={cat.name} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
-              </div>
-              <h4>{cat.name}</h4>
-            </Link>
-          ))}
         </div>
       </section>
 

@@ -279,6 +279,16 @@ const Loyalty = () => {
                     <p className="voucher-info">{c.description || 'Ưu đãi mua sắm thực phẩm sạch tại hệ thống MiniMart'}</p>
 
                     <div className="voucher-footer">
+                      {c.applicableCategoryName && (
+                        <span className="condition-item" style={{ color: '#0369a1' }}>
+                          Áp dụng: <strong>{c.applicableCategoryName}</strong>
+                        </span>
+                      )}
+                      {c.maxDiscountAmount > 0 && (
+                        <span className="condition-item" style={{ color: '#ea580c' }}>
+                          Tối đa: <strong>{c.maxDiscountAmount?.toLocaleString()}đ</strong>
+                        </span>
+                      )}
                       {c.minOrderAmount > 0 && (
                         <span className="condition-item">
                           Đơn tối thiểu: <strong>{c.minOrderAmount?.toLocaleString()}đ</strong>

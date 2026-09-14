@@ -328,21 +328,27 @@ public class DataInitializer implements CommandLineRunner {
     private void initializeCoupons() {
         if (couponRepository.count() > 0) return;
 
-        createCoupon("WELCOME10", "Giảm 10% cho đơn hàng đầu tiên của thành viên mới", "PERCENTAGE", BigDecimal.valueOf(10), BigDecimal.valueOf(100000), BigDecimal.valueOf(50000), 500);
-        createCoupon("FREESHIP", "Miễn phí vận chuyển cho đơn hàng từ 200.000đ", "FIXED", BigDecimal.valueOf(25000), BigDecimal.valueOf(200000), null, 1000);
-        createCoupon("SALE20", "Giảm ngay 20.000đ cho đơn hàng bách hóa", "FIXED", BigDecimal.valueOf(20000), BigDecimal.valueOf(150000), null, 300);
-        createCoupon("MINI50K", "Siêu voucher giảm 50.000đ cho đơn từ 500.000đ", "FIXED", BigDecimal.valueOf(50000), BigDecimal.valueOf(500000), null, 200);
+        Category rauCat = categoryRepository.findByName("Rau Củ Quả").orElse(null);
+        Category thucPhamKho = categoryRepository.findByName("Thực Phẩm Khô").orElse(null);
 
-        System.out.println("[COUPON] Da tao cac ma giam gia WELCOME10, FREESHIP, SALE20, MINI50K.");
+        createCoupon("WELCOME10", "Giảm 10% cho đơn hàng đầu tiên (Tối đa 50k)", "PERCENTAGE", BigDecimal.valueOf(10), BigDecimal.valueOf(100000), BigDecimal.valueOf(50000), null, 500);
+        createCoupon("RAUXANH15", "Giảm 15% cho danh mục Rau Củ Quả VietGAP (Tối đa 25k)", "PERCENTAGE", BigDecimal.valueOf(15), BigDecimal.valueOf(30000), BigDecimal.valueOf(25000), rauCat, 500);
+        createCoupon("KHO20K", "Giảm 20.000đ cho Thực Phẩm Khô & Gia vị từ 100k", "FIXED_AMOUNT", BigDecimal.valueOf(20000), BigDecimal.valueOf(100000), null, thucPhamKho, 300);
+        createCoupon("FREESHIP", "Miễn phí vận chuyển cho đơn hàng từ 200.000đ", "FIXED_AMOUNT", BigDecimal.valueOf(15000), BigDecimal.valueOf(200000), null, null, 1000);
+        createCoupon("MINI50K", "Siêu voucher giảm 50.000đ cho đơn từ 500.000đ", "FIXED_AMOUNT", BigDecimal.valueOf(50000), BigDecimal.valueOf(500000), null, null, 200);
+
+        System.out.println("[COUPON] Da tao cac ma giam gia WELCOME10, RAUXANH15, KHO20K, FREESHIP, MINI50K.");
     }
 
-    private void createCoupon(String code, String desc, String type, BigDecimal val, BigDecimal minOrder, BigDecimal maxDiscount, int usage) {
+    private void createCoupon(String code, String desc, String type, BigDecimal val, BigDecimal minOrder, BigDecimal maxDiscount, Category applicableCat, int usage) {
         Coupon c = new Coupon();
         c.setCode(code);
         c.setDescription(desc);
         c.setDiscountType(type);
         c.setDiscountValue(val);
         c.setMinOrderAmount(minOrder);
+        c.setMaxDiscountAmount(maxDiscount);
+        c.setApplicableCategory(applicableCat);
         c.setMaxUses(usage);
         c.setUsedCount(0);
         c.setStartDate(LocalDateTime.now().minusDays(1));

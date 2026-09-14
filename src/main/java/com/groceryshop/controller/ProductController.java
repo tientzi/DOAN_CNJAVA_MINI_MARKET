@@ -1,8 +1,10 @@
 package com.groceryshop.controller;
 
 import com.groceryshop.dto.ProductDTO;
+import com.groceryshop.dto.ProductRecommendationDTO;
 import com.groceryshop.service.FileStorageService;
 import com.groceryshop.service.ProductService;
+import com.groceryshop.service.RecommendationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,9 @@ public class ProductController {
 
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private RecommendationService recommendationService;
 
     @Autowired
     private FileStorageService fileStorageService;
@@ -40,6 +45,13 @@ public class ProductController {
     @GetMapping("/api/public/products/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
+    }
+
+    @GetMapping("/api/public/products/{id}/recommendations")
+    public ResponseEntity<List<ProductRecommendationDTO>> getRecommendations(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "4") int limit) {
+        return ResponseEntity.ok(recommendationService.getRecommendations(id, limit));
     }
 
     @GetMapping("/api/admin/products")

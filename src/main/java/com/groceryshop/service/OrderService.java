@@ -79,7 +79,15 @@ public class OrderService {
         BigDecimal discountAmount = BigDecimal.ZERO;
         Coupon appliedCoupon = null;
         if (orderDTO.getCouponCode() != null && !orderDTO.getCouponCode().trim().isEmpty()) {
-            discountAmount = couponService.calculateDiscount(orderDTO.getCouponCode(), totalAmount);
+            List<com.groceryshop.dto.CouponItemInfo> itemInfos = cart.getItems().stream()
+                    .map(item -> com.groceryshop.dto.CouponItemInfo.builder()
+                            .productId(item.getProduct().getId())
+                            .categoryId(item.getProduct().getCategory() != null ? item.getProduct().getCategory().getId() : null)
+                            .price(item.getProduct().getSalePrice() != null ? item.getProduct().getSalePrice() : item.getProduct().getPrice())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .collect(Collectors.toList());
+            discountAmount = couponService.calculateDiscountForItems(orderDTO.getCouponCode(), totalAmount, itemInfos);
             appliedCoupon = couponRepository.findByCode(orderDTO.getCouponCode()).orElse(null);
         }
 
@@ -305,6 +313,27 @@ public class OrderService {
 
         order.setStatus(newStatus);
 
+        if (newStatus.equals("DA_XAC_NHAN")) {
+            Payment payment = order.getPayment();
+            boolean isCod = "TIEN_MAT".equalsIgnoreCase(order.getPaymentMethod()) || "COD".equalsIgnoreCase(order.getPaymentMethod());
+            if (payment == null) {
+                payment = Payment.builder()
+                        .order(order)
+                        .paymentMethod(order.getPaymentMethod())
+                        .amount(order.getFinalAmount())
+                        .paymentStatus(isCod ? "APPROVED_COD" : "COMPLETED")
+                        .paidAt(isCod ? null : LocalDateTime.now())
+                        .build();
+            } else {
+                payment.setPaymentStatus(isCod ? "APPROVED_COD" : "COMPLETED");
+                if (!isCod && payment.getPaidAt() == null) {
+                    payment.setPaidAt(LocalDateTime.now());
+                }
+            }
+            paymentRepository.save(payment);
+            order.setPayment(payment);
+        }
+
         if (newStatus.equals("HUY")) {
             restoreInventoryAndCoupon(order, null, "Hoàn trả do hủy đơn (Admin/Shipper) #" + order.getId());
             if (order.getPayment() != null) {
@@ -454,6 +483,9 @@ public class OrderService {
             paymentRepository.save(payment);
         }
 
+        if ("CHO_XAC_NHAN".equals(order.getStatus())) {
+            order.setStatus("DA_XAC_NHAN");
+        }
         order.setUpdatedAt(LocalDateTime.now());
         Order saved = orderRepository.save(order);
         return EntityMapper.toOrderDTO(saved);

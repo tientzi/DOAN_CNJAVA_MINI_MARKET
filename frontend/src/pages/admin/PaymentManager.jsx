@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../../services/api'
 import { 
   CreditCard, QrCode, Wallet, CheckCircle, Save, Settings, 
   ToggleLeft, ToggleRight, AlertCircle, RefreshCw, DollarSign, Image,
-  Upload, Trash2, Check
+  Upload, Trash2, Check, ExternalLink
 } from 'lucide-react'
 import './AdminPages.css'
 
@@ -154,7 +155,7 @@ const PaymentManager = () => {
             onClick={() => setActiveTab('LOGS')}
             style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <CreditCard size={16} /> Duyệt & Lịch sử thanh toán ({transactions.length})
+            <CreditCard size={16} /> Lịch sử & Đối soát giao dịch ({transactions.length})
             {transactions.filter(t => t.paymentStatus === 'PENDING').length > 0 && (
               <span style={{ 
                 background: '#dc2626', 
@@ -449,6 +450,24 @@ const PaymentManager = () => {
             </button>
           </div>
 
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.08)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.88rem',
+            color: '#1e40af'
+          }}>
+            <AlertCircle size={18} style={{ flexShrink: 0, color: '#2563eb' }} />
+            <span>
+              💡 <strong>Lưu ý:</strong> Thao tác duyệt thanh toán đã được gộp trực tiếp vào <strong>Quản lý Đơn hàng</strong> (1-chạm khi duyệt đơn). Màn hình này dùng để đối soát doanh thu và kiểm tra lịch sử dòng tiền.
+            </span>
+          </div>
+
           <div className="admin-table-container glass">
             <table className="admin-table">
               <thead>
@@ -514,29 +533,39 @@ const PaymentManager = () => {
                         <td>{tx.paidAt ? new Date(tx.paidAt).toLocaleString('vi-VN') : tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—'}</td>
                         <td>
                           {tx.paymentStatus === 'PENDING' ? (
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <Link
+                                to="/admin/orders"
+                                className="btn btn-outline"
+                                style={{ 
+                                  padding: '5px 10px', 
+                                  fontSize: '0.8rem', 
+                                  color: '#0284c7', 
+                                  borderColor: '#0284c7',
+                                  whiteSpace: 'nowrap',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Đi tới Quản lý Đơn hàng để duyệt đơn và thanh toán 1-chạm"
+                              >
+                                Duyệt tại Đơn #{tx.orderId}
+                              </Link>
                               <button
                                 className="btn btn-primary"
                                 onClick={() => handleApprovePayment(tx)}
                                 disabled={approvingId === tx.id}
                                 style={{ 
-                                  padding: '5px 10px', 
+                                  padding: '5px 9px', 
                                   fontSize: '0.8rem', 
                                   background: isCod ? '#0284c7' : '#16a34a', 
                                   borderColor: isCod ? '#0284c7' : '#16a34a',
                                   whiteSpace: 'nowrap'
                                 }}
-                                title={isCod ? 'Duyệt đơn COD và chuyển sang Quản lý giao hàng' : 'Xác nhận đã nhận chuyển khoản QR'}
+                                title="Duyệt nhanh và tự động cập nhật sang Đơn hàng"
                               >
-                                {isCod ? '✓ Duyệt đơn COD' : '✓ Duyệt tiền QR'}
-                              </button>
-                              <button
-                                className="btn btn-outline"
-                                onClick={() => handleRejectPayment(tx)}
-                                style={{ padding: '5px 10px', fontSize: '0.8rem', color: '#dc2626', borderColor: '#dc2626', whiteSpace: 'nowrap' }}
-                                title="Từ chối thanh toán và tự động hủy đơn, hoàn trả kho"
-                              >
-                                ✕ Từ chối
+                                {isCod ? '✓ Duyệt COD' : '✓ Duyệt QR'}
                               </button>
                             </div>
                           ) : tx.paymentStatus === 'APPROVED_COD' ? (

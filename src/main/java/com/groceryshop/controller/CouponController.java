@@ -20,7 +20,21 @@ public class CouponController {
     public ResponseEntity<?> applyCoupon(@RequestBody Map<String, Object> payload) {
         String code = payload.get("code").toString();
         BigDecimal amount = new BigDecimal(payload.get("amount").toString());
-        BigDecimal discount = couponService.calculateDiscount(code, amount);
+        List<com.groceryshop.dto.CouponItemInfo> items = new java.util.ArrayList<>();
+        if (payload.containsKey("items") && payload.get("items") instanceof List) {
+            List<?> rawList = (List<?>) payload.get("items");
+            for (Object obj : rawList) {
+                if (obj instanceof Map) {
+                    Map<?, ?> itemMap = (Map<?, ?>) obj;
+                    Long productId = itemMap.get("productId") != null ? Long.valueOf(itemMap.get("productId").toString()) : null;
+                    Long categoryId = itemMap.get("categoryId") != null ? Long.valueOf(itemMap.get("categoryId").toString()) : null;
+                    BigDecimal price = itemMap.get("price") != null ? new BigDecimal(itemMap.get("price").toString()) : BigDecimal.ZERO;
+                    Integer quantity = itemMap.get("quantity") != null ? Integer.valueOf(itemMap.get("quantity").toString()) : 1;
+                    items.add(new com.groceryshop.dto.CouponItemInfo(productId, categoryId, price, quantity));
+                }
+            }
+        }
+        BigDecimal discount = couponService.calculateDiscountForItems(code, amount, items);
         Map<String, Object> response = new HashMap<>();
         response.put("discountAmount", discount);
         response.put("code", code);

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { CartContext } from '../contexts/CartContext'
 import { AuthContext } from '../contexts/AuthContext'
-import { ShoppingCart, Star, MessageSquare } from 'lucide-react'
+import { ShoppingCart, Star, MessageSquare, Sparkles, Flame } from 'lucide-react'
 import './ProductDetail.css'
 
 const ProductDetail = () => {
@@ -11,6 +11,7 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [reviews, setReviews] = useState([])
+  const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeImage, setActiveImage] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -28,10 +29,14 @@ const ProductDetail = () => {
 
   const fetchProductData = async () => {
     try {
-      const prodRes = await api.get(`/api/public/products/${id}`)
-      const revRes = await api.get(`/api/public/products/${id}/reviews`)
+      const [prodRes, revRes, recRes] = await Promise.all([
+        api.get(`/api/public/products/${id}`),
+        api.get(`/api/public/products/${id}/reviews`),
+        api.get(`/api/public/products/${id}/recommendations?limit=4`).catch(() => ({ data: [] }))
+      ])
       setProduct(prodRes.data)
       setReviews(revRes.data)
+      setRecommendations(recRes.data || [])
       setActiveImage(prodRes.data.mainImage)
     } catch (err) {
       console.error('Không tìm thấy thông tin sản phẩm', err)
@@ -43,6 +48,23 @@ const ProductDetail = () => {
   useEffect(() => {
     fetchProductData()
   }, [id])
+
+  const handleQuickAddRecommended = async (e, recProd) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+    try {
+      await addToCart(recProd.id, 1)
+      setCartSuccess(`Đã thêm "${recProd.name}" vào giỏ hàng!`)
+      setTimeout(() => setCartSuccess(''), 2000)
+    } catch (err) {
+      setCartError(err)
+      setTimeout(() => setCartError(''), 3000)
+    }
+  }
 
   const handleAddToCart = async () => {
     setCartError('')
@@ -186,6 +208,79 @@ const ProductDetail = () => {
           {cartError && <div className="detail-alert error-alert">{cartError}</div>}
         </div>
       </section>
+
+      {/* Gợi ý sản phẩm thường mua cùng (Thuật toán Apriori) */}
+      {recommendations.length > 0 && (
+        <section className="recommendations-section glass">
+          <div className="section-header-rec">
+            <div className="rec-title-wrap">
+              <Sparkles className="rec-sparkle-icon" size={22} />
+              <h2>Sản phẩm thường mua cùng & Gợi ý cho bạn</h2>
+            </div>
+            <span className="rec-subtitle">Dựa trên thói quen mua sắm của khách hàng tại MiniMart (Thuật toán Apriori)</span>
+          </div>
+
+          <div className="recommendations-grid">
+            {recommendations.map((rec) => {
+              const p = rec.product
+              const isSale = p.salePrice != null
+              const percent = isSale ? Math.round(((p.price - p.salePrice) / p.price) * 100) : 0
+              return (
+                <div
+                  key={p.id}
+                  className="rec-card"
+                  onClick={() => navigate(`/products/${p.id}`)}
+                >
+                  <div className="rec-badge-container">
+                    {rec.reason === 'Thường mua cùng' ? (
+                      <span className="rec-badge apriori-badge" title={`Độ nâng (Lift): ${rec.lift || 1}x`}>
+                        <Flame size={13} /> Thường mua cùng {rec.confidence ? `• ${Math.round(rec.confidence * 100)}%` : ''}
+                      </span>
+                    ) : (
+                      <span className="rec-badge category-badge">
+                        Cùng danh mục
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="rec-img-box">
+                    <img
+                      src={p.mainImage}
+                      alt={p.name}
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=250&auto=format&fit=crop' }}
+                    />
+                    {isSale && <span className="rec-discount-tag">-{percent}%</span>}
+                  </div>
+
+                  <div className="rec-info">
+                    <span className="rec-cat-name">{p.categoryName}</span>
+                    <h4 className="rec-prod-name" title={p.name}>{p.name}</h4>
+                    
+                    <div className="rec-price-row">
+                      {isSale ? (
+                        <>
+                          <span className="rec-sale-price">{p.salePrice.toLocaleString()}đ</span>
+                          <span className="rec-orig-price">{p.price.toLocaleString()}đ</span>
+                        </>
+                      ) : (
+                        <span className="rec-normal-price">{p.price.toLocaleString()}đ</span>
+                      )}
+                    </div>
+
+                    <button
+                      className="rec-add-btn btn btn-sm btn-outline"
+                      onClick={(e) => handleQuickAddRecommended(e, p)}
+                      title="Thêm vào giỏ"
+                    >
+                      <ShoppingCart size={14} /> Thêm giỏ hàng
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Đánh giá sản phẩm */}
       <section className="reviews-section glass">

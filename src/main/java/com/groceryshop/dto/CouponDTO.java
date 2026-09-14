@@ -21,4 +21,7 @@ public class CouponDTO {
     private Integer usedCount;
     private Integer maxUses;
     private Boolean isActive;
+    private Long applicableCategoryId;
+    private String applicableCategoryName;
+    private BigDecimal maxDiscountAmount;
 }

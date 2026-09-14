@@ -254,7 +254,17 @@ const Checkout = () => {
     setCouponError(''); setCouponSuccess(''); setDiscountAmount(0); setAppliedCoupon('')
     if (!couponCode.trim()) return
     try {
-      const response = await api.post('/api/public/coupons/apply', { code: couponCode, amount: cartSubtotal })
+      const itemsPayload = (cart?.items || []).map(item => ({
+        productId: item.productId,
+        categoryId: item.categoryId,
+        price: item.productSalePrice != null ? item.productSalePrice : item.productPrice,
+        quantity: item.quantity
+      }))
+      const response = await api.post('/api/public/coupons/apply', {
+        code: couponCode.trim(),
+        amount: cartSubtotal,
+        items: itemsPayload
+      })
       setDiscountAmount(response.data.discountAmount)
       setAppliedCoupon(response.data.code)
       setCouponSuccess(`Áp dụng thành công! Giảm ${response.data.discountAmount.toLocaleString()}đ`)
