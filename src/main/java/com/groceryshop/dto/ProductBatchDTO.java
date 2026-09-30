@@ -19,7 +19,12 @@ public class ProductBatchDTO {
     private Integer quantity;
     private LocalDate expiryDate;
     private Integer discountPercentage;
+    private java.math.BigDecimal importPrice;
     private java.math.BigDecimal originalPrice;
     private java.math.BigDecimal salePrice;
+    private String status;
+    private Boolean isExpired;
+    private Long daysRemaining;
+    private java.math.BigDecimal totalLoss;
     private LocalDateTime createdAt;
 }

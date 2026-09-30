@@ -2,6 +2,7 @@ package com.groceryshop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -34,6 +35,15 @@ public class ProductBatch {
     @Column(name = "expiry_date", nullable = false)
     private LocalDate expiryDate;
 
+    @Column(name = "import_price", precision = 18, scale = 2)
+    private java.math.BigDecimal importPrice;
+
+    @Column(name = "sale_price", precision = 18, scale = 2)
+    private java.math.BigDecimal salePrice;
+
+    @Column(name = "status", length = 20)
+    private String status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -41,6 +51,17 @@ public class ProductBatch {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (quantity == null) quantity = 0;
+        if (status == null) status = "ACTIVE";
+    }
+
+    public BigDecimal getEffectiveImportPrice() {
+        if (this.importPrice != null && this.importPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return this.importPrice;
+        }
+        if (this.product != null && this.product.getPrice() != null) {
+            return this.product.getPrice().multiply(java.math.BigDecimal.valueOf(0.70)).setScale(0, java.math.RoundingMode.HALF_UP);
+        }
+        return java.math.BigDecimal.ZERO;
     }
 
     public Long getId() { return id; }
@@ -60,6 +81,15 @@ public class ProductBatch {
 
     public LocalDate getExpiryDate() { return expiryDate; }
     public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
+
+    public java.math.BigDecimal getImportPrice() { return importPrice; }
+    public void setImportPrice(java.math.BigDecimal importPrice) { this.importPrice = importPrice; }
+
+    public java.math.BigDecimal getSalePrice() { return salePrice; }
+    public void setSalePrice(java.math.BigDecimal salePrice) { this.salePrice = salePrice; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

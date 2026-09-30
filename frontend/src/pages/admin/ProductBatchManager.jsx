@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Calendar, AlertTriangle, Percent, Tag, Check, X, ArrowRight, Download, Printer } from 'lucide-react'
+import { Calendar, AlertTriangle, Percent, Tag, Check, X, ArrowRight, Download, Printer, Trash2, ShieldAlert, PackageX } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
 
 const ProductBatchManager = () => {
   const [batches, setBatches] = useState([])
   const [expiringBatches, setExpiringBatches] = useState([])
+  const [expiredBatches, setExpiredBatches] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('EXPIRING') // EXPIRING, ALL
+  const [activeTab, setActiveTab] = useState('EXPIRING') // EXPIRING, EXPIRED, ALL
 
   // Modal / Sale configuration
   const [selectedBatch, setSelectedBatch] = useState(null)
@@ -21,12 +22,14 @@ const ProductBatchManager = () => {
   const fetchBatches = async () => {
     setLoading(true)
     try {
-      const [allRes, expRes] = await Promise.all([
+      const [allRes, expRes, expiredRes] = await Promise.all([
         api.get('/api/admin/batches'),
-        api.get('/api/admin/batches/expiring?days=30')
+        api.get('/api/admin/batches/expiring?days=30'),
+        api.get('/api/admin/batches/expired')
       ])
       setBatches(allRes.data)
       setExpiringBatches(expRes.data)
+      setExpiredBatches(expiredRes.data)
     } catch (err) {
       console.error('Lỗi khi tải thông tin lô hàng', err)
     } finally {
@@ -39,6 +42,10 @@ const ProductBatchManager = () => {
   }, [])
 
   const openSaleModal = (batch) => {
+    if (isExpired(batch.expiryDate)) {
+      alert('Lô hàng này đã hết hạn sử dụng! Không được phép thiết lập Sale bán lẻ.')
+      return
+    }
     setSelectedBatch(batch)
     setDiscountPercent('')
     setCustomPrice('')
@@ -50,20 +57,6 @@ const ProductBatchManager = () => {
     setSelectedBatch(null)
     setDiscountPercent('')
     setCustomPrice('')
-  }
-
-  // Tính trước giá sau giảm
-  const calculatePreviewPrice = (originalPrice) => {
-    if (!originalPrice) return 0
-    if (saleMode === 'PERCENT') {
-      const pct = parseFloat(discountPercent)
-      if (isNaN(pct) || pct <= 0 || pct >= 100) return originalPrice
-      return Math.round(originalPrice * (100 - pct) / 100)
-    } else {
-      const price = parseFloat(customPrice)
-      if (isNaN(price) || price <= 0 || price >= originalPrice) return originalPrice
-      return price
-    }
   }
 
   const handleApplySale = async (e) => {
@@ -89,28 +82,65 @@ const ProductBatchManager = () => {
 
     setApplying(true)
     try {
-      await api.post(`/api/admin/batches/${selectedBatch.productId}/clearance-sale`, payload)
-      setSuccessMessage(`✅ Đã áp dụng giảm giá cho sản phẩm ${selectedBatch.productName} thành công!`)
+      // Ưu tiên gọi API sale theo từng lô
+      await api.post(`/api/admin/batches/batch/${selectedBatch.id}/clearance-sale`, payload)
+      setSuccessMessage(`✅ Đã áp dụng giá Sale xả hàng cho lô ${selectedBatch.batchName} thành công!`)
       setTimeout(() => {
         closeSaleModal()
         fetchBatches()
-      }, 1200)
+      }, 1000)
     } catch (err) {
-      alert(err.response?.data?.error || 'Lỗi khi áp dụng giá khuyến mãi')
+      alert(err.response?.data?.error || err.response?.data?.message || 'Lỗi khi áp dụng giá khuyến mãi')
     } finally {
       setApplying(false)
     }
   }
 
-  const isExpired = (dateString) => new Date(dateString) < new Date()
+  const handleDisposeBatch = async (batch) => {
+    const importPrice = batch.importPrice || 0
+    const loss = (batch.quantity || 0) * importPrice
+    const confirmMsg = `⚠️ XÁC NHẬN TIÊU HỦY LÔ QUÁ HẠN:\n\n` +
+      `- Lô: ${batch.batchName} (Sản phẩm: ${batch.productName})\n` +
+      `- Số lượng tồn hủy: ${batch.quantity}\n` +
+      `- Đơn giá vốn: ${importPrice.toLocaleString()}đ\n` +
+      `- Tổng vốn thiệt hại: ${loss.toLocaleString()}đ\n\n` +
+      `Thao tác này sẽ trừ số lượng tồn về 0 và ghi nhận xuất hủy vào Sổ Cái Kho (EXPIRED_DISPOSAL). Bạn có chắc chắn muốn xuất hủy?`
 
-  const getStatusBadge = (dateString) => {
-    if (isExpired(dateString)) {
-      return <span className="badge-danger" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#fee2e2', color: '#dc2626' }}>Đã hết hạn</span>
+    if (!window.confirm(confirmMsg)) return
+
+    try {
+      await api.post(`/api/admin/batches/${batch.id}/dispose`)
+      alert(`✅ Đã xuất hủy lô ${batch.batchName} thành công! Nhật ký biến động kho đã được lưu.`)
+      fetchBatches()
+    } catch (err) {
+      alert(err.response?.data?.error || err.response?.data?.message || 'Lỗi khi xuất hủy lô hàng')
     }
-    const daysLeft = Math.ceil((new Date(dateString) - new Date()) / (1000 * 60 * 60 * 24))
+  }
+
+  const isExpired = (dateString) => {
+    if (!dateString) return false
+    const d = new Date(dateString)
+    d.setHours(23, 59, 59, 999)
+    return d < new Date()
+  }
+
+  const getStatusBadge = (b) => {
+    if (b.status === 'DISPOSED') {
+      return <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#f1f5f9', color: '#64748b' }}>Đã xuất hủy</span>
+    }
+    if (isExpired(b.expiryDate)) {
+      return <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#fee2e2', color: '#dc2626', fontWeight: 600 }}>Quá hạn sử dụng</span>
+    }
+    const daysLeft = Math.ceil((new Date(b.expiryDate) - new Date()) / (1000 * 60 * 60 * 24))
+    if (daysLeft <= 30) {
+      return (
+        <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#fef3c7', color: '#d97706', fontWeight: 600 }}>
+          Còn {daysLeft} ngày
+        </span>
+      )
+    }
     return (
-      <span className="badge-warning" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#fef3c7', color: '#d97706' }}>
+      <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', background: '#ecfdf5', color: '#059669' }}>
         Còn {daysLeft} ngày
       </span>
     )
@@ -118,10 +148,18 @@ const ProductBatchManager = () => {
 
   if (loading) return <div className="loading-state">Đang tải thông tin lô hàng...</div>
 
-  const displayList = activeTab === 'ALL' ? batches : expiringBatches
+  let displayList = batches
+  if (activeTab === 'EXPIRING') displayList = expiringBatches
+  else if (activeTab === 'EXPIRED') displayList = expiredBatches
+
+  const totalExpiredLoss = expiredBatches.reduce((sum, b) => {
+    const qty = b.quantity || 0
+    const price = b.importPrice || 0
+    return sum + (qty * price)
+  }, 0)
 
   const handleExportCSV = () => {
-    const headers = ['Mã Lô', 'Mã SKU', 'Tên sản phẩm', 'Tên Lô', 'Số lượng còn', 'Hạn sử dụng', 'Mức giảm giá (%)', 'Trạng thái']
+    const headers = ['Mã Lô', 'SKU', 'Sản phẩm', 'Tên Lô', 'Số lượng', 'HSD', 'Giá vốn', 'Tổng vốn', 'Trạng thái']
     const rows = displayList.map(b => [
       `#${b.id}`,
       b.productSku || '',
@@ -129,16 +167,19 @@ const ProductBatchManager = () => {
       b.batchName || 'Lô mặc định',
       b.quantity || 0,
       b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('vi-VN') : 'Không có',
-      b.saleDiscountPercent ? `${b.saleDiscountPercent}%` : '0%',
-      isExpired(b.expiryDate) ? 'Đã hết hạn' : isExpiringSoon(b.expiryDate) ? 'Sắp hết hạn' : 'Còn hạn'
+      b.importPrice ? `${b.importPrice}đ` : '0đ',
+      b.importPrice ? `${(b.quantity * b.importPrice)}đ` : '0đ',
+      b.status === 'DISPOSED' ? 'Đã hủy' : isExpired(b.expiryDate) ? 'Hết hạn' : 'Còn hạn'
     ])
     exportToCSV(`Bao_Cao_Lo_Hang_${activeTab}_${new Date().toISOString().slice(0, 10)}`, headers, rows)
   }
 
   const handlePrint = () => {
-    const title = activeTab === 'EXPIRING' 
-      ? 'Báo cáo Lô hàng Cận Date (< 30 ngày) - Siêu thị MiniMart' 
-      : 'Báo cáo Toàn bộ Lô hàng & HSD - Siêu thị MiniMart'
+    const title = activeTab === 'EXPIRED'
+      ? 'Báo cáo Thất thoát Lô Hàng Hết Hạn - Siêu thị MiniMart'
+      : activeTab === 'EXPIRING'
+        ? 'Báo cáo Lô hàng Cận Date (< 30 ngày) - Siêu thị MiniMart' 
+        : 'Báo cáo Toàn bộ Lô hàng & HSD - Siêu thị MiniMart'
     printDocument(title)
   }
 
@@ -153,20 +194,20 @@ const ProductBatchManager = () => {
           </div>
           <div className="print-doc-meta">
             <div>Ngày in: {new Date().toLocaleString('vi-VN')}</div>
-            <div>Báo cáo: {activeTab === 'EXPIRING' ? 'Cảnh báo lô hàng cận date (< 30 ngày)' : 'Toàn bộ danh sách lô hàng'}</div>
+            <div>Báo cáo: {activeTab === 'EXPIRED' ? 'Danh sách Lô hàng Quá hạn / Thất thoát vốn' : activeTab === 'EXPIRING' ? 'Cảnh báo cận date (< 30 ngày)' : 'Toàn bộ danh sách lô hàng'}</div>
           </div>
         </div>
         <div className="print-doc-title">
           <h2>BÁO CÁO THEO DÕI LÔ HÀNG & HẠN SỬ DỤNG</h2>
-          <p>Tổng số lô ghi nhận: {displayList.length} lô hàng</p>
+          <p>Tổng số lô ghi nhận: {displayList.length} lô hàng {activeTab === 'EXPIRED' && `(Tổng thiệt hại vốn: ${totalExpiredLoss.toLocaleString()}đ)`}</p>
         </div>
       </div>
 
       <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2>Quản lý Lô & Hạn sử dụng (Sale Cận Date)</h2>
+          <h2>Quản lý Lô Hàng, Hạn Sử Dụng & Xuất Hủy</h2>
           <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '4px' }}>
-            Theo dõi hạn sử dụng các lô hàng và chủ động áp dụng mức giảm giá tùy ý để xả hàng cận date.
+            Giám sát vòng đời lô hàng, thiết lập Sale xả kho cận date và xuất hủy hàng quá hạn bảo đảm đúng quy định.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -179,7 +220,8 @@ const ProductBatchManager = () => {
         </div>
       </div>
 
-      <div className="admin-tabs margin-bottom-md" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>
+      {/* Tabs điều hướng */}
+      <div className="admin-tabs margin-bottom-md" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${activeTab === 'EXPIRING' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('EXPIRING')}
@@ -188,11 +230,26 @@ const ProductBatchManager = () => {
           <AlertTriangle size={16} style={{ marginRight: '6px' }} />
           Cảnh báo cận Date (30 ngày)
           {expiringBatches.length > 0 && (
-            <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#dc2626', color: 'white', borderRadius: '50%', width: '22px', height: '22px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#d97706', color: 'white', borderRadius: '50%', width: '22px', height: '22px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {expiringBatches.length}
             </span>
           )}
         </button>
+
+        <button 
+          className={`btn ${activeTab === 'EXPIRED' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('EXPIRED')}
+          style={{ position: 'relative', borderColor: '#dc2626', color: activeTab === 'EXPIRED' ? '#fff' : '#dc2626', background: activeTab === 'EXPIRED' ? '#dc2626' : 'transparent' }}
+        >
+          <ShieldAlert size={16} style={{ marginRight: '6px' }} />
+          Lô hàng đã hết hạn
+          {expiredBatches.length > 0 && (
+            <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#991b1b', color: 'white', borderRadius: '50%', width: '22px', height: '22px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {expiredBatches.length}
+            </span>
+          )}
+        </button>
+
         <button 
           className={`btn ${activeTab === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('ALL')}
@@ -200,6 +257,20 @@ const ProductBatchManager = () => {
           Tất cả lô hàng ({batches.length})
         </button>
       </div>
+
+      {/* Card thống kê thiệt hại nếu ở tab EXPIRED */}
+      {activeTab === 'EXPIRED' && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ color: '#991b1b', fontWeight: 600, fontSize: '0.95rem' }}>Tổng số lô quá hạn cần xử lý: {expiredBatches.length} lô</div>
+            <div style={{ color: '#7f1d1d', fontSize: '0.85rem', marginTop: '2px' }}>Hàng hết hạn bắt buộc không được phép bán hoặc khuyến mãi. Vui lòng bấm "Xuất hủy kho" để hoàn tất chứng từ.</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.85rem', color: '#991b1b' }}>Tổng thiệt hại vốn ước tính:</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626' }}>{totalExpiredLoss.toLocaleString()}đ</div>
+          </div>
+        </div>
+      )}
 
       <div className="admin-table-container glass">
         <table className="admin-table">
@@ -209,67 +280,112 @@ const ProductBatchManager = () => {
               <th>Mã SKU</th>
               <th>Tên sản phẩm</th>
               <th>Tên Lô</th>
-              <th>Số lượng còn</th>
+              <th>Số lượng tồn</th>
               <th>Hạn sử dụng</th>
-              <th>% Đang Sale</th>
+              <th>Đơn giá vốn</th>
+              {activeTab === 'EXPIRED' ? (
+                <th>Tổn thất vốn</th>
+              ) : (
+                <th>% Đang Sale</th>
+              )}
               <th>Trạng thái</th>
-              <th>Thao tác Sale</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {displayList.map(b => (
-              <tr key={b.id}>
-                <td>#{b.id}</td>
-                <td><code>{b.productSku}</code></td>
-                <td><strong>{b.productName}</strong></td>
-                <td>{b.batchName || 'Lô mặc định'}</td>
-                <td><strong style={{ color: '#0284c7' }}>{b.quantity}</strong></td>
-                <td>
-                  <Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: isExpired(b.expiryDate) ? 'red' : 'inherit' }} />
-                  <span style={{ color: isExpired(b.expiryDate) ? 'red' : 'inherit', fontWeight: isExpired(b.expiryDate) ? 'bold' : 'normal' }}>
-                    {new Date(b.expiryDate).toLocaleDateString('vi-VN')}
-                  </span>
-                </td>
-                <td>
-                  {b.discountPercentage && b.discountPercentage > 0 ? (
-                    <span 
-                      style={{ 
-                        background: '#fee2e2', 
-                        color: '#dc2626', 
-                        padding: '4px 10px', 
-                        borderRadius: '20px', 
-                        fontWeight: 800, 
-                        fontSize: '0.85rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        border: '1px solid #fecaca',
-                        cursor: 'help'
-                      }}
-                      title={b.originalPrice && b.salePrice ? `Giá gốc: ${b.originalPrice.toLocaleString()}đ ➔ Giá sale: ${b.salePrice.toLocaleString()}đ` : 'Đang xả kho giảm giá'}
-                    >
-                      -{b.discountPercentage}%
+            {displayList.map(b => {
+              const expired = isExpired(b.expiryDate)
+              const importPrice = b.importPrice || 0
+              const loss = (b.quantity || 0) * importPrice
+
+              return (
+                <tr key={b.id} style={{ background: expired ? '#fff5f5' : 'transparent' }}>
+                  <td>#{b.id}</td>
+                  <td><code>{b.productSku}</code></td>
+                  <td><strong>{b.productName}</strong></td>
+                  <td>{b.batchName || 'Lô mặc định'}</td>
+                  <td>
+                    <strong style={{ color: expired ? '#dc2626' : '#0284c7' }}>
+                      {b.quantity}
+                    </strong>
+                  </td>
+                  <td>
+                    <Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'middle', color: expired ? '#dc2626' : 'inherit' }} />
+                    <span style={{ color: expired ? '#dc2626' : 'inherit', fontWeight: expired ? 'bold' : 'normal' }}>
+                      {b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('vi-VN') : '—'}
                     </span>
+                  </td>
+                  <td>{importPrice > 0 ? `${importPrice.toLocaleString()}đ` : '—'}</td>
+                  
+                  {activeTab === 'EXPIRED' ? (
+                    <td><strong style={{ color: '#dc2626' }}>{loss > 0 ? `${loss.toLocaleString()}đ` : '0đ'}</strong></td>
                   ) : (
-                    <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>—</span>
+                    <td>
+                      {b.discountPercentage && b.discountPercentage > 0 ? (
+                        <span 
+                          style={{ 
+                            background: '#fee2e2', 
+                            color: '#dc2626', 
+                            padding: '4px 10px', 
+                            borderRadius: '20px', 
+                            fontWeight: 800, 
+                            fontSize: '0.85rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            border: '1px solid #fecaca'
+                          }}
+                          title={b.originalPrice && b.salePrice ? `Giá gốc: ${b.originalPrice.toLocaleString()}đ ➔ Giá sale: ${b.salePrice.toLocaleString()}đ` : 'Đang xả kho giảm giá'}
+                        >
+                          -{b.discountPercentage}%
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>—</span>
+                      )}
+                    </td>
                   )}
-                </td>
-                <td>{getStatusBadge(b.expiryDate)}</td>
-                <td>
-                  <button 
-                    onClick={() => openSaleModal(b)} 
-                    className="btn btn-primary" 
-                    style={{ padding: '5px 10px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <Percent size={14} /> Thiết lập Sale
-                  </button>
-                </td>
-              </tr>
-            ))}
+
+                  <td>{getStatusBadge(b)}</td>
+                  
+                  <td>
+                    {expired ? (
+                      <button 
+                        onClick={() => handleDisposeBatch(b)}
+                        className="btn" 
+                        disabled={b.quantity <= 0 || b.status === 'DISPOSED'}
+                        style={{ 
+                          padding: '5px 10px', 
+                          fontSize: '0.85rem', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '4px',
+                          background: b.quantity <= 0 ? '#e2e8f0' : '#dc2626',
+                          color: b.quantity <= 0 ? '#94a3b8' : '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: b.quantity <= 0 ? 'not-allowed' : 'pointer'
+                        }}
+                        title={b.quantity <= 0 ? 'Lô này đã xuất hủy xong' : 'Xuất hủy kho do quá hạn sử dụng'}
+                      >
+                        <Trash2 size={14} /> {b.quantity <= 0 ? 'Đã hủy' : 'Xuất hủy kho'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => openSaleModal(b)} 
+                        className="btn btn-primary" 
+                        style={{ padding: '5px 10px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Percent size={14} /> Thiết lập Sale
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
             {displayList.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                  {activeTab === 'EXPIRING' ? 'Không có lô hàng nào sắp hết hạn trong 30 ngày tới.' : 'Chưa có lô hàng nào.'}
+                <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                  {activeTab === 'EXPIRED' ? 'Tuyệt vời! Không có lô hàng nào bị quá hạn.' : activeTab === 'EXPIRING' ? 'Không có lô hàng nào sắp hết hạn trong 30 ngày tới.' : 'Chưa có lô hàng nào.'}
                 </td>
               </tr>
             )}
@@ -296,13 +412,13 @@ const ProductBatchManager = () => {
         </div>
       </div>
 
-      {/* MODAL THIẾT LẬP MỨC SALE TÙY Ý CÓ PREVIEW */}
+      {/* MODAL THIẾT LẬP MỨC SALE */}
       {selectedBatch && (
         <div className="admin-form-overlay" onClick={(e) => e.target === e.currentTarget && closeSaleModal()}>
           <form onSubmit={handleApplySale} className="admin-popup-form glass" style={{ maxWidth: '480px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Tag size={20} color="#d97706" /> Thiết lập giá Sale xả hàng
+                <Tag size={20} color="#d97706" /> Thiết lập giá Sale xả hàng cho lô
               </h3>
               <button type="button" onClick={closeSaleModal} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
@@ -310,7 +426,7 @@ const ProductBatchManager = () => {
             </div>
 
             <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#475569' }}>
-              Sản phẩm: <strong>{selectedBatch.productName}</strong> ({selectedBatch.productSku})
+              Lô hàng: <strong>{selectedBatch.batchName}</strong> (Sản phẩm: {selectedBatch.productName})
             </p>
 
             {/* Chọn chế độ nhập */}
@@ -350,7 +466,6 @@ const ProductBatchManager = () => {
                   />
                   <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>%</span>
                 </div>
-                {/* Gợi ý mức giảm nhanh */}
                 <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                   {[10, 20, 30, 50].map(p => (
                     <button
@@ -380,7 +495,6 @@ const ProductBatchManager = () => {
               </div>
             )}
 
-            {/* BẢNG PREVIEW GIÁ MỚI */}
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.85rem', marginBottom: '1.2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                 <span style={{ fontSize: '0.85rem', color: '#166534' }}>Mức điều chỉnh:</span>
@@ -389,7 +503,7 @@ const ProductBatchManager = () => {
                 </strong>
               </div>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#15803d' }}>
-                ✨ Giá sale mới sẽ được cập nhật ngay vào cơ sở dữ liệu và hiển thị trực tiếp ra trang chủ cửa hàng.
+                ✨ Giá sale mới sẽ áp dụng ưu tiên cho lô hàng cận date này và hiển thị nổi bật trên cửa hàng.
               </p>
             </div>
 

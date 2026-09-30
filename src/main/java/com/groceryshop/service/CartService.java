@@ -16,7 +16,13 @@ import com.groceryshop.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import com.groceryshop.repository.ProductBatchRepository;
+import com.groceryshop.entity.ProductBatch;
 
 @Service
 public class CartService {
@@ -33,9 +39,45 @@ public class CartService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ProductBatchRepository productBatchRepository;
+
     public CartDTO getCartByUserId(Long userId) {
         Cart cart = getOrCreateCart(userId);
-        return EntityMapper.toCartDTO(cart);
+        CartDTO dto = EntityMapper.toCartDTO(cart);
+        enrichCartDTOWithBatchInfo(dto);
+        return dto;
+    }
+
+    private void enrichCartDTOWithBatchInfo(CartDTO cartDTO) {
+        if (cartDTO == null || cartDTO.getItems() == null) return;
+        LocalDate today = LocalDate.now();
+        for (com.groceryshop.dto.CartItemDTO item : cartDTO.getItems()) {
+            if (item.getProductId() == null) continue;
+            List<ProductBatch> validBatches = productBatchRepository
+                    .findByProductIdAndQuantityGreaterThanOrderByExpiryDateAsc(item.getProductId(), 0)
+                    .stream()
+                    .filter(b -> b.getExpiryDate() != null && !b.getExpiryDate().isBefore(today))
+                    .collect(Collectors.toList());
+
+            ProductBatch saleBatch = validBatches.stream()
+                    .filter(b -> b.getSalePrice() != null && b.getSalePrice().compareTo(BigDecimal.ZERO) > 0
+                            && item.getProductPrice() != null && b.getSalePrice().compareTo(item.getProductPrice()) < 0)
+                    .findFirst()
+                    .orElse(null);
+
+            if (saleBatch != null && saleBatch.getQuantity() != null && saleBatch.getQuantity() > 0) {
+                item.setHasMultiBatch(true);
+                item.setSaleBatchQuantity(saleBatch.getQuantity());
+                item.setSaleBatchPrice(saleBatch.getSalePrice());
+                item.setSaleBatchExpiryDate(saleBatch.getExpiryDate());
+            } else {
+                item.setHasMultiBatch(false);
+                item.setSaleBatchQuantity(0);
+                item.setSaleBatchPrice(null);
+                item.setSaleBatchExpiryDate(null);
+            }
+        }
     }
 
     private Cart getOrCreateCart(Long userId) {

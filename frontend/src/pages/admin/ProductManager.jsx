@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
-import { Plus, Edit2, Trash2, Eye, EyeOff, Upload, Download, Printer, Search, Filter, X } from 'lucide-react'
+import { 
+  Plus, Edit2, Trash2, Eye, EyeOff, Upload, Download, Printer, Search, 
+  Filter, X, PackageCheck, AlertTriangle, CheckCircle2, Boxes, ArrowRight, Layers,
+  Apple, FolderKanban
+} from 'lucide-react'
+import CategoryManager from './CategoryManager'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
 const ProductManager = () => {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') === 'categories' ? 'categories' : 'products'
+  const handleTabChange = (tab) => setSearchParams({ tab })
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
@@ -14,6 +24,7 @@ const ProductManager = () => {
   // Search & Category Filter states
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
+  const [stockFilter, setStockFilter] = useState('ALL') // 'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
 
   // Form states
   const [showForm, setShowForm] = useState(false)
@@ -213,9 +224,26 @@ const ProductManager = () => {
     setError('')
   }
 
+  // Thống kê tồn kho phục vụ KPI
+  const totalStock = products.reduce((acc, p) => acc + (p.currentStock || 0), 0)
+  const lowStockProducts = products.filter(p => (p.currentStock || 0) > 0 && (p.currentStock || 0) <= (p.minimumStock || 5))
+  const outOfStockProducts = products.filter(p => (p.currentStock || 0) === 0)
+  const inStockProducts = products.filter(p => (p.currentStock || 0) > (p.minimumStock || 5))
+
   const filteredProducts = products.filter(p => {
     const matchCat = selectedCategory === 'ALL' || String(p.categoryId) === String(selectedCategory)
     if (!matchCat) return false
+    
+    let matchStock = true
+    if (stockFilter === 'IN_STOCK') {
+      matchStock = (p.currentStock || 0) > (p.minimumStock || 5)
+    } else if (stockFilter === 'LOW_STOCK') {
+      matchStock = (p.currentStock || 0) > 0 && (p.currentStock || 0) <= (p.minimumStock || 5)
+    } else if (stockFilter === 'OUT_OF_STOCK') {
+      matchStock = (p.currentStock || 0) === 0
+    }
+    if (!matchStock) return false
+
     return matchesRelative([p.name, p.sku, p.barcode, p.categoryName, p.brandName, p.location], searchTerm)
   })
 
@@ -266,20 +294,91 @@ const ProductManager = () => {
         </div>
       </div>
 
-      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2>Quản lý Sản phẩm</h2>
-          <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
-            Quản lý thông tin hàng hóa, định giá niêm yết và trạng thái hiển thị bán hàng.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {/* THANH TAB BAR: SẢN PHẨM & TỒN KHO / DANH MỤC */}
+      <div className="no-print" style={{
+        display: 'flex',
+        gap: '8px',
+        borderBottom: '2px solid #e2e8f0',
+        marginBottom: '20px',
+        paddingBottom: '2px'
+      }}>
+        <button
+          type="button"
+          onClick={() => handleTabChange('products')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'none',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'products' ? 700 : 500,
+            color: activeTab === 'products' ? '#ff5722' : '#64748b',
+            borderBottom: activeTab === 'products' ? '3px solid #ff5722' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Apple size={18} /> Sản phẩm & Tồn kho ({products.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('categories')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'none',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'categories' ? 700 : 500,
+            color: activeTab === 'categories' ? '#ff5722' : '#64748b',
+            borderBottom: activeTab === 'categories' ? '3px solid #ff5722' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <FolderKanban size={18} /> Danh mục ({categories.length})
+        </button>
+      </div>
+
+      {activeTab === 'categories' ? (
+        <CategoryManager onCategoryUpdated={fetchData} />
+      ) : (
+        <>
+          <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2>Quản lý Sản phẩm & Tồn kho</h2>
+              <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                Quản lý thông tin hàng hóa, định giá niêm yết, theo dõi số lượng tồn kho và nhập hàng kịp thời.
+              </p>
+            </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <button onClick={handleExportCSV} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Download size={16} /> Xuất Excel / CSV
           </button>
           <button onClick={handlePrint} className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Printer size={16} /> In Bảng Giá
           </button>
+          <Link 
+            to="/admin/warehouse-history?tab=receipts&action=create" 
+            className="btn btn-primary" 
+            style={{ 
+              background: '#16a34a', 
+              borderColor: '#16a34a', 
+              color: '#ffffff',
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              fontWeight: 600,
+              textDecoration: 'none'
+            }}
+          >
+            <Boxes size={18} /> + Nhập hàng
+          </Link>
           <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={18} /> Thêm sản phẩm
           </button>
@@ -336,8 +435,16 @@ const ProductManager = () => {
                 <input type="number" placeholder="Trọng lượng gram..." required value={weightG} onChange={(e) => setWeightG(e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Số lượng tồn kho {editId ? '(Chỉ xem)' : ''}</label>
-                <input type="number" required value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} disabled={!!editId} />
+                <label>Số lượng tồn kho (Khóa - Chỉ tăng qua QC Nhập kho)</label>
+                <input 
+                  type="number" 
+                  value={currentStock} 
+                  disabled={true} 
+                  style={{ background: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: 700 }} 
+                />
+                <small style={{ color: '#0284c7', display: 'block', marginTop: '4px', fontSize: '0.8rem', lineHeight: 1.3 }}>
+                  🔒 Tồn kho ban đầu luôn bằng 0. Số lượng chỉ được tăng tự động sau khi lập Phiếu nhập kho và kiểm định chất lượng (QC) đạt chuẩn.
+                </small>
               </div>
               <div className="form-group">
                 <label>Ngưỡng tồn kho tối thiểu</label>
@@ -388,7 +495,99 @@ const ProductManager = () => {
         </div>
       )}
 
-      {/* Thanh tìm kiếm tương đối & Bộ lọc Danh mục */}
+      {/* 3 THẺ KPI TỒN KHO THÔNG MINH (CLICK ĐỂ LỌC NHANH) */}
+      <div className="no-print" style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', 
+        gap: '16px', 
+        marginBottom: '20px' 
+      }}>
+        {/* KPI 1: Tổng lượng tồn kho */}
+        <div 
+          onClick={() => setStockFilter('ALL')}
+          style={{ 
+            background: stockFilter === 'ALL' ? '#eff6ff' : '#ffffff', 
+            padding: '18px 20px', 
+            borderRadius: '16px', 
+            border: stockFilter === 'ALL' ? '2px solid #3b82f6' : '1px solid #e2e8f0', 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div>
+            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Tổng lượng tồn kho</span>
+            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#0f172a' }}>
+              {totalStock.toLocaleString()} <small style={{ fontSize: '0.9rem', fontWeight: 500, color: '#64748b' }}>món</small>
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 600 }}>Tất cả {products.length} sản phẩm</span>
+          </div>
+          <div style={{ background: '#dbeafe', color: '#2563eb', padding: '12px', borderRadius: '12px' }}>
+            <PackageCheck size={24} />
+          </div>
+        </div>
+
+        {/* KPI 2: Mặt hàng sắp hết */}
+        <div 
+          onClick={() => setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
+          style={{ 
+            background: stockFilter === 'LOW_STOCK' ? '#fffbeb' : '#ffffff', 
+            padding: '18px 20px', 
+            borderRadius: '16px', 
+            border: stockFilter === 'LOW_STOCK' ? '2px solid #f59e0b' : '1px solid #fed7aa', 
+            boxShadow: '0 4px 12px rgba(245,158,11,0.08)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div>
+            <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: 600 }}>Mặt hàng sắp hết (≤ Ngưỡng)</span>
+            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#d97706' }}>
+              {lowStockProducts.length} <small style={{ fontSize: '0.9rem', fontWeight: 500, color: '#b45309' }}>mặt hàng</small>
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>Cần lên đơn nhập sớm</span>
+          </div>
+          <div style={{ background: '#fef3c7', color: '#d97706', padding: '12px', borderRadius: '12px' }}>
+            <AlertTriangle size={24} />
+          </div>
+        </div>
+
+        {/* KPI 3: Mặt hàng đã hết */}
+        <div 
+          onClick={() => setStockFilter(stockFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK')}
+          style={{ 
+            background: stockFilter === 'OUT_OF_STOCK' ? '#fff5f5' : '#ffffff', 
+            padding: '18px 20px', 
+            borderRadius: '16px', 
+            border: stockFilter === 'OUT_OF_STOCK' ? '2px solid #ef4444' : '1px solid #fecaca', 
+            boxShadow: '0 4px 12px rgba(239,68,68,0.08)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div>
+            <span style={{ fontSize: '0.85rem', color: '#991b1b', fontWeight: 600 }}>Mặt hàng hết hàng (= 0)</span>
+            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: 900, color: '#dc2626' }}>
+              {outOfStockProducts.length} <small style={{ fontSize: '0.9rem', fontWeight: 500, color: '#991b1b' }}>mặt hàng</small>
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 600 }}>Ngưng bán do hết tồn</span>
+          </div>
+          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px', borderRadius: '12px' }}>
+            <Boxes size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Thanh tìm kiếm tương đối & Bộ lọc Danh mục + Tồn kho */}
       <div className="no-print" style={{
         display: 'flex',
         gap: '12px',
@@ -451,9 +650,34 @@ const ProductManager = () => {
           </select>
         </div>
 
-        {(searchTerm || selectedCategory !== 'ALL') && (
+        {/* Bộ lọc trạng thái Tồn kho */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Layers size={18} style={{ color: '#64748b' }} />
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            style={{
+              padding: '9px 12px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#f8fafc',
+              fontSize: '0.92rem',
+              color: '#334155',
+              cursor: 'pointer',
+              outline: 'none',
+              fontWeight: stockFilter !== 'ALL' ? 700 : 400
+            }}
+          >
+            <option value="ALL">Tất cả tồn kho ({products.length})</option>
+            <option value="IN_STOCK">Còn hàng dồi dào ({inStockProducts.length})</option>
+            <option value="LOW_STOCK">Sắp hết hàng (≤ ngưỡng) ({lowStockProducts.length})</option>
+            <option value="OUT_OF_STOCK">Đã hết hàng (= 0) ({outOfStockProducts.length})</option>
+          </select>
+        </div>
+
+        {(searchTerm || selectedCategory !== 'ALL' || stockFilter !== 'ALL') && (
           <button
-            onClick={() => { setSearchTerm(''); setSelectedCategory('ALL') }}
+            onClick={() => { setSearchTerm(''); setSelectedCategory('ALL'); setStockFilter('ALL') }}
             className="btn btn-outline"
             style={{ padding: '8px 14px', fontSize: '0.85rem' }}
           >
@@ -485,22 +709,36 @@ const ProductManager = () => {
           </thead>
           <tbody>
             {filteredProducts.length > 0 ? (
-              [...filteredProducts].sort((a, b) => a.id - b.id).map(prod => (
-                <tr key={prod.id}>
-                  <td>{prod.id}</td>
-                  <td className="no-print">
-                    <img src={prod.mainImage} alt={prod.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
-                  </td>
-                  <td><strong>{prod.name}</strong></td>
-                  <td>{prod.categoryName}</td>
-                  <td>{prod.brandName}</td>
-                  <td>{prod.price.toLocaleString()}đ</td>
-                  <td>{prod.salePrice ? `${prod.salePrice.toLocaleString()}đ` : '—'}</td>
-                  <td>
-                    <span className={prod.currentStock < prod.minimumStock ? 'text-danger font-bold' : ''}>
-                      {prod.currentStock}
-                    </span>
-                  </td>
+              [...filteredProducts].sort((a, b) => a.id - b.id).map(prod => {
+                const isOutOfStock = (prod.currentStock || 0) === 0
+                const isLowStock = !isOutOfStock && (prod.currentStock || 0) <= (prod.minimumStock || 5)
+
+                return (
+                  <tr key={prod.id}>
+                    <td>{prod.id}</td>
+                    <td className="no-print">
+                      <img src={prod.mainImage} alt={prod.name} className="table-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
+                    </td>
+                    <td><strong>{prod.name}</strong></td>
+                    <td>{prod.categoryName}</td>
+                    <td>{prod.brandName}</td>
+                    <td>{prod.price.toLocaleString()}đ</td>
+                    <td>{prod.salePrice ? `${prod.salePrice.toLocaleString()}đ` : '—'}</td>
+                    <td>
+                      {isOutOfStock ? (
+                        <span style={{ background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 }}>
+                          Hết hàng (0)
+                        </span>
+                      ) : isLowStock ? (
+                        <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 }} title={`Tồn kho dưới ngưỡng tối thiểu (${prod.minimumStock || 5})`}>
+                          ⚠️ Sắp hết ({prod.currentStock} {prod.unit || 'món'})
+                        </span>
+                      ) : (
+                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 }}>
+                          {prod.currentStock} {prod.unit || 'món'}
+                        </span>
+                      )}
+                    </td>
                   <td>
                     <button
                       type="button"
@@ -520,7 +758,7 @@ const ProductManager = () => {
                     </div>
                   </td>
                 </tr>
-              ))
+              )})
             ) : (
               <tr>
                 <td colSpan="10" style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
@@ -550,6 +788,8 @@ const ProductManager = () => {
           <div className="print-sig-space"></div>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

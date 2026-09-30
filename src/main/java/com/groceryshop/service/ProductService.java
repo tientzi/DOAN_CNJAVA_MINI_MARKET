@@ -136,14 +136,12 @@ public class ProductService {
 
         Inventory inventory = Inventory.builder()
                 .product(saved)
-                .currentStock(dto.getCurrentStock() != null ? dto.getCurrentStock() : 0)
+                .currentStock(0) // Khóa nhập tay: Tồn kho mặc định bằng 0, chỉ tăng qua Nhập kho & Kiểm định QC
                 .minimumStock(dto.getMinimumStock() != null ? dto.getMinimumStock() : 5)
                 .location(dto.getLocation() != null ? dto.getLocation() : "Khu vực mặc định")
                 .build();
         inventoryRepository.save(inventory);
         saved.setInventory(inventory);
-        
-        ledgerService.recordLog(inventory, "IMPORT", inventory.getCurrentStock(), saved.getId(), "Khởi tạo tồn kho ban đầu", null);
 
         if (dto.getImages() != null) {
             for (String imgPath : dto.getImages()) {
@@ -199,10 +197,7 @@ public class ProductService {
         if (inventory == null) {
             inventory = Inventory.builder().product(product).build();
         }
-        Integer oldStock = inventory.getCurrentStock() != null ? inventory.getCurrentStock() : 0;
-        if (dto.getCurrentStock() != null) {
-            inventory.setCurrentStock(dto.getCurrentStock());
-        }
+        // Khóa chỉnh sửa tồn kho trực tiếp qua form sản phẩm (Tồn kho chỉ thay đổi qua Nhập kho/Bán hàng/Kiểm định)
         if (dto.getMinimumStock() != null) {
             inventory.setMinimumStock(dto.getMinimumStock());
         }
@@ -211,11 +206,6 @@ public class ProductService {
         }
         inventoryRepository.save(inventory);
         product.setInventory(inventory);
-        
-        if (dto.getCurrentStock() != null && !oldStock.equals(dto.getCurrentStock())) {
-            int change = dto.getCurrentStock() - oldStock;
-            ledgerService.recordLog(inventory, "MANUAL_ADJUST", change, product.getId(), "Admin điều chỉnh tồn kho thủ công", null);
-        }
 
         if (dto.getImages() != null) {
             productImageRepository.deleteAll(product.getImages());

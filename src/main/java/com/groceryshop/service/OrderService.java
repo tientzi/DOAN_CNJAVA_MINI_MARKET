@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -60,6 +61,15 @@ public class OrderService {
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
+        LocalDate today = LocalDate.now();
+
+        class ItemAllocation {
+            Product product;
+            String productName;
+            int quantity;
+            BigDecimal price;
+        }
+        List<ItemAllocation> itemAllocations = new java.util.ArrayList<>();
 
         for (CartItem item : cart.getItems()) {
             Product product = item.getProduct();
@@ -72,8 +82,61 @@ public class OrderService {
                 throw new BadRequestException("Sản phẩm '" + product.getName() + "' không đủ hàng trong kho (Còn lại: " + currentStock + ")");
             }
 
-            BigDecimal itemPrice = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
-            totalAmount = totalAmount.add(itemPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+            int reqQty = item.getQuantity();
+
+            // Tìm lô cận date đang có salePrice và còn hạn
+            List<ProductBatch> validBatches = productBatchRepository.findByProductIdAndQuantityGreaterThanOrderByExpiryDateAsc(product.getId(), 0)
+                    .stream()
+                    .filter(b -> b.getExpiryDate() != null && !b.getExpiryDate().isBefore(today))
+                    .collect(Collectors.toList());
+
+            ProductBatch saleBatch = validBatches.stream()
+                    .filter(b -> b.getSalePrice() != null && b.getSalePrice().compareTo(BigDecimal.ZERO) > 0 
+                            && product.getPrice() != null && b.getSalePrice().compareTo(product.getPrice()) < 0)
+                    .findFirst()
+                    .orElse(null);
+
+            if (saleBatch != null && saleBatch.getQuantity() > 0 && reqQty > saleBatch.getQuantity()) {
+                // Tách 2 dòng:
+                // 1. Phần lô sale
+                int saleQty = saleBatch.getQuantity();
+                BigDecimal salePrice = saleBatch.getSalePrice();
+                ItemAllocation a1 = new ItemAllocation();
+                a1.product = product;
+                a1.productName = product.getName() + " (Xả kho cận date - HSD: " + saleBatch.getExpiryDate() + ")";
+                a1.quantity = saleQty;
+                a1.price = salePrice;
+                itemAllocations.add(a1);
+                totalAmount = totalAmount.add(salePrice.multiply(BigDecimal.valueOf(saleQty)));
+
+                // 2. Phần lô tiêu chuẩn
+                int normalQty = reqQty - saleQty;
+                BigDecimal normalPrice = product.getPrice();
+                ItemAllocation a2 = new ItemAllocation();
+                a2.product = product;
+                a2.productName = product.getName() + " (Lô tiêu chuẩn)";
+                a2.quantity = normalQty;
+                a2.price = normalPrice;
+                itemAllocations.add(a2);
+                totalAmount = totalAmount.add(normalPrice.multiply(BigDecimal.valueOf(normalQty)));
+            } else {
+                BigDecimal itemPrice = (saleBatch != null && reqQty <= saleBatch.getQuantity())
+                        ? saleBatch.getSalePrice()
+                        : (product.getSalePrice() != null ? product.getSalePrice() : product.getPrice());
+
+                String displayName = product.getName();
+                if (saleBatch != null && reqQty <= saleBatch.getQuantity()) {
+                    displayName += " (Xả kho cận date - HSD: " + saleBatch.getExpiryDate() + ")";
+                }
+
+                ItemAllocation a = new ItemAllocation();
+                a.product = product;
+                a.productName = displayName;
+                a.quantity = reqQty;
+                a.price = itemPrice;
+                itemAllocations.add(a);
+                totalAmount = totalAmount.add(itemPrice.multiply(BigDecimal.valueOf(reqQty)));
+            }
         }
 
         BigDecimal discountAmount = BigDecimal.ZERO;
@@ -131,31 +194,34 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        for (CartItem item : cart.getItems()) {
-            Product product = item.getProduct();
-            BigDecimal itemPrice = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
-
+        for (ItemAllocation alloc : itemAllocations) {
             OrderItem orderItem = OrderItem.builder()
                     .order(savedOrder)
-                    .product(product)
-                    .quantity(item.getQuantity())
-                    .price(itemPrice)
-                    .productName(product.getName())
-                    .productImage(product.getMainImage())
+                    .product(alloc.product)
+                    .quantity(alloc.quantity)
+                    .price(alloc.price)
+                    .productName(alloc.productName)
+                    .productImage(alloc.product.getMainImage())
                     .build();
             orderItemRepository.save(orderItem);
             savedOrder.getItems().add(orderItem);
+        }
 
+        for (CartItem item : cart.getItems()) {
+            Product product = item.getProduct();
             Inventory inventory = product.getInventory();
             if (inventory != null) {
                 inventory.setCurrentStock(inventory.getCurrentStock() - item.getQuantity());
                 inventoryRepository.save(inventory);
                 
-                // Deduct from batches (FIFO)
+                // Deduct from batches (FIFO, strictly ignoring expired batches)
                 int quantityToDeduct = item.getQuantity();
                 List<ProductBatch> batches = productBatchRepository.findByProductIdAndQuantityGreaterThanOrderByExpiryDateAsc(product.getId(), 0);
                 for (ProductBatch batch : batches) {
                     if (quantityToDeduct <= 0) break;
+                    if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(today)) {
+                        continue; // Không trừ vào lô đã hết hạn khi bán lẻ
+                    }
                     if (batch.getQuantity() >= quantityToDeduct) {
                         batch.setQuantity(batch.getQuantity() - quantityToDeduct);
                         quantityToDeduct = 0;

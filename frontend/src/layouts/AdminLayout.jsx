@@ -42,12 +42,9 @@ const AdminLayout = () => {
     {
       group: 'SẢN PHẨM & KHO HÀNG',
       items: [
-        { path: '/admin/categories', name: 'Danh mục', icon: <FolderKanban size={18} /> },
-        { path: '/admin/products', name: 'Sản phẩm', icon: <Apple size={18} /> },
+        { path: '/admin/products', name: 'Sản phẩm & Tồn kho', icon: <Apple size={18} /> },
         { path: '/admin/product-batches', name: 'Lô & Hạn sử dụng', icon: <CalendarRange size={18} /> },
-        { path: '/admin/inventory', name: 'Tồn kho', icon: <PackageCheck size={18} /> },
-        { path: '/admin/inventory-ledger', name: 'Lịch sử kho', icon: <ClipboardList size={18} /> },
-        { path: '/admin/goods-receipts', name: 'Phiếu nhập kho', icon: <FileText size={18} /> },
+        { path: '/admin/warehouse-history', name: 'Lịch sử & Nhập kho', icon: <ClipboardList size={18} /> },
         { path: '/admin/suppliers', name: 'Nhà cung cấp & Thương hiệu', icon: <Building2 size={18} /> },
       ]
     },
@@ -83,7 +80,9 @@ const AdminLayout = () => {
             <div key={gIdx} className="nav-group">
               <div className="nav-group-title">{group.group}</div>
               {group.items.map((item) => {
-                const isActive = location.pathname === item.path
+                const isActive = location.pathname === item.path || 
+                  (item.path === '/admin/warehouse-history' && (location.pathname === '/admin/goods-receipts' || location.pathname === '/admin/inventory-ledger')) ||
+                  (item.path === '/admin/products' && location.pathname === '/admin/inventory')
                 return (
                   <Link
                     key={item.path}

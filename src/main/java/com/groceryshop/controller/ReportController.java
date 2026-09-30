@@ -23,4 +23,9 @@ public class ReportController {
     ) {
         return ResponseEntity.ok(reportService.getOverviewReport(range, startDate, endDate));
     }
+
+    @GetMapping("/expired-batches")
+    public ResponseEntity<java.util.Map<String, Object>> getExpiredBatchesReport() {
+        return ResponseEntity.ok(reportService.getExpiredBatchesReport());
+    }
 }

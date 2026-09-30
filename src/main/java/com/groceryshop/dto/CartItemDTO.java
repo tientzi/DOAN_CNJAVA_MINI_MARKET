@@ -19,4 +19,8 @@ public class CartItemDTO {
     private Integer maxStock;
     private Long categoryId;
     private String categoryName;
+    private Boolean hasMultiBatch;
+    private Integer saleBatchQuantity;
+    private BigDecimal saleBatchPrice;
+    private java.time.LocalDate saleBatchExpiryDate;
 }

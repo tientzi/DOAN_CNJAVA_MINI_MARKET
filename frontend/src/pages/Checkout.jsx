@@ -593,10 +593,48 @@ const Checkout = () => {
             <h3>Chi tiết đơn hàng</h3>
             <div className="order-items-preview">
               {cart.items.map(item => {
-                const price = item.productSalePrice != null ? item.productSalePrice : item.productPrice
+                const isMultiBatchSplit = item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity
+                const saleQty = item.saleBatchQuantity || 0
+                const normalQty = item.quantity - saleQty
+                const salePrice = item.saleBatchPrice || 0
+                const normalPrice = item.productPrice || 0
+
+                if (isMultiBatchSplit) {
+                  return (
+                    <React.Fragment key={item.id}>
+                      <div className="preview-item-row" style={{ background: '#fffbeb', padding: '6px 8px', borderRadius: '6px', marginBottom: '4px' }}>
+                        <span className="preview-name" style={{ color: '#92400e' }}>
+                          ⚡ {item.productName} <small style={{ color: '#b45309', fontWeight: 700 }}>(Xả kho cận date)</small> <strong>x{saleQty}</strong>
+                        </span>
+                        <span className="preview-price" style={{ color: '#ea580c', fontWeight: 700 }}>
+                          {(salePrice * saleQty).toLocaleString()}đ
+                        </span>
+                      </div>
+                      <div className="preview-item-row" style={{ padding: '6px 8px', borderRadius: '6px', marginBottom: '6px', borderBottom: '1px dashed #e2e8f0' }}>
+                        <span className="preview-name">
+                          📦 {item.productName} <small style={{ color: '#64748b', fontWeight: 600 }}>(Lô tiêu chuẩn)</small> <strong>x{normalQty}</strong>
+                        </span>
+                        <span className="preview-price">
+                          {(normalPrice * normalQty).toLocaleString()}đ
+                        </span>
+                      </div>
+                    </React.Fragment>
+                  )
+                }
+
+                const price = (item.hasMultiBatch && item.saleBatchPrice != null && item.quantity <= item.saleBatchQuantity)
+                  ? item.saleBatchPrice
+                  : (item.productSalePrice != null ? item.productSalePrice : item.productPrice)
+
                 return (
                   <div key={item.id} className="preview-item-row">
-                    <span className="preview-name">{item.productName} <strong>x{item.quantity}</strong></span>
+                    <span className="preview-name">
+                      {item.productName} 
+                      {item.hasMultiBatch && item.saleBatchPrice != null && item.quantity <= item.saleBatchQuantity && (
+                        <small style={{ color: '#ea580c', fontWeight: 700 }}> (Xả kho)</small>
+                      )}
+                      <strong> x{item.quantity}</strong>
+                    </span>
                     <span className="preview-price">{(price * item.quantity).toLocaleString()}đ</span>
                   </div>
                 )

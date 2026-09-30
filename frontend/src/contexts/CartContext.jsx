@@ -67,7 +67,14 @@ export const CartProvider = ({ children }) => {
   const totalItemsCount = cart.items ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0
   
   const cartSubtotal = cart.items ? cart.items.reduce((sum, item) => {
-    const price = item.productSalePrice != null ? item.productSalePrice : item.productPrice
+    if (item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity) {
+      const salePart = item.saleBatchQuantity * item.saleBatchPrice
+      const regularPart = (item.quantity - item.saleBatchQuantity) * item.productPrice
+      return sum + salePart + regularPart
+    }
+    const price = (item.hasMultiBatch && item.saleBatchPrice != null && item.quantity <= item.saleBatchQuantity)
+      ? item.saleBatchPrice
+      : (item.productSalePrice != null ? item.productSalePrice : item.productPrice)
     return sum + price * item.quantity
   }, 0) : 0
 

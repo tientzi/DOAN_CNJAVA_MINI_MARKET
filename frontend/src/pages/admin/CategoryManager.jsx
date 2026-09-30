@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, Eye, EyeOff, Search, X } from 'lucide-react'
 import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
 
-const CategoryManager = () => {
+const CategoryManager = ({ onCategoryUpdated }) => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -23,6 +23,7 @@ const CategoryManager = () => {
     try {
       const response = await api.get('/api/admin/categories')
       setCategories(response.data)
+      if (onCategoryUpdated) onCategoryUpdated(response.data)
     } catch (err) {
       console.error(err)
     } finally {

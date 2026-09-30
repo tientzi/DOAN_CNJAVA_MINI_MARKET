@@ -36,4 +36,27 @@ public class GoodsReceiptItem {
 
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
+
+    // Quality Control (QC) Fields
+    @Column(name = "passed_quantity")
+    private Integer passedQuantity;
+
+    @Column(name = "rejected_quantity")
+    private Integer rejectedQuantity;
+
+    @Column(name = "reject_reason", length = 255)
+    private String rejectReason;
+
+    @Column(name = "qc_status", length = 50)
+    private String qcStatus; // PENDING, PASSED, PARTIALLY_PASSED, REJECTED
+
+    @Column(name = "qc_note", length = 500)
+    private String qcNote;
+
+    @Column(name = "inspected_at")
+    private java.time.LocalDateTime inspectedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inspected_by")
+    private User inspectedBy;
 }

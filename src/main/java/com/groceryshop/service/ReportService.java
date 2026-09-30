@@ -357,10 +357,6 @@ public class ReportService {
             map.put("district", district);
             map.put("phone", s.getPhone());
             map.put("assignedCount", assigned);
-            map.put("deliveredCount", delivered);
-            map.put("failedCount", failed);
-            map.put("codCollected", codCollected);
-            map.put("successRate", Math.round(successRate * 10.0) / 10.0);
             shipperPerf.add(map);
         }
 
@@ -375,5 +371,40 @@ public class ReportService {
                 .topSellingProducts(topProducts)
                 .shipperPerformance(shipperPerf)
                 .build();
+    }
+
+    @Autowired
+    private com.groceryshop.repository.ProductBatchRepository batchRepository;
+
+    public Map<String, Object> getExpiredBatchesReport() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<com.groceryshop.entity.ProductBatch> allBatches = batchRepository.findAll();
+
+        List<com.groceryshop.dto.ProductBatchDTO> expiredList = new ArrayList<>();
+        int totalExpiredQty = 0;
+        BigDecimal totalLoss = BigDecimal.ZERO;
+
+        for (com.groceryshop.entity.ProductBatch b : allBatches) {
+            boolean isExp = b.getExpiryDate() != null && b.getExpiryDate().isBefore(today);
+            boolean isDisposed = "DISPOSED".equalsIgnoreCase(b.getStatus());
+            if (isExp || isDisposed) {
+                com.groceryshop.dto.ProductBatchDTO dto = com.groceryshop.mapper.EntityMapper.toProductBatchDTO(b);
+                expiredList.add(dto);
+
+                int qty = b.getQuantity() != null ? b.getQuantity() : 0;
+                totalExpiredQty += qty;
+                BigDecimal price = b.getEffectiveImportPrice();
+                if (price != null && qty > 0) {
+                    totalLoss = totalLoss.add(price.multiply(BigDecimal.valueOf(qty)));
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalExpiredBatches", expiredList.size());
+        result.put("totalExpiredQuantity", totalExpiredQty);
+        result.put("totalLossAmount", totalLoss);
+        result.put("batches", expiredList);
+        return result;
     }
 }

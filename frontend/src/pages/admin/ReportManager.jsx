@@ -3,7 +3,7 @@ import api from '../../services/api'
 import { 
   BarChart3, TrendingUp, ShoppingBag, Users, PackageCheck, 
   Printer, Download, RefreshCw, DollarSign, Award, Truck,
-  Calendar, CheckCircle2, AlertCircle, Filter, MapPin, CreditCard
+  Calendar, CheckCircle2, AlertCircle, Filter, MapPin, CreditCard, ShieldAlert
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
@@ -13,6 +13,7 @@ import './AdminPages.css'
 
 const ReportManager = () => {
   const [data, setData] = useState(null)
+  const [expiredData, setExpiredData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState('30days')
   const [startDate, setStartDate] = useState('')
@@ -30,8 +31,12 @@ const ReportManager = () => {
         if (start) params.startDate = start
         if (end) params.endDate = end
       }
-      const res = await api.get('/api/admin/reports/overview', { params })
+      const [res, expRes] = await Promise.all([
+        api.get('/api/admin/reports/overview', { params }),
+        api.get('/api/admin/reports/expired-batches')
+      ])
       setData(res.data)
+      setExpiredData(expRes.data)
     } catch (err) {
       console.error('Lỗi khi tải báo cáo thống kê:', err)
     } finally {
@@ -59,7 +64,10 @@ const ReportManager = () => {
       ...(data.topSellingProducts || []).map(p => [`"${p.productName}"`, p.quantity, p.revenue]),
       [],
       ['Shipper', 'Khu Vuc Quan', 'So Don Thanh Cong', 'So Don That Bai', 'Ty Le Thanh Cong (%)', 'Tien COD Da Thu'],
-      ...(data.shipperPerformance || []).map(s => [`"${s.shipperName}"`, `"${s.district || ''}"`, s.deliveredCount, s.failedCount, `${s.successRate}%`, s.codCollected])
+      ...(data.shipperPerformance || []).map(s => [`"${s.shipperName}"`, `"${s.district || ''}"`, s.deliveredCount, s.failedCount, `${s.successRate}%`, s.codCollected]),
+      [],
+      ['Lo Hang Qua Han / Xuat Huy', 'San Pham', 'SKU', 'HSD', 'So Luong', 'Don Gia Von', 'Ton That Von', 'Trang Thai'],
+      ...(expiredData?.batches || []).map(b => [`"${b.batchName || b.id}"`, `"${b.productName}"`, `"${b.productSku || ''}"`, b.expiryDate || '', b.quantity || 0, b.importPrice || 0, (b.quantity || 0) * (b.importPrice || 0), b.status || 'EXPIRED'])
     ]
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(r => r.join(',')).join('\n')
@@ -233,6 +241,21 @@ const ReportManager = () => {
               <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
                 {(data?.totalCustomers || 0).toLocaleString()} <small style={{ fontSize: '1rem', fontWeight: 500 }}>người</small>
               </h3>
+            </div>
+
+            <div style={{ background: '#fff5f5', padding: '24px', borderRadius: '18px', border: '1px solid #fecaca', boxShadow: '0 4px 15px rgba(220,38,38,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ color: '#991b1b', fontSize: '0.9rem', fontWeight: 600 }}>Tổn Thất Quá Hạn</span>
+                <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px', borderRadius: '12px' }}>
+                  <ShieldAlert size={22} />
+                </div>
+              </div>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#dc2626', margin: 0 }}>
+                {formatCurrency(expiredData?.totalLossAmount)}
+              </h3>
+              <small style={{ color: '#991b1b', fontWeight: 600, display: 'block', marginTop: '4px' }}>
+                {expiredData?.totalExpiredQuantity || 0} món ({expiredData?.totalExpiredBatches || 0} lô quá hạn)
+              </small>
             </div>
           </div>
 
@@ -546,6 +569,87 @@ const ReportManager = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          {/* BẢNG CHI TIẾT LÔ HÀNG QUÁ HẠN & THẤT THOÁT VỐN */}
+          <div style={{ background: 'white', padding: '24px', borderRadius: '20px', border: '1px solid #fecaca', boxShadow: '0 4px 15px rgba(220,38,38,0.05)', marginTop: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#991b1b', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldAlert size={22} color="#dc2626" /> Báo Cáo Chi Tiết Tổn Thất Do Hàng Quá Hạn & Xuất Hủy
+                </h3>
+                <small style={{ color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Tổng hợp các lô hàng đã quá hạn sử dụng hoặc đã được xuất hủy khỏi kho để tính toán số vốn bị thất thoát.
+                </small>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span style={{ background: '#fee2e2', color: '#dc2626', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 800, border: '1px solid #fca5a5' }}>
+                  Tổng tổn thất: {formatCurrency(expiredData?.totalLossAmount)}
+                </span>
+              </div>
+            </div>
+
+            <div className="table-responsive">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>STT</th>
+                    <th>Lô hàng</th>
+                    <th>Sản phẩm</th>
+                    <th>Mã SKU</th>
+                    <th>Hạn sử dụng</th>
+                    <th style={{ textAlign: 'center' }}>Số lượng</th>
+                    <th style={{ textAlign: 'right' }}>Giá vốn (VND)</th>
+                    <th style={{ textAlign: 'right' }}>Tổn thất vốn (VND)</th>
+                    <th style={{ textAlign: 'center' }}>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(expiredData?.batches || []).map((b, idx) => {
+                    const isDisposed = b.status === 'DISPOSED'
+                    const loss = (b.quantity || 0) * (b.importPrice || 0)
+                    return (
+                      <tr key={b.id || idx}>
+                        <td style={{ color: '#94a3b8' }}>#{idx + 1}</td>
+                        <td><strong>{b.batchName || `Lô #${b.id}`}</strong></td>
+                        <td>{b.productName}</td>
+                        <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{b.productSku || 'N/A'}</code></td>
+                        <td>
+                          <span style={{ color: '#dc2626', fontWeight: 600 }}>{b.expiryDate}</span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <strong style={{ color: isDisposed ? '#64748b' : '#dc2626' }}>
+                            {b.quantity}
+                          </strong>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(b.importPrice)}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <strong style={{ color: '#dc2626' }}>{formatCurrency(loss)}</strong>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {isDisposed ? (
+                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                              Đã xuất hủy
+                            </span>
+                          ) : (
+                            <span style={{ background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                              Quá hạn tồn kho
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {(!expiredData?.batches || expiredData.batches.length === 0) && (
+                    <tr>
+                      <td colSpan="9" style={{ textAlign: 'center', color: '#16a34a', padding: '24px', fontWeight: 600 }}>
+                        🎉 Siêu thị không có lô hàng nào quá hạn sử dụng. Quản lý kho hàng rất tốt!
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

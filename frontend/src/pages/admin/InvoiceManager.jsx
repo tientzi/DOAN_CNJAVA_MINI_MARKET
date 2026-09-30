@@ -361,17 +361,50 @@ const InvoiceManager = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedInvoice.items?.map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '8px 4px', color: '#94a3b8' }}>{idx + 1}</td>
-                      <td style={{ padding: '8px' }}>
-                        <strong>{item.productName}</strong>
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.quantity}</td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}>{item.price?.toLocaleString()}đ</td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}><strong>{(item.price * item.quantity)?.toLocaleString()}đ</strong></td>
-                    </tr>
-                  ))}
+                  {selectedInvoice.items?.map((item, idx) => {
+                    const isSaleBatch = item.productName?.includes('(Xả kho cận date')
+                    const isStandardBatch = item.productName?.includes('(Lô tiêu chuẩn')
+
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 4px', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px' }}>
+                          <span style={{ fontWeight: 700 }}>{item.productName}</span>
+                          {isSaleBatch && (
+                            <span style={{ 
+                              background: '#fef3c7', 
+                              color: '#b45309', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700, 
+                              marginLeft: '6px', 
+                              display: 'inline-block' 
+                            }}>
+                              ⚡ Đơn giá xả kho
+                            </span>
+                          )}
+                          {isStandardBatch && (
+                            <span style={{ 
+                              background: '#eff6ff', 
+                              color: '#1d4ed8', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700, 
+                              marginLeft: '6px', 
+                              display: 'inline-block' 
+                            }}>
+                              📦 Giá tiêu chuẩn
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'center' }}><strong>{item.quantity}</strong></td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>{item.price?.toLocaleString()}đ</td>
+                        <td style={{ padding: '8px', textAlign: 'right' }}><strong>{(item.price * item.quantity)?.toLocaleString()}đ</strong></td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
 

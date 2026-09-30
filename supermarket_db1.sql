@@ -1,9 +1,13 @@
 -- =============================================================
--- supermarket_db1_JAVA_100_PERCENT_FIXED.sql
--- SQL Server database aligned to current Java/JPA entities in
--- Mini_mart-main (Spring Boot 3.2 + Hibernate/JPA).
--- Target DB: supermarket_db1
--- IMPORTANT: This script rebuilds all application tables.
+-- supermarket_db1.sql
+-- TẬP LỆNH DATABASE TOÀN DIỆN & DUY NHẤT CHO HỆ THỐNG SUPERMARKET MINI-MART
+-- Tích hợp đầy đủ:
+--  1. Cấu trúc bảng (22 entities) chuẩn JPA/Hibernate (Spring Boot 3.2)
+--  2. Khóa ngoại, ràng buộc CHECK, chỉ mục tối ưu truy vấn
+--  3. Quản lý phân lô (Product Batches: import_price, sale_price, status)
+--  4. Xuất hủy hàng quá hạn & Sổ cái biến động kho (Inventory Ledger)
+--  5. 50 đơn hàng lịch sử TP.HCM (Tân Phú, Tân Bình, Quận 12) cho thuật toán Apriori
+--  6. Đầy đủ Shipper & Phân hạng khách hàng VIP (Diamond, Gold, Silver, Bronze)
 -- =============================================================
 
 IF DB_ID(N'supermarket_db1') IS NULL
@@ -226,6 +230,7 @@ GO
 CREATE TABLE dbo.goods_receipt (
     id           BIGINT IDENTITY(1,1) NOT NULL,
     supplier_id  BIGINT NULL,
+    brand_id     BIGINT NULL,
     total_amount DECIMAL(18,2) NOT NULL CONSTRAINT DF_goods_receipt_total DEFAULT (0),
     note         NVARCHAR(500) NULL,
     status       NVARCHAR(50) NOT NULL CONSTRAINT DF_goods_receipt_status DEFAULT (N'DRAFT'),
@@ -235,6 +240,7 @@ CREATE TABLE dbo.goods_receipt (
     CONSTRAINT PK_goods_receipt PRIMARY KEY (id),
     CONSTRAINT CK_goods_receipt_total_nonnegative CHECK (total_amount >= 0),
     CONSTRAINT FK_goods_receipt_supplier FOREIGN KEY (supplier_id) REFERENCES dbo.suppliers(id) ON DELETE NO ACTION,
+    CONSTRAINT FK_goods_receipt_brand FOREIGN KEY (brand_id) REFERENCES dbo.brands(id) ON DELETE SET NULL,
     CONSTRAINT FK_goods_receipt_created_by FOREIGN KEY (created_by) REFERENCES dbo.users(id) ON DELETE SET NULL
 );
 GO
@@ -270,6 +276,9 @@ CREATE TABLE dbo.product_batches (
     batch_name       NVARCHAR(50) NOT NULL,
     quantity         INT NOT NULL CONSTRAINT DF_product_batches_quantity DEFAULT (0),
     expiry_date      DATE NOT NULL,
+    import_price     DECIMAL(18,2) NULL,
+    sale_price       DECIMAL(18,2) NULL,
+    status           NVARCHAR(20) NOT NULL CONSTRAINT DF_product_batches_status DEFAULT ('ACTIVE'),
     created_at       DATETIME2 NOT NULL CONSTRAINT DF_product_batches_created_at DEFAULT (GETDATE()),
     CONSTRAINT PK_product_batches PRIMARY KEY (id),
     CONSTRAINT CK_product_batches_quantity_nonnegative CHECK (quantity >= 0),
@@ -661,23 +670,27 @@ INSERT INTO dbo.goods_receipt_items (goods_receipt_id, product_id, quantity, imp
 (2, 4,  30, 50000.00, N'DA2026A', DATEADD(DAY,365,CAST(GETDATE() AS DATE))),
 (2, 7,  50, 8000.00, N'CC2026A', DATEADD(DAY,180,CAST(GETDATE() AS DATE)));
 
-INSERT INTO dbo.product_batches (product_id, goods_receipt_id, batch_name, quantity, expiry_date) VALUES
-(1, 1, N'LH2026A', 100, DATEADD(DAY,30,CAST(GETDATE() AS DATE))),
-(2, 1, N'CT2026A',  80, DATEADD(DAY,30,CAST(GETDATE() AS DATE))),
-(5, 1, N'ST2026A',  50, DATEADD(DAY,180,CAST(GETDATE() AS DATE))),
-(3, 2, N'MH2026A',  20, DATEADD(DAY,300,CAST(GETDATE() AS DATE))),
-(4, 2, N'DA2026A',  30, DATEADD(DAY,365,CAST(GETDATE() AS DATE))),
-(7, 2, N'CC2026A',  50, DATEADD(DAY,180,CAST(GETDATE() AS DATE)));
+INSERT INTO dbo.product_batches (product_id, goods_receipt_id, batch_name, quantity, expiry_date, import_price, sale_price, status) VALUES
+(1, 1, N'LH2026A',      4, DATEADD(DAY, 15, CAST(GETDATE() AS DATE)), 15000.00, NULL,     N'ACTIVE'),
+(2, 1, N'CT2026_SALE',  5, DATEADD(DAY,  4, CAST(GETDATE() AS DATE)), 20000.00, 25000.00, N'ACTIVE'),
+(2, 1, N'CT2026A',     20, DATEADD(DAY, 30, CAST(GETDATE() AS DATE)), 20000.00, NULL,     N'ACTIVE'),
+(3, 2, N'MH2026A',      3, DATEADD(DAY,300, CAST(GETDATE() AS DATE)), 110000.00, NULL,    N'ACTIVE'),
+(4, 2, N'DA2026A',     50, DATEADD(DAY,365, CAST(GETDATE() AS DATE)), 50000.00, NULL,     N'ACTIVE'),
+(5, 1, N'ST2026A',     12, DATEADD(DAY,180, CAST(GETDATE() AS DATE)), 28000.00, NULL,     N'ACTIVE'),
+(5, 1, N'ST2026_EXP',   3, DATEADD(DAY, -5, CAST(GETDATE() AS DATE)), 28000.00, NULL,     N'ACTIVE'),
+(5, 1, N'ST2025_DISP',  0, DATEADD(DAY,-25, CAST(GETDATE() AS DATE)), 28000.00, NULL,     N'DISPOSED'),
+(7, 2, N'CC2026A',    120, DATEADD(DAY,180, CAST(GETDATE() AS DATE)), 8000.00,  NULL,     N'ACTIVE');
 
 INSERT INTO dbo.inventory_ledger
 (inventory_id, change_type, quantity_change, previous_stock, new_stock, reference_id, note, created_by)
 VALUES
-(1, N'IMPORT', 100, 0, 100, 1, N'Nhập lô LH2026A', 1),
-(1, N'SELL',   -96, 100, 4, NULL, N'Đồng bộ tồn kho mẫu', 1),
-(2, N'IMPORT',  80, 0, 80, 1, N'Nhập lô CT2026A', 1),
-(2, N'MANUAL_ADJUST', -55, 80, 25, NULL, N'Đồng bộ tồn kho mẫu', 1),
-(3, N'IMPORT',  20, 0, 20, 2, N'Nhập lô MH2026A', 1),
-(3, N'MANUAL_ADJUST', -17, 20, 3, NULL, N'Đồng bộ tồn kho mẫu', 1);
+(1, N'IMPORT',           100,  0, 100, 1,    N'Nhập lô LH2026A', 1),
+(1, N'SELL',             -96, 100,  4, NULL, N'Đồng bộ tồn kho bán hàng', 1),
+(2, N'IMPORT',            80,  0,  80, 1,    N'Nhập lô CT2026A & CT2026_SALE', 1),
+(2, N'MANUAL_ADJUST',    -55, 80,  25, NULL, N'Điều chỉnh kiểm kê', 1),
+(3, N'IMPORT',            20,  0,  20, 2,    N'Nhập lô MH2026A', 1),
+(3, N'MANUAL_ADJUST',    -17, 20,   3, NULL, N'Điều chỉnh kiểm kê', 1),
+(5, N'EXPIRED_DISPOSAL',  -2, 14,  12, NULL, N'Xuất hủy lô quá hạn ST2025_DISP (2 hộp)', 1);
 
 
 -- Customer Messages Seed
@@ -1018,7 +1031,7 @@ UNION ALL SELECT N'order_items', COUNT(*) FROM dbo.order_items
 UNION ALL SELECT N'payments', COUNT(*) FROM dbo.payments
 UNION ALL SELECT N'payment_method_configs', COUNT(*) FROM dbo.payment_method_configs
 UNION ALL SELECT N'reviews', COUNT(*) FROM dbo.reviews
-UNION ALL SELECT N'coupons', COUNT(*) FROM dbo.coupons;
+UNION ALL SELECT N'coupons', COUNT(*) FROM dbo.coupons
 UNION ALL SELECT N'customer_messages', COUNT(*) FROM dbo.customer_messages;
 
 SELECT p.id, p.name, c.name AS category_name, b.name AS brand_name, i.current_stock

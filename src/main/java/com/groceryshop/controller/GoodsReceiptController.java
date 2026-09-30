@@ -45,6 +45,14 @@ public class GoodsReceiptController {
         return ResponseEntity.ok(receiptService.completeReceipt(userDetails.getId(), id));
     }
 
+    @PostMapping("/{id}/qc-inspection")
+    public ResponseEntity<GoodsReceiptDTO> inspectAndCompleteReceipt(
+            @AuthenticationPrincipal UserPrincipal userDetails,
+            @PathVariable Long id,
+            @RequestBody com.groceryshop.dto.QCInspectionRequestDTO request) {
+        return ResponseEntity.ok(receiptService.inspectAndCompleteReceipt(userDetails.getId(), id, request));
+    }
+
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Void> cancelReceipt(@PathVariable Long id) {
         receiptService.cancelReceipt(id);

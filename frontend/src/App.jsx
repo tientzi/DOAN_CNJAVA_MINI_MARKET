@@ -25,14 +25,10 @@ import Profile from './pages/Profile'
 import Loyalty from './pages/Loyalty'
 
 // Admin Pages
-import Dashboard from './pages/admin/Dashboard'
-import CategoryManager from './pages/admin/CategoryManager'
 import ProductManager from './pages/admin/ProductManager'
 import SupplierManager from './pages/admin/SupplierManager'
-import GoodsReceiptManager from './pages/admin/GoodsReceiptManager'
 import ProductBatchManager from './pages/admin/ProductBatchManager'
-import InventoryManager from './pages/admin/InventoryManager'
-import InventoryLedgerManager from './pages/admin/InventoryLedgerManager'
+import WarehouseHistoryManager from './pages/admin/WarehouseHistoryManager'
 import CouponManager from './pages/admin/CouponManager'
 import OrderManager from './pages/admin/OrderManager'
 import InvoiceManager from './pages/admin/InvoiceManager'
@@ -111,13 +107,15 @@ function App() {
               }
             >
               <Route index element={<ReportManager />} />
-              <Route path="categories" element={<CategoryManager />} />
               <Route path="products" element={<ProductManager />} />
               <Route path="suppliers" element={<SupplierManager />} />
-              <Route path="goods-receipts" element={<GoodsReceiptManager />} />
+              <Route path="warehouse-history" element={<WarehouseHistoryManager />} />
               <Route path="product-batches" element={<ProductBatchManager />} />
-              <Route path="inventory" element={<InventoryManager />} />
-              <Route path="inventory-ledger" element={<InventoryLedgerManager />} />
+              {/* Redirects cho các trang đã gộp */}
+              <Route path="categories" element={<Navigate to="/admin/products?tab=categories" replace />} />
+              <Route path="inventory" element={<Navigate to="/admin/products" replace />} />
+              <Route path="goods-receipts" element={<Navigate to="/admin/warehouse-history?tab=receipts" replace />} />
+              <Route path="inventory-ledger" element={<Navigate to="/admin/warehouse-history?tab=ledger" replace />} />
               <Route path="coupons" element={<CouponManager />} />
               <Route path="orders" element={<OrderManager />} />
               <Route path="invoices" element={<InvoiceManager />} />

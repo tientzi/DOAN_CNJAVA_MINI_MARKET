@@ -4,6 +4,7 @@ import com.groceryshop.dto.*;
 import com.groceryshop.entity.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.stream.Collectors;
 
 public class EntityMapper {
@@ -303,14 +304,26 @@ public class EntityMapper {
     public static ProductBatchDTO toProductBatchDTO(ProductBatch batch) {
         if (batch == null) return null;
         Product p = batch.getProduct();
+        BigDecimal originalPrice = p != null ? p.getPrice() : null;
+        BigDecimal salePrice = batch.getSalePrice() != null ? batch.getSalePrice() : (p != null ? p.getSalePrice() : null);
+        
         Integer discount = null;
-        if (p != null && p.getPrice() != null && p.getSalePrice() != null && p.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-            if (p.getSalePrice().compareTo(p.getPrice()) < 0) {
-                BigDecimal diff = p.getPrice().subtract(p.getSalePrice());
+        if (originalPrice != null && salePrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            if (salePrice.compareTo(originalPrice) < 0) {
+                BigDecimal diff = originalPrice.subtract(salePrice);
                 discount = diff.multiply(BigDecimal.valueOf(100))
-                        .divide(p.getPrice(), 0, RoundingMode.HALF_UP)
+                        .divide(originalPrice, 0, RoundingMode.HALF_UP)
                         .intValue();
             }
+        }
+
+        BigDecimal importPrice = batch.getEffectiveImportPrice();
+        boolean isExpired = batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(LocalDate.now());
+        Long daysRemaining = batch.getExpiryDate() != null ? java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), batch.getExpiryDate()) : null;
+        
+        BigDecimal totalLoss = BigDecimal.ZERO;
+        if (isExpired && batch.getQuantity() != null && batch.getQuantity() > 0 && importPrice != null) {
+            totalLoss = importPrice.multiply(BigDecimal.valueOf(batch.getQuantity()));
         }
 
         return ProductBatchDTO.builder()
@@ -323,8 +336,13 @@ public class EntityMapper {
                 .quantity(batch.getQuantity())
                 .expiryDate(batch.getExpiryDate())
                 .discountPercentage(discount)
-                .originalPrice(p != null ? p.getPrice() : null)
-                .salePrice(p != null ? p.getSalePrice() : null)
+                .importPrice(importPrice)
+                .originalPrice(originalPrice)
+                .salePrice(salePrice)
+                .status(batch.getStatus() != null ? batch.getStatus() : (isExpired ? "EXPIRED" : "ACTIVE"))
+                .isExpired(isExpired)
+                .daysRemaining(daysRemaining)
+                .totalLoss(totalLoss)
                 .createdAt(batch.getCreatedAt())
                 .build();
     }
@@ -356,6 +374,13 @@ public class EntityMapper {
                 .importPrice(item.getImportPrice())
                 .batchName(item.getBatchName())
                 .expiryDate(item.getExpiryDate())
+                .passedQuantity(item.getPassedQuantity())
+                .rejectedQuantity(item.getRejectedQuantity())
+                .rejectReason(item.getRejectReason())
+                .qcStatus(item.getQcStatus())
+                .qcNote(item.getQcNote())
+                .inspectedAt(item.getInspectedAt())
+                .inspectedBy(item.getInspectedBy() != null ? item.getInspectedBy().getUsername() : null)
                 .build();
     }
 

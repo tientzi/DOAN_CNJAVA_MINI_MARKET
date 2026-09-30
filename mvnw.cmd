@@ -1,37 +1,46 @@
-@REM ----------------------------------------------------------------------------
-@REM Licensed to the Apache Software Foundation (ASF) under one
-@REM or more contributor license agreements.
-@REM ----------------------------------------------------------------------------
-@REM Maven Wrapper Script for Windows
-@REM ----------------------------------------------------------------------------
+@echo off
+@setlocal
+chcp 65001 > nul 2>&1
 
-@IF "%__MVNW_ARG0_NAME__%"=="" (SET __MVNW_ARG0_NAME__=%~nx0)
-@SET __MVNW_CMD__=
-@SET __MVNW_ERROR__=
-@SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
-@SET PSModulePath=
-@FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$ErrorActionPreference='Stop';Get-Content '.mvn\wrapper\maven-wrapper.properties' | Where-Object {$_ -match '^distributionUrl='} | ForEach-Object {$_ -replace 'distributionUrl=',''}}"`) DO @(
-  SET "__MVNW_CMD__=%%A"
-)
-@SET PSModulePath=%__MVNW_PSMODULEP_SAVE%
-
-@SET MVNW_REPOURL=https://repo.maven.apache.org/maven2
-@SET WRAPPER_JAR="%~dp0\.mvn\wrapper\maven-wrapper.jar"
-
-@REM Download maven-wrapper.jar if not present
-@IF NOT EXIST %WRAPPER_JAR% (
-  powershell -Command "&{$uri='%MVNW_REPOURL%/org/apache/maven/wrapper/maven-wrapper/3.2.0/maven-wrapper-3.2.0.jar';Invoke-WebRequest -Uri $uri -OutFile '%~dp0\.mvn\wrapper\maven-wrapper.jar'}" 2>nul
+@REM Ensure Java 21/17 is used for Spring Boot 3
+if not exist "%JAVA_HOME%\bin\java.exe" (
+    if exist "C:\Program Files\Java\jdk-21.0.11\bin\java.exe" (
+        set "JAVA_HOME=C:\Program Files\Java\jdk-21.0.11"
+    ) else if exist "C:\Program Files\Java\jdk-17\bin\java.exe" (
+        set "JAVA_HOME=C:\Program Files\Java\jdk-17"
+    )
+) else (
+    "%JAVA_HOME%\bin\java.exe" -version 2>&1 | findstr /i "1.8" > nul
+    if not errorlevel 1 (
+        if exist "C:\Program Files\Java\jdk-21.0.11\bin\java.exe" (
+            set "JAVA_HOME=C:\Program Files\Java\jdk-21.0.11"
+        ) else if exist "C:\Program Files\Java\jdk-17\bin\java.exe" (
+            set "JAVA_HOME=C:\Program Files\Java\jdk-17"
+        )
+    )
 )
 
-@REM Run Maven with wrapper
-@SET "MAVEN_PROJECTBASEDIR=%~dp0"
-@IF "%MAVEN_PROJECTBASEDIR:~-1%"=="\" @SET "MAVEN_PROJECTBASEDIR=%MAVEN_PROJECTBASEDIR:~0,-1%"
-@SET MAVEN_OPTS=%MAVEN_OPTS% "-Dmaven.multiModuleProjectDirectory=%MAVEN_PROJECTBASEDIR%"
-
-@IF EXIST %WRAPPER_JAR% (
-  java %MAVEN_OPTS% -jar %WRAPPER_JAR% %*
-) ELSE (
-  @ECHO ERROR: Could not download maven-wrapper.jar
-  @ECHO Please run: mvn wrapper:wrapper
-  @EXIT /B 1
+if defined JAVA_HOME (
+    set "PATH=%JAVA_HOME%\bin;%PATH%"
 )
+
+set "JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8"
+
+@REM 1. Fast path: Find existing extracted Maven in local .m2 repository
+for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9*") do (
+    for /r "%%D" %%F in (mvn.cmd) do (
+        if exist "%%F" (
+            call "%%F" %*
+            exit /b %ERRORLEVEL%
+        )
+    )
+)
+
+@REM 2. Wrapper Jar with relative path and Main class
+if exist ".mvn\wrapper\maven-wrapper.jar" (
+    java -Dfile.encoding=UTF-8 "-Dmaven.multiModuleProjectDirectory=." -cp ".mvn\wrapper\maven-wrapper.jar" org.apache.maven.wrapper.MavenWrapperMain %*
+    exit /b %ERRORLEVEL%
+)
+
+echo [ERROR] Could not find Maven or Maven Wrapper!
+exit /b 1

@@ -141,6 +141,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.groceryshop.GroceryShopApplication</mainClass>
                     <jvmArguments>-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2 -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -Djdk.tls.disabledAlgorithms="" -Dcom.sun.jndi.rmi.object.trustURLCodebase=false</jvmArguments>
                     <excludes>
                         <exclude>

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CartContext } from '../contexts/CartContext'
-import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Info, Tag } from 'lucide-react'
 import './Cart.css'
 
 const Cart = () => {
@@ -48,22 +48,72 @@ const Cart = () => {
           {/* List Items */}
           <div className="cart-items-list glass">
             {cart.items.map(item => {
-              const price = item.productSalePrice != null ? item.productSalePrice : item.productPrice
-              const itemTotal = price * item.quantity
+              const isMultiBatchSplit = item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity
+              const saleQty = item.saleBatchQuantity || 0
+              const normalQty = item.quantity - saleQty
+              const salePrice = item.saleBatchPrice || 0
+              const normalPrice = item.productPrice || 0
+
+              let itemTotal = 0
+              if (isMultiBatchSplit) {
+                itemTotal = (saleQty * salePrice) + (normalQty * normalPrice)
+              } else if (item.hasMultiBatch && item.saleBatchPrice != null && item.quantity <= item.saleBatchQuantity) {
+                itemTotal = item.saleBatchPrice * item.quantity
+              } else {
+                const effectivePrice = item.productSalePrice != null ? item.productSalePrice : item.productPrice
+                itemTotal = effectivePrice * item.quantity
+              }
 
               return (
-                <div key={item.id} className="cart-item-row">
+                <div key={item.id} className="cart-item-row" style={{ flexWrap: 'wrap', gap: '12px' }}>
                   <div className="cart-item-img">
                     <img src={item.productMainImage} alt={item.productName} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
                   </div>
                   
-                  <div className="cart-item-details">
+                  <div className="cart-item-details" style={{ flex: '1 1 220px' }}>
                     <Link to={`/products/${item.productId}`} className="item-name">{item.productName}</Link>
-                    <span className="item-stock-warning">Kho còn: {item.maxStock} sản phẩm</span>
+                    <span className="item-stock-warning" style={{ display: 'block', marginTop: '2px' }}>Kho còn: {item.maxStock} sản phẩm</span>
+
+                    {/* THÔNG BÁO THÔNG MINH KHI ĐƠN HÀNG TÁCH 2 LÔ (LÔ SALE + LÔ MỚI) */}
+                    {isMultiBatchSplit && (
+                      <div style={{ 
+                        background: '#fffbeb', 
+                        border: '1px solid #fde68a', 
+                        borderRadius: '8px', 
+                        padding: '8px 10px', 
+                        marginTop: '8px', 
+                        fontSize: '0.82rem', 
+                        color: '#92400e',
+                        lineHeight: 1.4
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700, marginBottom: '2px' }}>
+                          <Info size={15} color="#d97706" /> Lưu ý giá theo lô:
+                        </div>
+                        <span>
+                          Sản phẩm chỉ còn <strong>{saleQty}</strong> món thuộc lô cận date giá ưu đãi <strong>{salePrice.toLocaleString()}đ</strong>{item.saleBatchExpiryDate ? ` (HSD: ${item.saleBatchExpiryDate})` : ''}. 
+                          <strong> {normalQty}</strong> món còn lại tính theo giá tiêu chuẩn <strong>{normalPrice.toLocaleString()}đ</strong> của lô mới.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="cart-item-price">
-                    {item.productSalePrice != null ? (
+                  <div className="cart-item-price" style={{ minWidth: '130px' }}>
+                    {isMultiBatchSplit ? (
+                      <div style={{ fontSize: '0.85rem' }}>
+                        <div style={{ color: '#d97706', fontWeight: 700 }}>
+                          {saleQty} x {salePrice.toLocaleString()}đ <small style={{ color: '#b45309' }}>(Sale)</small>
+                        </div>
+                        <div style={{ color: '#334155', fontWeight: 600, marginTop: '2px' }}>
+                          {normalQty} x {normalPrice.toLocaleString()}đ <small style={{ color: '#64748b' }}>(Gốc)</small>
+                        </div>
+                      </div>
+                    ) : item.hasMultiBatch && item.saleBatchPrice != null && item.quantity <= item.saleBatchQuantity ? (
+                      <>
+                        <span className="current-price" style={{ color: '#ea580c' }}>{item.saleBatchPrice.toLocaleString()}đ</span>
+                        <span className="old-price">{item.productPrice.toLocaleString()}đ</span>
+                        <small style={{ display: 'block', color: '#ea580c', fontSize: '0.75rem', fontWeight: 600 }}>⚡ Xả kho cận date</small>
+                      </>
+                    ) : item.productSalePrice != null ? (
                       <>
                         <span className="current-price">{item.productSalePrice.toLocaleString()}đ</span>
                         <span className="old-price">{item.productPrice.toLocaleString()}đ</span>
