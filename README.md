@@ -1,18 +1,22 @@
 # 🛒 DỰ ÁN WEBSITE QUẢN LÝ SIÊU THỊ MINI & CHUỖI BÁN LẺ THỰC PHẨM TƯƠI SẠCH (MINIMART)
 
-Chào mừng bạn đến với dự án **Hệ Thống Quản Lý & Bán Hàng Siêu Thị Mini Trực Tuyến (MiniMart Fresh & Convenience)**. Đây là giải pháp phần mềm thương mại điện tử và quản trị bán lẻ toàn diện, được xây dựng theo mô hình **Fullstack Decoupled Architecture** kết hợp giữa nền tảng **Java Spring Boot 3.2 (RESTful API)**, cơ sở dữ liệu **Microsoft SQL Server**, giao diện hiện đại **React 18 SPA (Vite)** và trợ lý ảo thông minh **Google Gemini AI**.
+Chào mừng bạn đến với dự án **Hệ Thống Quản Lý & Bán Hàng Siêu Thị Mini Trực Tuyến (MiniMart Fresh & Convenience)**. Đây là giải pháp phần mềm thương mại điện tử và quản trị chuỗi bán lẻ toàn diện, được xây dựng theo kiến trúc hiện đại **Fullstack Decoupled Architecture** kết hợp giữa nền tảng **Java Spring Boot 3.2 (RESTful API)**, cơ sở dữ liệu **Microsoft SQL Server**, giao diện người dùng **React 18 SPA (Vite)**, thuật toán khai phá dữ liệu **Apriori (Market Basket Analysis)** và trợ lý ảo thông minh **Google Gemini AI**.
 
-Hệ thống được thiết kế đặc thù cho các chuỗi siêu thị mini, cửa hàng tiện lợi, tạp hóa và thực phẩm tươi sạch; đáp ứng trọn vẹn quy trình nghiệp vụ: từ khách hàng đặt hàng trực tuyến, tích điểm thành viên VIP, quản lý kho hàng nâng cao theo lô & hạn sử dụng, **quy trình kiểm định chất lượng đầu vào (Inward QC)**, nhập hàng từ nhà cung cấp, xuất hóa đơn bán lẻ, quản lý thanh toán QR động, cho đến tự động điều phối shipper giao hàng theo từng quận/huyện.
+Hệ thống được thiết kế chuyên biệt cho các chuỗi siêu thị mini, cửa hàng tiện lợi, tạp hóa thông minh và bán lẻ thực phẩm tươi sống; khép kín toàn bộ chu trình nghiệp vụ bán lẻ thực tế: từ tìm kiếm gợi ý thông minh, đặt hàng đa lô hạn sử dụng, tích điểm thăng hạng hội viên VIP, điều phối shipper tự động theo quận huyện, quy trình **Kiểm định chất lượng đầu vào (Inward Quality Control - QC)**, quản lý tiêu hủy hàng quá hạn & báo cáo vốn thiệt hại, cho đến xuất hóa đơn bán lẻ chuẩn thu ngân.
+
+> [!NOTE]
+> Hệ thống sở hữu tài liệu quy trình nghiệp vụ chuyên sâu chuẩn BPM với đầy đủ sơ đồ Mermaid chi tiết tại: [QUY_TRINH_NGHIEP_VU_CHI_TIET.md](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/QUY_TRINH_NGHIEP_VU_CHI_TIET.md).  
+> Kế hoạch kỹ thuật và kiến trúc nâng cấp kho đa lô 2.0 tham khảo tại: [plan2.md](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/plan2.md) và [PLAN.md](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/PLAN.md).
 
 ---
 
 ## 📑 MỤC LỤC
 
 1. [🛠️ Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng)
-2. [🏗️ Kiến Trúc & Luồng Hoạt Động](#️-kiến-trúc-ứng-dụng--mô-hình-spring-boot-mvc)
-3. [✨ Tính Năng Nổi Bật](#-tính-năng-nổi-bật)
+2. [🏗️ Kiến Trúc Ứng Dụng & Mô Hình Spring Boot MVC](#️-kiến-trúc-ứng-dụng--mô-hình-spring-boot-mvc)
+3. [✨ Tính Năng Nổi Bật & Các Điểm Mới Nâng Cấp](#-tính-năng-nổi-bật--các-điểm-mới-nâng-cấp)
 4. [👥 Chi Tiết Các Phân Hệ Chức Năng](#-chi-tiết-các-phân-hệ-chức-năng)
-   - [1. Phân Hệ Khách Hàng (User / Client)](#1-phân-hệ-khách-hàng-user--client)
+   - [1. Phân Hệ Khách Hàng (User / Client Portal)](#1-phân-hệ-khách-hàng-user--client-portal)
    - [2. Phân Hệ Quản Trị Viên (Admin Console)](#2-phân-hệ-quản-trị-viên-admin-console)
    - [3. Phân Hệ Nhân Viên Giao Hàng (Shipper Console)](#3-phân-hệ-nhân-viên-giao-hàng-shipper-console)
 5. [🗄️ Cấu Trúc Cơ Sở Dữ Liệu (Database Schema)](#️-cấu-trúc-cơ-sở-dữ-liệu-database-schema)
@@ -28,195 +32,166 @@ Hệ thống được thiết kế đặc thù cho các chuỗi siêu thị mini
 
 ### 1. Backend (RESTful Web Services)
 * **Ngôn ngữ**: Java 21 (LTS).
-* **Framework**: Spring Boot 3.2.0.
-* **Bảo mật**: Spring Security 6, Stateless JWT Authentication (`jjwt 0.11.5`), Remember-me Token.
+* **Framework**: Spring Boot 3.2.0 (Spring MVC, Spring Data JPA, Spring Security 6).
+* **Bảo mật**: Stateless JWT Authentication (`jjwt 0.11.5`), Remember-me Token, BCrypt Password Encoder.
 * **Đăng nhập mạng xã hội**: Spring Boot Starter OAuth2 Client (Đăng nhập 1 chạm với Google & Facebook).
-* **Tương tác dữ liệu**: Spring Data JPA, Hibernate ORM (Hỗ trợ chuẩn hóa chuỗi Unicode `NVARCHAR`).
+* **Tương tác dữ liệu**: Spring Data JPA, Hibernate ORM (Tự động ánh xạ chuỗi Unicode `NVARCHAR` qua thuộc tính `use_nationalized_character_data`).
 * **Tiện ích & Mapper**: Project Lombok (`1.18.34`), Jakarta Validation, RestTemplate.
-* **Build Tool**: Apache Maven (`mvnw` đi kèm).
+* **Build Tool**: Apache Maven (Script [mvnw.cmd](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/mvnw.cmd) đi kèm).
 
-### 2. Frontend (Single Page Application - SPA)
-* **Framework**: React 18.2.
-* **Build Tool**: Vite 5.0 (tốc độ HMR cực nhanh, tối ưu hóa bundle).
-* **Điều hướng**: React Router DOM v6 (Nested Routes, Route Guards, ProtectedRoute theo vai trò).
-* **HTTP Client**: Axios (Cấu hình Interceptor tự động đính kèm JWT Bearer Token).
-* **Biểu đồ & Thống kê**: Recharts (Vẽ biểu đồ AreaChart, BarChart, PieChart doanh thu và đơn hàng).
-* **Icon Library**: Lucide React.
-* **Giao diện & Trải nghiệm**: CSS3 hiện đại (Glassmorphism, CSS Variables, Flexbox/Grid, Responsive Mobile/Desktop).
-
-### 3. Database & Lưu Trữ
-* **Hệ quản trị CSDL**: Microsoft SQL Server (2012, 2016, 2019, 2022).
-* **JDBC Driver**: `mssql-jdbc` tương thích cấu hình bảo mật TLS 1.0 - TLS 1.2.
-* **Lưu trữ tệp**: Local File System Storage (Thư mục `/uploads` lưu trữ ảnh sản phẩm, danh mục và mã QR thanh toán).
-
-### 4. Trí Tuệ Nhân Tạo (AI)
-* **Google Gemini AI API**: Tích hợp mô hình Gemini để tư vấn mua sắm trực tuyến, giải đáp thắc mắc, gợi ý sản phẩm giá tốt và khuyến mãi.
+### 2. Thuật Toán Khai Phá Dữ Liệu & Trí Tuệ Nhân Tạo (Data Mining & AI)
+* **Thuật toán Apriori (Market Basket Analysis)**: Được lập trình trực tiếp trong service [RecommendationService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/RecommendationService.java), khai phá các tập mục mua cùng từ lịch sử 50 đơn hàng thực tế; tính toán chính xác chỉ số Độ hỗ trợ (Support), Độ tin cậy (Confidence) và Độ nâng (Lift) để gợi ý mặt hàng mua kèm tối ưu.
+* **Cơ chế Fallback Cold-Start**: Tự động gợi ý sản phẩm cùng danh mục khi mặt hàng mới chưa có đủ lịch sử đồng xuất hiện.
+* **Google Gemini AI API**: Tích hợp mô hình Gemini để hỗ trợ khách hàng hỏi đáp trực tuyến, tư vấn công thức nấu ăn và sản phẩm dinh dưỡng.
 * **Offline Fallback Engine**: Tự động nhận diện từ khóa và gợi ý sản phẩm ngay cả khi chưa cấu hình Gemini API Key.
+
+### 3. Frontend (Single Page Application - SPA)
+* **Framework**: React 18.2.
+* **Build Tool**: Vite 5.0 (tốc độ HMR tức thì, đóng gói bundle tự động vào `src/main/resources/static`).
+* **Điều hướng**: React Router DOM v6 (Nested Routes, Route Guards, ProtectedRoute phân quyền `ROLE_ADMIN`, `ROLE_SHIPPER`, `ROLE_USER`).
+* **HTTP Client**: Axios (Cấu hình Interceptor tự động đính kèm Bearer Token).
+* **Biểu đồ & Thống kê**: Recharts (Vẽ biểu đồ AreaChart, BarChart, PieChart doanh thu, đơn hàng và tỷ lệ hủy kho).
+* **Icon Library**: Lucide React.
+* **Giao diện & Trải nghiệm**: CSS3 hiện đại (Glassmorphism, Card bóng bẩy, Responsive Mobile/Desktop).
+
+### 4. Database & Lưu Trữ
+* **Hệ quản trị CSDL**: Microsoft SQL Server (2012, 2016, 2019, 2022).
+* **Script khởi tạo**: File đơn nhất [supermarket_db1.sql](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/supermarket_db1.sql) chứa trọn vẹn 22 bảng, ràng buộc khóa ngoại, chỉ mục và 50 đơn hàng lịch sử TP.HCM.
+* **Lưu trữ tệp**: Local File System Storage (Thư mục [uploads/](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/uploads) lưu trữ ảnh sản phẩm, ảnh danh mục và mã QR ngân hàng).
 
 ---
 
 ## 🏗️ Kiến Trúc Ứng Dụng & Mô Hình Spring Boot MVC
 
-Dự án được xây dựng dựa trên nền tảng **Spring Boot MVC** cốt lõi kết hợp mô hình phân tách độc lập hiện đại (**Decoupled Client-Server / Single Page Application**). Hệ thống tối ưu hóa toàn diện trải nghiệm người dùng so với mô hình MVC nguyên khối truyền thống, đồng thời giữ vững tính chuẩn mực, an toàn và dễ mở rộng của một ứng dụng doanh nghiệp chuẩn Java.
-
-### 1. Phân Tích Các Thành Phần Mô Hình MVC Trong Dự Án
+Hệ thống được thiết kế theo mô hình **Spring Boot MVC Decoupled** chuẩn mực doanh nghiệp, chia tách rõ ràng 3 tầng:
 
 ```
 +---------------------------------------------------------------------------------------------------+
 |                                        VIEW (Giao Diện)                                           |
-|   React 18 SPA (Client-Side Rendering) - Quản lý giao diện, trạng thái (State) & Router mượt mà   |
+|   React 18 SPA (Client-Side Rendering) - Quản lý UI, State & Router tức thời (Zero Reload)       |
 +-------------------------------------------------+-------------------------------------------------+
                                                   |  (Gọi bất đồng bộ HTTP Request kèm Bearer JWT)
                                                   v
 +---------------------------------------------------------------------------------------------------+
 |                                    CONTROLLER (Bộ Điều Phối)                                      |
 |   Spring Boot MVC Core: DispatcherServlet -> Security Filter -> 24 REST Controllers (@RestController)   |
-|   - Định tuyến endpoint, xác thực phân quyền, Validate dữ liệu và phản hồi dữ liệu chuẩn JSON    |
+|   - Định tuyến endpoint, xác thực phân quyền, Validate @Valid và phản hồi dữ liệu chuẩn JSON      |
 +-------------------------------------------------+-------------------------------------------------+
                                                   |  (Gọi xử lý nghiệp vụ)
                                                   v
 +---------------------------------------------------------------------------------------------------+
 |                                      MODEL (Dữ Liệu & Nghiệp Vụ)                                   |
 |   - Tầng DTO: Đóng gói và chuẩn hóa dữ liệu trao đổi (Data Transfer Objects)                     |
-|   - Tầng Service: Xử lý toàn bộ logic nghiệp vụ (Tồn kho, QC Inspection, VIP Loyalty, Shipper...)  |
+|   - Tầng Service: Logic nghiệp vụ (OrderService, ProductBatchService, RecommendationService,...)  |
 |   - Tầng Repository & Entity: Spring Data JPA / Hibernate tương tác với Microsoft SQL Server     |
 +---------------------------------------------------------------------------------------------------+
 ```
 
-#### 📦 Model (M - Dữ Liệu & Nghiệp Vụ)
-Nằm trọn vẹn tại tầng Backend Java Spring Boot:
-* **Entities (`com.groceryshop.entity.*`)**: 22 lớp thực thể ánh xạ trực tiếp với các bảng CSDL SQL Server thông qua JPA/Hibernate (VD: `Product`, `Order`, `Inventory`, `ProductBatch`, `GoodsReceipt`, `GoodsReceiptItem`, `User`,...).
-* **Repositories (`com.groceryshop.repository.*`)**: Kế thừa `JpaRepository` của Spring Data JPA, cung cấp sẵn các phương thức CRUD và truy vấn nâng cao (`findBy...`, `@Query`).
-* **Services (`com.groceryshop.service.*`)**: Đóng gói toàn bộ logic nghiệp vụ cốt lõi của siêu thị:
-  - Tự động trừ kho và lưu vết sổ cái kho khi đơn hàng được xác nhận.
-  - **Quy trình Kiểm định chất lượng đầu vào (QC)**: Phân tách số lượng đạt chuẩn (tăng tồn kho và tạo lô) và số lượng không đạt chuẩn (trả về nhà cung cấp, ghi nhận lý do).
-  - Khóa chặt tồn kho, tuyệt đối không cho phép nhập tay khi tạo mới hay chỉnh sửa thông tin sản phẩm.
-  - Phân loại hạng thẻ và tính toán chiết khấu khách hàng VIP Loyalty.
-  - Thuật toán tự động nhận diện khu vực và điều phối đơn hàng cho Shipper theo quận.
-  - Xử lý xả hàng cận date và kết nối API Google Gemini AI.
-* **DTOs (`com.groceryshop.dto.*`)**: Đóng vai trò lớp vỏ bọc an toàn, chỉ truyền tải dữ liệu cần thiết giữa Controller và View, che giấu các thông tin nhạy cảm của Model CSDL.
-
-#### 🎮 Controller (C - Bộ Điều Khiển)
-Sử dụng nền tảng **Spring MVC** (`spring-boot-starter-web`) với bộ điều phối trung tâm `DispatcherServlet`:
-* **24 REST Controllers (`com.groceryshop.controller.*`)**: Tiếp nhận các yêu cầu HTTP (GET, POST, PUT, PATCH, DELETE) từ View, kiểm tra dữ liệu đầu vào (`@Valid`), xác thực phân quyền với Spring Security (`@PreAuthorize`) và gọi tầng Service tương ứng.
-* **Định Dạng Dữ Liệu Trao Đổi**: Dữ liệu phản hồi được tuần tự hóa tự động (Serialization) thành chuẩn **JSON**, giúp hệ thống nhẹ, nhanh và dễ dàng mở rộng sang các nền tảng khác như Mobile App.
-* **SPA Fallback Controller (`SpaController.java`)**: Định tuyến tất cả các route giao diện người dùng về file `index.html` của React khi người dùng F5 hoặc gõ trực tiếp URL.
-
-#### 🖥️ View (V - Giao Diện Người Dùng)
-Được hiện đại hóa hoàn toàn bằng **React 18 Single Page Application (SPA)**:
-* Chạy trực tiếp trên trình duyệt của người dùng (Client-Side Rendering) thay vì Server-Side Rendering cũ kỹ.
-* Chuyển trang mượt mà tức thì không cần tải lại toàn bộ trang web (Zero Page Reload), trạng thái giỏ hàng và dữ liệu người dùng được phản hồi tức thời nhờ React Context API (`AuthContext`, `CartContext`).
-* View giao tiếp 100% với Controller thông qua các cuộc gọi bất đồng bộ (**Asynchronous AJAX / Axios**).
+### 📦 Chi Tiết Các Tầng:
+1. **Model (M)**:
+   * **Entities**: 22 lớp thực thể ánh xạ trực tiếp các bảng CSDL ([Product.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/Product.java), [ProductBatch.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/ProductBatch.java), [GoodsReceiptItem.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/GoodsReceiptItem.java), [Coupon.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/Coupon.java), [Order.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/Order.java),...).
+   * **Repositories**: Kế thừa `JpaRepository`, thực thi các câu truy vấn mở rộng.
+   * **Services**: Đóng gói toàn bộ logic cốt lõi:
+     - [RecommendationService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/RecommendationService.java): Thuật toán Apriori tính Lift, Confidence và Cold-Start fallback.
+     - [OrderService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/OrderService.java): Bán hàng đa lô, tự động tách dòng đơn hàng và trừ kho FIFO (bỏ qua lô quá hạn).
+     - [ProductBatchService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/ProductBatchService.java): Quản lý lô, chặn sale hàng hết hạn, tiêu hủy lô ghi sổ cái kho.
+     - [GoodsReceiptService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/GoodsReceiptService.java): Quy trình kiểm định chất lượng đầu vào (Inward QC) phân tách số lượng đạt/không đạt.
+     - [CouponService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/CouponService.java): Tính chiết khấu voucher theo đúng ngành hàng áp dụng.
+2. **Controller (C)**:
+   * 24 REST Controllers tiếp nhận request, kiểm tra tính hợp lệ dữ liệu `@Valid`, kiểm soát phân quyền `@PreAuthorize` và tuần tự hóa kết quả trả về chuẩn JSON.
+   * [SpaController.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/controller/SpaController.java): Điều hướng các URL giao diện về file `index.html` của React khi người dùng F5 hoặc truy cập trực tiếp.
+3. **View (V)**:
+   * Ứng dụng Single Page Application (React 18) tương tác với Controller qua các API call bất đồng bộ (Axios), mang lại trải nghiệm mượt mà, không giật lag.
 
 ---
 
-### 2. Sơ Đồ Luồng Xử Lý Yêu Cầu Chi Tiết (Request Processing Flow)
+## ✨ Tính Năng Nổi Bật & Các Điểm Mới Nâng Cấp
 
-```
-[ Người Dùng Thao Tác Trên Giao Diện React SPA ]
-                       │
-                       ▼ (Gửi HTTP Request + Bearer JWT qua Axios)
-         [ Spring Security Filter Chain ]
-                       │ (Xác thực JWT Token & Phân quyền Role: ADMIN / SHIPPER / USER)
-                       ▼
-            [ Spring MVC DispatcherServlet ]
-                       │ (Ánh xạ request đến đúng Controller xử lý)
-                       ▼
-              [ @RestController ]
-                       │ (Validate dữ liệu đầu vào với @Valid)
-                       ▼
-                 [ Service Layer ]
-                       │ (Thực thi các nghiệp vụ: Đơn hàng, Tồn kho, QC Inspection, VIP...)
-                       ▼
-                [ Repository Layer ]
-                       │ (Spring Data JPA / Hibernate)
-                       ▼
-            [ Microsoft SQL Server DB ]
-                       │ (Thực thi SQL và trả dữ liệu Entity)
-                       ▼
-  [ Service chuyển đổi Entity sang DTO & Trả về Controller ]
-                       │
-                       ▼ (Serialization)
- [ Phản hồi JSON Response về Client qua mã HTTP 200 OK / 201 Created... ]
-                       │
-                       ▼
-[ React 18 cập nhật State và Re-render Component mượt mà trên màn hình ]
-```
+### 1. 🧠 Thuật Toán Gợi Ý Sản Phẩm Mua Kèm Apriori (Market Basket Analysis)
+* Phân tích hành vi mua sắm từ lịch sử các hóa đơn trong hệ thống:
+  $$\text{Confidence}(A \to B) = \frac{\text{freq}(A \cap B)}{\text{freq}(A)}, \quad \text{Lift}(A \to B) = \frac{\text{Confidence}(A \to B)}{\text{Support}(B)}$$
+* Lọc ra các sản phẩm thường được khách hàng mua cùng với chỉ số $\text{Lift} \ge 1.0$, hiển thị tại trang [ProductDetail.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/ProductDetail.jsx) với nhãn **"Thường mua cùng"**.
+* Cơ chế tự động Cold-Start fallback sang các mặt hàng **"Cùng danh mục"** khi sản phẩm chưa có đủ dữ liệu hóa đơn.
 
----
+### 2. 📦 Nghiệp Vụ Bán Hàng Đa Lô (Multi-Batch Sale) & Hóa Đơn Tách Dòng Minh Bạch
+* Khi một sản phẩm vừa có **lô cận date giảm giá xả kho** ($Q_{sale}$, giá $P_{sale}$), vừa có **lô tiêu chuẩn mới nhập** (giá gốc $P_{gốc}$):
+  * Khi khách hàng mua số lượng $N > Q_{sale}$: Hệ thống tự động phân bổ $Q_{sale}$ sản phẩm giá rẻ và $(N - Q_{sale})$ sản phẩm theo giá gốc.
+  * Hiển thị thông báo màu vàng thông minh tại [Cart.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Cart.jsx) và [Checkout.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Checkout.jsx).
+  * Trong đơn hàng và hóa đơn in tại [InvoiceManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/InvoiceManager.jsx): Tự động tách thành **2 dòng sản phẩm riêng biệt** rõ ràng, minh bạch 100% về giá bán và hạn sử dụng.
+  * Trừ kho FIFO: **Tuyệt đối không trừ vào các lô đã quá hạn sử dụng khi bán lẻ**.
 
-## ✨ Tính Năng Nổi Bật
+### 3. 🛡️ Quản Lý Lô Quá Hạn, Tiêu Hủy Kho & Báo Cáo Tổn Thất Vốn
+* **Bảo vệ an toàn**: Chặn triệt để nút "Thiết lập Sale" với các lô hàng đã quá hạn sử dụng (`expiryDate < LocalDate.now()`).
+* **Tab Lô Hàng Đã Hết Hạn**: Tab riêng biệt gắn badge đỏ tại [ProductBatchManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ProductBatchManager.jsx) hiển thị số lượng tồn, giá vốn nhập và tổng vốn thiệt hại.
+* **Quy trình Xuất Hủy Kho (`POST /api/admin/batches/{id}/dispose`)**: Giảm số lượng lô về 0, chuyển trạng thái sang `DISPOSED`, trừ tổng tồn kho và ghi sổ cái kho loại `EXPIRED_DISPOSAL`.
+* **Báo Cáo Tổn Thất Vốn (`GET /api/admin/reports/expired-batches`)**: Card KPI thống kê chi tiết số lô hủy, tổng số lượng và số tiền vốn bị thất thoát tại [ReportManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ReportManager.jsx).
 
-1. **Quản Lý Chất Lượng Đầu Vào (Inward Quality Control - QC) & Chuẩn Hóa Tồn Kho**:
-   - **Khóa nhập tay tồn kho**: Khi tạo mới hoặc cập nhật sản phẩm, ô số lượng tồn kho bị vô hiệu hóa (`disabled`) và mặc định bằng 0. Tồn kho chỉ được gia tăng chuẩn hóa qua quy trình nhập kho và kiểm định thực tế.
-   - **Quy trình kiểm định QC 2 bước**:
-     - Lập phiếu nhập kho từ Nhà cung cấp ➔ Trạng thái `CHỜ KIỂM ĐỊNH QC`.
-     - Bộ phận kiểm hàng thực hiện đánh giá: ghi nhận số lượng đạt chuẩn ($Q_{passed}$) và số lượng không đạt chuẩn ($Q_{rejected}$) kèm lý do chi tiết (dập nát, hỏng bao bì, cận date...).
-     - **Tự động cân đối**: Chỉ $Q_{passed}$ mới được tăng vào tồn kho khả dụng và tạo lô hàng hoạt động. $Q_{rejected}$ được hoàn trả nhà cung cấp và ghi vết minh bạch vào Thẻ kho.
-     - Hỗ trợ xem lại và in Biên bản kiểm định chất lượng trực tiếp.
-2. **Giao Diện Hợp Nhất Sản Phẩm & Danh Mục (Unified Products & Categories Console)**:
-   - Gộp phân hệ Danh mục vào trang **Sản phẩm & Tồn kho** dưới dạng 2 Sub-tab trực quan (`?tab=products` và `?tab=categories`).
-   - Giúp quản trị viên dễ dàng quản lý cây danh mục và tạo sản phẩm mới mà không cần chuyển đổi trang rườm rà. Menu sidebar được tinh gọn tối đa.
-3. **Quản Lý Lô Hàng & Hạn Sử Dụng (Product Batches & Clearance Sale)**:
-   - Theo dõi chi tiết số lô (`batch_number`), ngày sản xuất (`manufacturing_date`) và hạn sử dụng (`expiry_date`) của từng mặt hàng tươi sống/tiêu dùng.
-   - Cảnh báo tự động các sản phẩm cận date (sắp hết hạn trong 30 ngày, 60 ngày).
-   - **Xả hàng cận date (Clearance Sale)**: Thiết lập giảm giá % hoặc giá bán xả kho đặc biệt để kích cầu tiêu thụ trước hạn.
-4. **Điều Phối Vận Chuyển Thông Minh (Smart Delivery Dispatching)**:
-   - Tự động nhận diện Quận/Huyện từ chuỗi địa chỉ nhận hàng của khách hàng (VD: Quận Tân Phú, Tân Bình, Quận 12,...).
-   - Tính năng **Tự động phân bổ đơn**: Gán các đơn hàng cần giao cho Shipper phụ trách từng địa bàn tương ứng chỉ với 1 cú click.
-   - Hỗ trợ phân công shipper thủ công (đơn lẻ hoặc hàng loạt) và theo dõi tình trạng đơn giao thất bại để tái điều phối.
-5. **Quản Lý Hóa Đơn & In Ấn Bán Lẻ (Invoice Manager)**:
-   - Tra cứu hóa đơn theo ngày, phương thức thanh toán, trạng thái thanh toán.
-   - **In hóa đơn bán lẻ trực tiếp**: Định dạng hóa đơn mini mart chuẩn khổ giấy, sẵn sàng in tại quầy thu ngân.
-   - **Xuất dữ liệu ra Excel/CSV**: Phục vụ công tác kế toán và kiểm toán định kỳ.
-6. **Hệ Thống Thành Viên & Tích Điểm VIP Loyalty**:
-   - 4 Hạng thẻ thành viên: **Đồng (BRONZE) -> Bạc (SILVER) -> Vàng (GOLD) -> Kim Cương (DIAMOND)**.
-   - Tích điểm lũy tiến sau mỗi đơn hàng hoàn thành.
-   - Hưởng chiết khấu trực tiếp trên đơn hàng (lên tới 8%) cùng đặc quyền miễn phí giao hàng toàn quốc.
-7. **Cấu Hình Cổng Thanh Toán Đa Kênh & Upload Mã QR Động**:
-   - Bật/Tắt linh hoạt các phương thức: COD, Chuyển khoản ngân hàng (VietQR), Ví MoMo, VNPAY.
-   - Hỗ trợ tải trực tiếp ảnh mã QR thanh toán từ Admin và hiển thị tức thì trên trang Checkout của khách.
-8. **Trợ Lý AI Tư Vấn Bán Hàng (Google Gemini AI & Fallback)**:
-   - Trò chuyện tự nhiên, tư vấn sản phẩm giá tốt nhất, thực phẩm xanh VietGAP, gợi ý công thức nấu ăn và giới thiệu mã giảm giá đang kích hoạt.
-9. **Đăng Nhập Đa Dạng (OAuth2 Social Login + JWT)**:
-   - Đăng nhập tài khoản truyền thống bằng Username/Email + Password.
-   - Đăng nhập 1 chạm bằng tài khoản **Google** hoặc **Facebook** qua giao thức chuẩn OAuth2.
+### 4. 💰 Cơ Chế 3 Lớp Fallback Bảo Vệ Giá Vốn Lô Hàng (`importPrice`)
+* **Lớp 1 (Quan hệ chứng từ)**: Lấy giá nhập trực tiếp từ bản ghi `goods_receipt_items` tương ứng với mã lô.
+* **Lớp 2 (Ước lượng dự phòng SQL)**: Tự động gán bằng 70% giá niêm yết cho các lô tạo độc lập không qua phiếu nhập.
+* **Lớp 3 (Bảo vệ Entity trong Java)**: Phương thức `getEffectiveImportPrice()` trong [ProductBatch.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/entity/ProductBatch.java) đảm bảo luôn trả về `BigDecimal > 0`, triệt tiêu hoàn toàn nguy cơ lỗi `NullPointerException`.
+
+### 5. 🔍 Quy Trình Kiểm Định Chất Lượng Đầu Vào (Inward QC) & Khóa Tồn Kho Thủ Công
+* **Khóa nhập tay tồn kho**: Khi tạo hoặc sửa thông tin sản phẩm tại [ProductManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ProductManager.jsx), ô tồn kho bị vô hiệu hóa (`disabled`) và mặc định bằng 0. Tồn kho chỉ được gia tăng qua quy trình nhập kho và kiểm định thực tế.
+* **Quy trình kiểm định Inward QC 2 bước**:
+  - Phiếu nhập kho mới từ NCC có trạng thái `CHỜ KIỂM ĐỊNH QC`.
+  - Bộ phận kiểm hàng đánh giá: Ghi nhận số lượng đạt chuẩn ($Q_{passed}$) và số lượng lỗi/hỏng ($Q_{rejected}$) kèm lý do cụ thể.
+  - Tự động cộng tồn kho và tạo lô mới đúng bằng $Q_{passed}$. Phần $Q_{rejected}$ được lập biên bản trả về nhà cung cấp và ghi vết vào Sổ cái kho.
+  - Hỗ trợ in trực tiếp **Biên bản kiểm định chất lượng đầu vào**.
+
+### 6. 🏷️ Nâng Cấp Mã Giảm Giá (Coupon) Theo Ngành Hàng & Hạn Mức Tối Đa
+* Mã giảm giá có thể cấu hình áp dụng cho toàn bộ giỏ hàng hoặc chỉ áp dụng riêng cho một **Danh mục cụ thể** (`applicable_category_id`).
+* Bổ sung trường hạn mức giảm tối đa (`max_discount_amount`) đối với coupon theo tỷ lệ phần trăm (%).
+* [CouponService.java](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/CouponService.java) tự động tính toán chiết khấu chỉ trên tổng tiền của các mặt hàng thỏa mãn điều kiện ngành hàng.
+
+### 7. 🖼️ Giao Diện Bộ Lọc Danh Mục Với Thumbnail Hình Ảnh Trực Quan
+* Bộ lọc danh mục tại [ProductList.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/ProductList.jsx) và [Home.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Home.jsx) được nâng cấp hiển thị thumbnail/icon đại diện bắt mắt, hỗ trợ người dùng lọc nhanh mặt hàng yêu thích trên cả điện thoại và máy tính.
+
+### 8. 🚚 Điều Phối Vận Chuyển Tự Động Theo Địa Bàn & Giao Hàng Shipper
+* Tự động nhận diện Quận/Huyện từ chuỗi địa chỉ giao hàng của khách:
+  * Khách tại **Quận Tân Phú** ➔ Điều phối tự động cho Shipper 1 (`shipper1`).
+  * Khách tại **Quận Tân Bình** ➔ Điều phối tự động cho Shipper 2 (`shipper2`).
+  * Khách tại **Quận 12** ➔ Điều phối tự động cho Shipper 3 (`shipper3`).
+* Tính năng tự động phân bổ hàng loạt với 1 click, phân công thủ công và xử lý đơn giao thất bại để điều phối lại (`reassign`).
+
+### 9. 💳 Thống Nhất Duyệt Thanh Toán & Cấu Hình Cổng Thanh Toán Đa Kênh
+* Quản trị viên duyệt trạng thái thanh toán và xác nhận đơn hàng tập trung trực tiếp ngay tại [OrderManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/OrderManager.jsx).
+* Trang [PaymentManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/PaymentManager.jsx) tập trung quản lý bật/tắt cổng (COD, Chuyển khoản VietQR, Ví MoMo, VNPAY) và tải lên hình ảnh mã QR ngân hàng động.
+
+### 10. 👑 Hệ Thống Khách Hàng Thân Thiết & Tích Điểm VIP Loyalty
+* 4 Hạng thẻ thành viên: **Đồng (BRONZE) -> Bạc (SILVER) -> Vàng (GOLD) -> Kim Cương (DIAMOND)**.
+* Tự động tích lũy điểm khi hoàn tất đơn hàng và tự động thăng hạng.
+* Chiết khấu trực tiếp trên đơn hàng (lên tới 8%) kèm đặc quyền miễn phí vận chuyển.
 
 ---
 
 ## 👥 Chi Tiết Các Phân Hệ Chức Năng
 
-### 1. Phân Hệ Khách Hàng (User / Client)
+### 1. Phân Hệ Khách Hàng (User / Client Portal)
 
-* **Trang Chủ (Home)**:
-  - Banner trượt quảng bá khuyến mãi và sự kiện nổi bật.
-  - Danh mục sản phẩm trực quan với icon và hình ảnh bắt mắt.
-  - Khối sản phẩm bán chạy, sản phẩm giảm giá sốc (Flash Sale/Clearance) và thực phẩm tươi sống mới về.
-* **Danh Mục & Tìm Kiếm Sản Phẩm (Product List)**:
-  - Tìm kiếm sản phẩm theo tên theo thời gian thực.
-  - Bộ lọc đa chiều: Lọc theo danh mục, thương hiệu, khoảng giá (`minPrice` - `maxPrice`).
-  - Sắp xếp linh hoạt: Giá tăng dần, giá giảm dần, mới nhất, tên A-Z.
-* **Chi Tiết Sản Phẩm (Product Detail)**:
-  - Xem bộ sưu tập hình ảnh sản phẩm chất lượng cao.
-  - Hiển thị giá gốc, giá khuyến mãi, phần trăm tiết kiệm, tồn kho khả dụng.
-  - Xem thông tin nguồn gốc xuất xứ, hạn sử dụng và đánh giá sao kèm bình luận.
-* **Giỏ Hàng Thông Minh (Shopping Cart)**:
-  - Điều chỉnh số lượng từng sản phẩm (tự động kiểm tra trần tồn kho thực tế).
-  - Tự động tính toán tạm tính, tiền giảm giá và tổng thanh toán.
-* **Đặt Hàng & Thanh Toán (Checkout)**:
-  - Quản lý sổ địa chỉ giao hàng (chọn địa chỉ có sẵn hoặc nhập địa chỉ mới).
-  - Nhập mã giảm giá (Coupon Code) để được giảm thêm tiền đơn hàng.
-  - Tự động áp dụng chiết khấu đặc quyền thành viên VIP Loyalty (Giảm giá % theo hạng thẻ & Free Ship).
-  - Thanh toán linh hoạt: COD, Quét mã VietQR chuyển khoản, Ví MoMo, VNPAY.
-* **Lịch Sử Đơn Hàng (Order History)**:
-  - Theo dõi lộ trình đơn: `CHỜ XÁC NHẬN` ➔ `ĐÃ XÁC NHẬN` ➔ `ĐANG GIAO` ➔ `HOÀN THÀNH` (hoặc `ĐÃ HỦY`).
-  - Xem chi tiết từng món hàng, địa chỉ nhận hàng và hình thức thanh toán.
-* **Trang Thành Viên VIP (Loyalty Portal)**:
-  - Hiển thị thẻ VIP cá nhân với giao diện sang trọng (Bronze, Silver, Gold, Diamond).
-  - Tiến độ thăng hạng, số điểm tích lũy và kho voucher độc quyền.
-* **Trợ Lý AI & Chăm Sóc Khách Hàng**:
-  - ChatBot tư vấn bằng AI Google Gemini hoạt động 24/7.
-  - Khung gửi tin nhắn góp ý & hỗ trợ kỹ thuật trực tiếp tới Admin.
+* **Trang Chủ ([Home.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Home.jsx))**:
+  - Banner quảng bá ưu đãi, khối danh mục sản phẩm kèm hình ảnh thumbnail sinh động.
+  - Danh mục hàng bán chạy, hàng xả kho cận date giá sốc và thực phẩm tươi sạch.
+* **Danh Mục & Tìm Kiếm ([ProductList.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/ProductList.jsx))**:
+  - Tìm kiếm tương đối theo tên, bộ lọc đa tiêu chí (danh mục, khoảng giá, thương hiệu).
+  - Bộ lọc danh mục dạng thẻ thumbnail trực quan dễ thao tác.
+* **Chi Tiết Sản Phẩm ([ProductDetail.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/ProductDetail.jsx))**:
+  - Hình ảnh sản phẩm chất lượng cao, giá niêm yết, giá khuyến mãi xả kho, tồn kho khả dụng.
+  - **Khối Gợi Ý Mua Kèm Apriori**: Danh sách sản phẩm thường được mua cùng kèm chỉ số Lift/Confidence hoặc sản phẩm cùng danh mục.
+* **Giỏ Hàng Thông Minh ([Cart.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Cart.jsx))**:
+  - Kiểm tra tồn kho khả dụng thời gian thực.
+  - Cảnh báo thông minh về số lượng lô xả kho cận date và lô tiêu chuẩn.
+* **Thanh Toán & Đặt Hàng ([Checkout.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Checkout.jsx))**:
+  - Sổ địa chỉ nhận hàng, chọn phương thức thanh toán linh hoạt (COD / VietQR / MoMo).
+  - Áp dụng mã giảm giá (kiểm tra điều kiện ngành hàng và giới hạn tối đa).
+  - Tự động cộng dồn chiết khấu hội viên VIP Loyalty.
+  - Bảng kê đơn hàng hiển thị tách 2 dòng lô cận date & lô mới nếu có.
+* **Lịch Sử Đơn Hàng ([OrderHistory.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/OrderHistory.jsx))**:
+  - Theo dõi hành trình đơn: `CHỜ XÁC NHẬN` ➔ `ĐÃ XÁC NHẬN` ➔ `ĐANG GIAO` ➔ `HOÀN THÀNH` (hoặc `ĐÃ HỦY`).
+* **Cổng Thành Viên VIP ([Loyalty.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/Loyalty.jsx))**:
+  - Thẻ VIP điện tử sang trọng (Bronze, Silver, Gold, Diamond), thanh tiến trình thăng hạng và lịch sử tích điểm.
+* **Trợ Lý Trí Tuệ Nhân Tạo & Chăm Sóc Khách Hàng**:
+  - ChatBot AI Google Gemini tư vấn 24/7 và khung gửi tin nhắn phản hồi hai chiều tới ban quản trị.
 
 ---
 
@@ -224,60 +199,42 @@ Sử dụng nền tảng **Spring MVC** (`spring-boot-starter-web`) với bộ �
 
 Truy cập tại: `/admin` (Yêu cầu quyền `ROLE_ADMIN`).
 
-#### A. Nhóm Báo Cáo & Thống Kê
-* **Báo Cáo Tổng Quan (Report Manager)**:
-  - Thống kê doanh thu theo các mốc: 7 ngày qua, 30 ngày qua, năm nay hoặc khoảng ngày tùy chọn.
-  - Biểu đồ tương tác (Recharts): Xu hướng doanh thu, cơ cấu đơn hàng theo phương thức thanh toán.
-  - Chỉ số KPI: Tổng doanh thu, tổng số đơn đặt, tỷ lệ giao hàng thành công, giá trị đơn hàng trung bình.
+#### A. Quản Lý Sản Phẩm & Danh Mục ([ProductManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ProductManager.jsx))
+* Giao diện hợp nhất 2 Sub-tab: **Sản phẩm & Tồn kho** và **Danh mục**.
+* 3 Thẻ KPI đầu trang: Tổng lượng tồn kho, Mặt hàng sắp hết (`<= minStock`), Mặt hàng hết tồn (`= 0`).
+* Nút `+ Tạo phiếu nhập` màu xanh lá nổi bật, dẫn trực tiếp sang tạo phiếu nhập kho.
+* Khóa trường tồn kho thủ công, ngăn chặn việc sửa tay sai lệch thực tế.
 
-#### B. Nhóm Quản Lý Đơn Hàng & Vận Chuyển
-* **Quản Lý Đơn Hàng (Order Manager)**:
-  - Toàn bộ danh sách đơn hàng với bộ lọc trạng thái và ngày đặt.
-  - Xác nhận đơn hàng, chuẩn bị hàng và bàn giao cho đơn vị vận chuyển.
-* **Điều Phối Giao Hàng (Delivery Manager)**:
-  - Danh sách shipper trực thuộc kèm khu vực phụ trách và số đơn đang nhận.
-  - Tự động nhận diện quận/huyện từ địa chỉ giao hàng.
-  - Điều phối tự động (Auto-dispatch) đơn hàng về đúng Shipper phụ trách địa bàn.
-  - Phân công thủ công đơn lẻ hoặc hàng loạt và xử lý đơn giao thất bại.
+#### B. Lịch Sử & Nhập Kho Nâng Cao ([WarehouseHistoryManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/WarehouseHistoryManager.jsx))
+* **Tab 1 - Phiếu Nhập Kho**: Lập phiếu nhập từ NCC đa thương hiệu, chọn sản phẩm, số lượng, đơn giá và số lô dự kiến.
+* **Tab 2 - Quản Lý Chất Lượng Đầu Vào (Inward QC)**: Đánh giá phiếu nhập, ghi nhận số lượng đạt chuẩn ($Q_{passed}$) và số lượng từ chối ($Q_{rejected}$) kèm lý do, in Biên bản kiểm định chất lượng.
+* **Tab 3 - Sổ Cái Biến Động Kho**: Tra cứu toàn bộ lịch sử xuất/nhập/bán/hủy hàng hóa.
 
-#### C. Nhóm Thanh Toán & Hóa Đơn
-* **Quản Lý Hóa Đơn (Invoice Manager)**:
-  - Tra cứu hóa đơn chi tiết: Mã hóa đơn, khách hàng, số điện thoại, ngày lập, phương thức thanh toán.
-  - In hóa đơn bán lẻ chuyên nghiệp chuẩn siêu thị.
-  - Xuất toàn bộ hoặc kết quả lọc hóa đơn ra file CSV/Excel.
-* **Cấu Hình Cổng Thanh Toán (Payment Manager)**:
-  - Bật/tắt các phương thức thanh toán (COD, VietQR, Ví MoMo, VNPAY).
-  - Upload ảnh mã QR thanh toán ngân hàng trực tiếp từ máy tính lên hệ thống.
+#### C. Quản Lý Lô Hàng & Hạn Dùng ([ProductBatchManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ProductBatchManager.jsx))
+* Quản lý số lô, ngày sản xuất, hạn sử dụng, giá vốn nhập (`importPrice`) và giá xả kho (`salePrice`).
+* Cảnh báo cận date 30 - 60 ngày; thiết lập giá xả hàng khuyến mãi cho lô.
+* **Tab Lô Hàng Đã Hết Hạn**: Hiển thị riêng các lô quá date kèm tổng vốn thiệt hại; nút **Xuất Hủy Kho** tự động ghi sổ cái `EXPIRED_DISPOSAL`.
 
-#### D. Nhóm Sản Phẩm & Kho Hàng
-* **Quản Lý Sản Phẩm & Tồn Kho (Product Manager)**:
-  - **Sub-tab 1: Sản phẩm & Tồn kho**: Quản lý sản phẩm, giá bán, giá vốn, tải ảnh, đơn vị tính. **Tồn kho bị khóa không cho sửa tay** (chỉ tăng qua nhập kho & QC).
-  - **Sub-tab 2: Danh mục**: Quản lý danh mục sản phẩm, biểu tượng và hình ảnh đại diện, đồng bộ tự động.
-* **Lịch Sử & Nhập Kho Nâng Cao (Warehouse History Manager)**:
-  - **Tab 1: Phiếu nhập kho**: Lập phiếu nhập từ NCC, chọn sản phẩm, số lượng nhập, đơn giá và số lô dự kiến.
-  - **Tab 2: Quản lý chất lượng đầu vào (Inward QC)**:
-    - Tiếp nhận các phiếu nhập chờ kiểm định.
-    - Ghi nhận số lượng đạt chuẩn ($Q_{passed}$) và số lượng không đạt chuẩn ($Q_{rejected}$) kèm lý do cụ thể.
-    - Cập nhật tồn kho tự động theo đúng $Q_{passed}$, tạo lô hàng hoạt động. $Q_{rejected}$ được trả lại NCC và ghi nhận biên bản.
-    - Hỗ trợ in Biên bản kiểm định chất lượng đầu vào.
-  - **Tab 3: Sổ cái kho / Thẻ kho**: Tra cứu toàn bộ lịch sử biến động kho (Nhập hàng, Xuất bán, Trả hàng QC, Cân chỉnh).
-* **Quản Lý Lô Hàng & Hạn Sử Dụng (Product Batch Manager)**:
-  - Danh sách lô hàng: Số lô, ngày sản xuất, hạn sử dụng, số lượng ban đầu và tồn hiện tại.
-  - Cảnh báo cận date 30 - 60 ngày; công cụ thiết lập xả hàng giảm giá cận date.
-* **Quản Lý Nhà Cung Cấp & Thương Hiệu (Supplier Manager)**:
-  - Quản lý hồ sơ nhà cung cấp: Tên công ty, MST, số điện thoại, email, địa chỉ.
+#### D. Quản Lý Đơn Hàng & Vận Chuyển ([OrderManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/OrderManager.jsx) & [DeliveryManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/DeliveryManager.jsx))
+* Quản lý toàn bộ danh sách đơn hàng, xác nhận duyệt đơn và duyệt thanh toán đồng bộ.
+* Tự động nhận diện quận huyện từ địa chỉ và phân bổ shipper theo địa bàn phụ trách.
+* Phân công shipper thủ công hoặc hàng loạt; quản lý đơn giao thất bại để tái điều phối.
 
-#### E. Nhóm Khách Hàng & Tiếp Thị
-* **Quản Lý Mã Giảm Giá (Coupon Manager)**:
-  - Tạo mới voucher giảm giá theo tỷ lệ (%) hoặc trừ tiền mặt (VNĐ).
-  - Cấu hình giá trị đơn tối thiểu, mức giảm tối đa và thời hạn hiệu lực.
-* **Quản Lý Người Dùng (User Manager)**:
-  - Xem danh sách toàn bộ khách hàng, shipper và quản trị viên.
-  - Khóa/Mở khóa tài khoản, phân quyền, xem hạng thành viên VIP và điểm tích lũy.
-* **Quản Lý Đánh Giá (Review Manager)**:
-  - Duyệt và quản lý bình luận, số sao đánh giá sản phẩm từ người mua.
-* **Hộp Thư Khách Hàng (Customer Support Manager)**:
-  - Tiếp nhận và phản hồi tin nhắn trực tiếp với khách hàng ngay trên giao diện admin.
+#### E. Quản Lý Hóa Đơn & Thanh Toán ([InvoiceManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/InvoiceManager.jsx) & [PaymentManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/PaymentManager.jsx))
+* In hóa đơn bán lẻ chuẩn thu ngân (tách rõ 2 dòng lô cận date & lô mới nếu có).
+* Xuất danh sách hóa đơn ra file CSV/Excel phục vụ đối soát.
+* Cấu hình bật/tắt các cổng thanh toán và tải lên ảnh mã QR chuyển khoản.
+
+#### F. Báo Cáo & Phân Tích Hoạt Động ([ReportManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ReportManager.jsx))
+* Thống kê doanh thu theo thời gian, tỷ lệ đơn hàng thành công, phương thức thanh toán.
+* **Card KPI Thất thoát hàng hết hạn**: Báo cáo tổng vốn thiệt hại từ các lô đã tiêu hủy kèm danh sách chi tiết.
+
+#### G. Quản Lý Khách Hàng, Mã Giảm Giá & Tiếp Thị
+* [CouponManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/CouponManager.jsx): Tạo voucher theo tỷ lệ % hoặc tiền mặt, cấu hình theo danh mục cụ thể và giới hạn mức giảm tối đa.
+* [UserManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/UserManager.jsx): Quản lý người dùng, phân quyền, xem hạng VIP và điểm thưởng.
+* [SupplierManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/SupplierManager.jsx): Quản lý danh sách nhà cung cấp đối tác.
+* [ReviewManager.jsx](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/frontend/src/pages/admin/ReviewManager.jsx): Duyệt đánh giá và nhận xét sản phẩm.
+* Quản lý hội thoại và phản hồi tin nhắn của khách hàng.
 
 ---
 
@@ -285,45 +242,43 @@ Truy cập tại: `/admin` (Yêu cầu quyền `ROLE_ADMIN`).
 
 Truy cập tại: `/shipper` (Yêu cầu quyền `ROLE_SHIPPER` hoặc `ROLE_ADMIN`).
 
-* **Bảng Điều Khiển Giao Hàng (Shipper Dashboard)**:
-  - Thống kê nhanh: Đơn đang cần giao, đơn giao thành công hôm nay, tiền COD cần nộp về quỹ.
-* **Danh Sách Đơn Hàng Phụ Trách**:
-  - Các đơn hàng được Admin điều phối theo đúng quận/huyện của shipper.
-  - Xem chi tiết: Tên khách hàng, số điện thoại bấm gọi ngay, địa chỉ chi tiết, tiền COD cần thu.
-* **Cập Nhật Tiến Trình Giao Hàng**:
-  - Chuyển trạng thái: `ĐÃ NHẬN ĐƠN` ➔ `ĐANG GIAO HÀNG`.
-  - Xác nhận **Giao hàng thành công** hoặc báo cáo **Giao hàng thất bại** kèm lý do cụ thể.
+* **Bảng Thống Kê Giao Hàng**: Đơn cần giao, đơn hoàn thành trong ngày, số tiền COD cần nộp về quỹ.
+* **Danh Sách Đơn Hàng Theo Quận**: Đơn hàng do Admin hoặc hệ thống phân bổ theo đúng quận phụ trách của shipper.
+* **Thao Tác Giao Nhận**:
+  - Bấm `Bắt đầu giao` ➔ Chuyển đơn sang trạng thái `ĐANG GIAO HÀNG`.
+  - Gọi điện nhanh cho khách hàng từ giao diện.
+  - Xác nhận `Giao hàng thành công` (thu tiền COD) hoặc báo cáo `Giao hàng thất bại` kèm lý do cụ thể.
 
 ---
 
 ## 🗄️ Cấu Trúc Cơ Sở Dữ Liệu (Database Schema)
 
-Hệ thống sử dụng cơ sở dữ liệu **Microsoft SQL Server** với 22 bảng được thiết kế chuẩn hóa và toàn vẹn tham chiếu khóa ngoại:
+Cơ sở dữ liệu **Microsoft SQL Server** được khởi tạo hoàn chỉnh từ file [supermarket_db1.sql](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/supermarket_db1.sql) gồm 22 bảng thực thể chuẩn hóa:
 
-| STT | Tên Bảng | Mục Đích & Nghiệp Vụ |
+| STT | Tên Bảng | Mục Đích & Cột Nổi Bật Mới Nâng Cấp |
 | :--- | :--- | :--- |
 | 1 | `roles` | Danh sách vai trò hệ thống (`ROLE_ADMIN`, `ROLE_USER`, `ROLE_SHIPPER`). |
-| 2 | `users` | Tài khoản người dùng, mật khẩu mã hóa, thông tin cá nhân, hạng VIP và điểm tích lũy. |
-| 3 | `categories` | Danh mục sản phẩm (Rau Củ Quả, Thực Phẩm Tươi Sống, Đồ Uống,...). |
+| 2 | `users` | Tài khoản, mật khẩu mã hóa BCrypt, `loyalty_points`, `membership_tier`, OAuth2 provider. |
+| 3 | `categories` | Danh mục ngành hàng, mô tả và hình ảnh đại diện (`image`). |
 | 4 | `brands` | Thương hiệu sản phẩm (Vinamilk, CP, Barona, Masan,...). |
-| 5 | `suppliers` | Danh sách nhà cung cấp hàng hóa (tên, MST, số điện thoại, địa chỉ). |
-| 6 | `products` | Thông tin sản phẩm, mã vạch, giá gốc, giá khuyến mãi, đơn vị tính, mô tả. |
-| 7 | `product_images` | Danh sách hình ảnh chi tiết của từng sản phẩm. |
-| 8 | `product_batches` | Quản lý lô hàng, ngày sản xuất, hạn sử dụng và số lượng của từng đợt nhập. |
-| 9 | `inventory` | Quản lý số lượng tồn kho thực tế của từng sản phẩm tại siêu thị. |
-| 10 | `goods_receipt` | Thông tin phiếu nhập kho hàng từ nhà cung cấp. |
-| 11 | `goods_receipt_items` | Chi tiết phiếu nhập, đơn vị tính, số lượng nhập, đơn giá, **kết quả kiểm định QC (`passed_quantity`, `rejected_quantity`, `reject_reason`, `qc_status`, `qc_note`, `inspected_at`, `inspected_by`)**. |
-| 12 | `inventory_ledger` | Sổ cái kho ghi nhận toàn bộ biến động xuất/nhập/tồn kho và lý do trả hàng QC. |
-| 13 | `coupons` | Mã khuyến mãi, voucher giảm giá, hạn mức sử dụng và ngày hiệu lực. |
-| 14 | `addresses` | Sổ địa chỉ nhận hàng của khách hàng. |
-| 15 | `cart` | Giỏ hàng của từng người dùng. |
-| 16 | `cart_items` | Chi tiết sản phẩm và số lượng nằm trong giỏ hàng. |
-| 17 | `orders` | Đơn hàng, tổng tiền, chiết khấu VIP, trạng thái xử lý, thông tin người nhận, shipper phân công. |
-| 18 | `order_items` | Chi tiết từng sản phẩm, đơn giá và số lượng trong đơn hàng. |
-| 19 | `payment_method_configs` | Cấu hình bật/tắt các phương thức thanh toán và lưu trữ URL mã QR thanh toán. |
-| 20 | `payments` | Lịch sử và trạng thái giao dịch thanh toán của từng đơn hàng. |
-| 21 | `reviews` | Đánh giá số sao và bình luận sản phẩm của khách hàng. |
-| 22 | `customer_messages` | Tin nhắn trao đổi hai chiều giữa khách hàng và ban quản trị siêu thị. |
+| 5 | `suppliers` | Danh sách nhà cung cấp (MST, điện thoại, email, địa chỉ). |
+| 6 | `products` | Thông tin mặt hàng, giá niêm yết, giá khuyến mãi, đơn vị tính, mô tả, ảnh chính. |
+| 7 | `product_images` | Bộ sưu tập hình ảnh chi tiết của sản phẩm. |
+| 8 | `product_batches` | **Quản lý phân lô**: `batch_name`, `quantity`, `expiry_date`, **`import_price` (giá vốn nhập)**, **`sale_price` (giá xả kho)**, **`status` (`ACTIVE`/`DISPOSED`)**. |
+| 9 | `inventory` | Quản lý tồn kho thực tế (`current_stock`, `min_stock`, `max_stock`). |
+| 10 | `goods_receipt` | Thông tin phiếu nhập kho hàng từ nhà cung cấp (`receipt_number`, `status`). |
+| 11 | `goods_receipt_items` | **Chi tiết nhập & Kiểm định QC**: `quantity`, `import_price`, **`passed_quantity`**, **`rejected_quantity`**, **`reject_reason`**, **`qc_status`**, **`qc_note`**, **`inspected_at`**, **`inspected_by`**. |
+| 12 | `inventory_ledger` | Sổ cái kho ghi nhận toàn bộ biến động: `RECEIPT`, `SELL`, `RETURN`, `EXPIRED_DISPOSAL`, `QC_REJECT`. |
+| 13 | `coupons` | **Mã giảm giá**: `code`, `discount_type`, `discount_value`, **`applicable_category_id` (áp dụng theo ngành hàng)**, **`max_discount_amount` (giảm tối đa)**. |
+| 14 | `addresses` | Sổ địa chỉ nhận hàng của khách (tỉnh/thành, quận/huyện, phường/xã, chi tiết). |
+| 15 | `cart` | Giỏ hàng của từng khách hàng. |
+| 16 | `cart_items` | Chi tiết mặt hàng và số lượng nằm trong giỏ. |
+| 17 | `orders` | Đơn đặt hàng, tổng tiền, chiết khấu VIP, trạng thái xử lý, shipper được phân công, thông tin người nhận. |
+| 18 | `order_items` | Chi tiết từng sản phẩm trong đơn (lưu tên riêng biệt cho lô cận date và lô tiêu chuẩn). |
+| 19 | `payment_method_configs` | Cấu hình bật/tắt các phương thức thanh toán và lưu URL ảnh mã QR động. |
+| 20 | `payments` | Lịch sử và trạng thái giao dịch thanh toán (`PENDING`, `APPROVED`, `FAILED`). |
+| 21 | `reviews` | Đánh giá số sao (1-5 sao) và bình luận trải nghiệm của khách hàng. |
+| 22 | `customer_messages` | Hộp thư tin nhắn trao đổi hai chiều giữa khách hàng và quản trị viên. |
 
 ---
 
@@ -331,76 +286,78 @@ Hệ thống sử dụng cơ sở dữ liệu **Microsoft SQL Server** với 22 
 
 ```
 DO_AN_CONGNGHEJAVA/
-├── pom.xml                                  # File cấu hình Maven, dependencies và build plugin
+├── pom.xml                                  # Cấu hình Maven dependencies (Java 21, Spring Boot 3.2)
 ├── mvnw / mvnw.cmd                          # Maven Wrapper cho Windows và Linux
-├── run.bat                                  # Script khởi chạy nhanh 1-Click trên Windows
-├── supermarket_db1.sql                      # File script CSDL chuẩn: tạo 22 bảng, nạp hạt giống và 50 đơn hàng HCM
-├── uploads/                                 # Thư mục lưu trữ hình ảnh upload thực tế
-├── PLAN.md / plan2.md                       # Tài liệu kế hoạch phát triển và kiến trúc dự án
+├── run.bat                                  # Script khởi chạy nhanh 1-Click trên Windows (UTF-8, JAVA_HOME)
+├── supermarket_db1.sql                      # Script CSDL duy nhất: 22 bảng, nạp hạt giống & 50 đơn hàng HCM
+├── QUY_TRINH_NGHIEP_VU_CHI_TIET.md          # Tài liệu quy trình nghiệp vụ BPM chi tiết kèm sơ đồ Mermaid
+├── PLAN.md / plan2.md                       # Tài liệu kiến trúc và kế hoạch nâng cấp hệ thống kho đa lô
+├── uploads/                                 # Thư mục lưu trữ hình ảnh sản phẩm và mã QR upload
 │
 ├── src/main/java/com/groceryshop/           # Mã nguồn Backend (Java Spring Boot 3.2)
 │   ├── GroceryShopApplication.java          # Main Application Class
 │   ├── config/                              # Cấu hình Spring Boot (DataInitializer, WebConfig)
-│   ├── security/                            # Kiến trúc bảo mật Spring Security 6 & OAuth2 Google/Facebook
-│   │   ├── SecurityConfig.java              # Cấu hình phân quyền endpoints & bộ lọc JWT
+│   ├── security/                            # Spring Security 6 & Stateless JWT
+│   │   ├── SecurityConfig.java              # Cấu hình phân quyền endpoints & bộ lọc
 │   │   ├── JwtTokenProvider.java            # Tạo, giải mã và xác thực JWT token
 │   │   └── JwtAuthenticationFilter.java     # Filter chặn bắt Authorization Bearer header
 │   ├── controller/                          # 24 RESTful Controllers xử lý API
 │   │   ├── AuthController.java              # Đăng ký, đăng nhập JWT, đổi mật khẩu
-│   │   ├── ProductController.java           # Quản lý & Lọc sản phẩm (khóa tồn kho thủ công)
-│   │   ├── CategoryController.java          # Quản lý danh mục
-│   │   ├── GoodsReceiptController.java      # Phiếu nhập kho & API kiểm định chất lượng QC
-│   │   ├── DeliveryController.java          # Điều phối giao hàng & tự động phân shipper theo quận
-│   │   ├── ShipperController.java           # Bảng điều khiển dành riêng cho shipper
-│   │   ├── ProductBatchController.java      # Quản lý Lô & Hạn sử dụng, xả hàng cận date
-│   │   ├── InventoryController.java         # Tồn kho thực tế
-│   │   ├── InventoryLedgerController.java   # Sổ cái biến động kho
-│   │   ├── OrderController.java             # Đặt hàng, chi tiết đơn hàng
-│   │   ├── ReportController.java            # Báo cáo thống kê doanh thu
-│   │   ├── ChatController.java              # ChatBot AI Gemini
+│   │   ├── ProductController.java           # Quản lý sản phẩm & API gợi ý Apriori
+│   │   ├── ProductBatchController.java      # Quản lý Lô, HSD, xả hàng & xuất hủy lô hết hạn
+│   │   ├── GoodsReceiptController.java      # Phiếu nhập kho & kiểm định chất lượng Inward QC
+│   │   ├── OrderController.java             # Tạo đơn hàng, duyệt đơn & duyệt thanh toán
+│   │   ├── DeliveryController.java          # Tự động điều phối đơn hàng theo quận huyện
+│   │   ├── ShipperController.java           # Bảng điều khiển riêng cho Shipper
+│   │   ├── ReportController.java            # Báo cáo doanh thu & Báo cáo tổn thất hàng hết hạn
+│   │   ├── CouponController.java            # Quản lý mã giảm giá theo danh mục
+│   │   ├── ChatController.java              # ChatBot AI Gemini & Offline Fallback
 │   │   └── SpaController.java               # Forwarding route cho Single Page Application
 │   ├── entity/                              # 22 Thực thể JPA tương ứng với các bảng DB
 │   ├── repository/                          # Giao diện Spring Data JPA Repositories
-│   ├── service/                             # Tầng xử lý nghiệp vụ kinh doanh (Business Logic)
-│   │   ├── GoodsReceiptService.java         # Xử lý nhập kho & kiểm định QC đầu vào
-│   │   ├── ProductService.java              # Xử lý sản phẩm (chuẩn hóa tồn ban đầu = 0)
-│   │   ├── OrderService.java                # Xử lý đơn hàng & trừ kho FIFO
+│   ├── service/                             # Tầng xử lý logic nghiệp vụ
+│   │   ├── RecommendationService.java       # Thuật toán Apriori (Confidence, Lift, Cold-Start)
+│   │   ├── OrderService.java                # Bán hàng đa lô, tách dòng hóa đơn & trừ kho FIFO
+│   │   ├── ProductBatchService.java         # Quản lý lô, chặn sale quá date, hủy kho ghi sổ cái
+│   │   ├── GoodsReceiptService.java         # Nhập kho & kiểm định chất lượng Inward QC
+│   │   ├── CouponService.java               # Tính chiết khấu coupon theo ngành hàng
+│   │   ├── ProductService.java              # Khóa chỉnh sửa tồn kho trực tiếp
+│   │   ├── ReportService.java               # Tổng hợp báo cáo kinh doanh & tổn thất lô hủy
 │   │   └── ...
 │   ├── dto/                                 # Data Transfer Objects
+│   │   ├── ProductRecommendationDTO.java    # DTO gợi ý sản phẩm kèm Confidence, Lift, Reason
 │   │   ├── QCInspectionRequestDTO.java      # DTO tiếp nhận dữ liệu kiểm định QC
-│   │   ├── GoodsReceiptItemDTO.java         # DTO chi tiết phiếu nhập kèm trường QC
+│   │   ├── CouponItemInfo.java              # DTO hỗ trợ kiểm tra coupon theo ngành hàng
 │   │   └── ...
-│   └── exception/                           # Xử lý ngoại lệ tập trung (Global Exception Handler)
+│   └── exception/                           # Global Exception Handler tập trung
 │
 ├── src/main/resources/
-│   ├── application.properties               # File cấu hình CSDL, cổng, JWT Secret, Gemini Key
-│   └── static/                              # Chứa toàn bộ static bundle được build từ React (HTML/CSS/JS)
+│   ├── application.properties               # Cấu hình SQL Server, cổng 8080, JWT Secret, Gemini Key
+│   └── static/                              # Chứa static bundle đã build từ React (HTML/CSS/JS)
 │
 └── frontend/                                # Mã nguồn Frontend (React 18 SPA + Vite)
     ├── package.json                         # Dependencies Frontend (React, Axios, Recharts, Lucide)
-    ├── vite.config.js                       # Cấu hình Vite & Proxy chuyển tiếp sang port 8080
+    ├── vite.config.js                       # Cấu hình Vite & Proxy chuyển tiếp cổng 8080
     ├── index.html                           # File HTML gốc của SPA
     └── src/
         ├── App.jsx                          # Cấu hình BrowserRouter, Routes và Context Providers
-        ├── main.jsx                         # Điểm vào của ứng dụng React
         ├── contexts/                        # State Management (AuthContext, CartContext)
-        ├── services/api.js                  # Axios Instance kèm Interceptor gắn JWT token
+        ├── services/api.js                  # Axios Instance kèm Interceptor gắn JWT Bearer token
         ├── layouts/                         # UserLayout và AdminLayout
-        ├── pages/                           # Các trang giao diện người dùng
-        │   ├── Home.jsx, Cart.jsx, Checkout.jsx, OrderHistory.jsx, Loyalty.jsx, Profile.jsx...
-        │   ├── admin/                       # Các trang quản trị chuyên sâu
-        │   │   ├── ProductManager.jsx       # Quản lý Sản phẩm & Tồn kho (gồm Sub-tab Sản phẩm & Danh mục)
-        │   │   ├── WarehouseHistoryManager.jsx # Quản lý Lịch sử & Nhập kho (Phiếu nhập, QC đầu vào, Sổ cái kho)
-        │   │   ├── ProductBatchManager.jsx  # Quản lý Lô & Hạn sử dụng, xả hàng cận date
-        │   │   ├── OrderManager.jsx         # Quản lý đơn hàng
+        ├── pages/                           # Các màn hình người dùng
+        │   ├── Home.jsx, Cart.jsx, Checkout.jsx, ProductDetail.jsx, ProductList.jsx, Loyalty.jsx...
+        │   ├── admin/                       # Các màn hình quản trị chuyên sâu
+        │   │   ├── ProductManager.jsx       # Quản lý Sản phẩm & Danh mục (khóa tồn kho thủ công)
+        │   │   ├── WarehouseHistoryManager.jsx # Quản lý Lịch sử & Nhập kho (Phiếu nhập, Inward QC, Sổ cái)
+        │   │   ├── ProductBatchManager.jsx  # Quản lý Lô HSD (Tab Lô hết hạn & Nút Xuất hủy)
+        │   │   ├── OrderManager.jsx         # Quản lý đơn hàng & duyệt thanh toán tập trung
         │   │   ├── DeliveryManager.jsx      # Điều phối vận chuyển thông minh theo quận
-        │   │   ├── InvoiceManager.jsx       # Quản lý hóa đơn, in ấn và xuất CSV
-        │   │   ├── PaymentManager.jsx       # Cấu hình thanh toán & Upload mã QR
-        │   │   ├── ReportManager.jsx        # Báo cáo doanh thu & biểu đồ KPI
-        │   │   ├── SupplierManager.jsx      # Quản lý nhà cung cấp
-        │   │   ├── CouponManager.jsx        # Quản lý mã giảm giá
+        │   │   ├── InvoiceManager.jsx       # Quản lý hóa đơn, in ấn chuẩn và xuất CSV
+        │   │   ├── PaymentManager.jsx       # Cấu hình phương thức thanh toán & Upload mã QR
+        │   │   ├── ReportManager.jsx        # Báo cáo doanh thu & Tổn thất hàng hết hạn
+        │   │   ├── CouponManager.jsx        # Quản lý voucher theo danh mục
         │   │   ├── UserManager.jsx          # Quản lý người dùng & VIP Loyalty
-        │   │   └── ReviewManager.jsx        # Quản lý đánh giá sản phẩm
+        │   │   └── SupplierManager.jsx      # Quản lý nhà cung cấp đối tác
         │   └── shipper/
         │       └── ShipperDashboard.jsx     # Bảng điều khiển riêng cho Shipper
         ├── components/                      # ChatBot AI Gemini, Feedback Widget, ProtectedRoute...
@@ -411,7 +368,7 @@ DO_AN_CONGNGHEJAVA/
 
 ## 🔑 Tài Khoản Trải Nghiệm Mặc Định
 
-Hệ thống đã chuẩn bị sẵn các tài khoản demo tương ứng với 3 vai trò người dùng trong hệ thống (Mật khẩu mặc định là: `pass1234`):
+Hệ thống đã nạp sẵn dữ liệu demo tương ứng với 3 vai trò người dùng (Mật khẩu mặc định là: `pass1234`):
 
 | Vai Trò | Tên Đăng Nhập | Mật Khẩu | Họ Tên & Khu Vực / Đặc Quyền | Quyền Hạn (Role) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -430,8 +387,8 @@ Hệ thống đã chuẩn bị sẵn các tài khoản demo tương ứng với 
 
 ### 1. Yêu Cầu Môi Trường
 * **Java Development Kit (JDK)**: Phiên bản **Java 17** hoặc **Java 21 LTS** (Khuyến nghị Eclipse Temurin, Amazon Corretto hoặc Oracle JDK).
-* **Cơ sở dữ liệu**: **Microsoft SQL Server** (2012 trở lên).
-* **Node.js**: Phiên bản 18+ hoặc 20+ (Dùng để build frontend khi cần tùy biến).
+* **Cơ sở dữ liệu**: **Microsoft SQL Server** (2012, 2016, 2019, 2022).
+* **Node.js**: Phiên bản 18+ hoặc 20+ (Dùng khi cần build lại giao diện frontend).
 * **Trình quản lý gói**: npm hoặc yarn.
 
 ---
@@ -439,10 +396,10 @@ Hệ thống đã chuẩn bị sẵn các tài khoản demo tương ứng với 
 ### 2. Thiết Lập Cơ Sở Dữ Liệu
 
 1. Mở công cụ **SQL Server Management Studio (SSMS)** hoặc Azure Data Studio.
-2. Kết nối tới SQL Server của bạn (mặc định cổng `1433`).
+2. Kết nối tới SQL Server của bạn (cổng mặc định `1433`).
 3. Mở file [supermarket_db1.sql](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/supermarket_db1.sql) và nhấn **Execute (F5)**.
-   *(Script sẽ tự động tạo cơ sở dữ liệu `supermarket_db1`, toàn bộ 22 bảng thực thể chuẩn JPA, khóa ngoại, chỉ mục, dữ liệu mẫu phân lô date/xả kho và 50 đơn hàng lịch sử thực tế TP.HCM)*.
-4. Kiểm tra tài khoản/mật khẩu kết nối CSDL trong file [application.properties](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/resources/application.properties):
+   *(Script duy nhất sẽ tự động tạo cơ sở dữ liệu `supermarket_db1`, toàn bộ 22 bảng chuẩn JPA, khóa ngoại, chỉ mục, dữ liệu phân lô HSD có giá vốn và 50 đơn hàng lịch sử thực tế TP.HCM phục vụ thuật toán Apriori)*.
+4. Kiểm tra tài khoản và mật khẩu kết nối CSDL trong file [application.properties](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/resources/application.properties):
    ```properties
    spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=supermarket_db1;encrypt=true;trustServerCertificate=true
    spring.datasource.username=sa
@@ -453,37 +410,17 @@ Hệ thống đã chuẩn bị sẵn các tài khoản demo tương ứng với 
 
 ### 3. Khởi Chạy Nhanh Dự Án
 
-#### ⚡ Cách Khởi Chạy Nhanh Nhất (1-Click Run trên Windows)
-Dự án đã tích hợp sẵn file script [run.bat](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/run.bat) tại thư mục gốc:
-1. Double-click trực tiếp vào file **`run.bat`** (hoặc mở Command Prompt gõ `run.bat`).
-2. Script sẽ tự động nhận diện `JAVA_HOME`, thiết lập mã hóa UTF-8 và khởi chạy ứng dụng Spring Boot.
-3. Mở trình duyệt và truy cập:
-   * Website Siêu thị: `http://localhost:8080`
-   * Đăng nhập: `http://localhost:8080/login`
-   * Trang Quản trị: `http://localhost:8080/admin`
-   * Bảng Shipper: `http://localhost:8080/shipper`
+#### ⚡ Cách 1: Khởi Chạy Nhanh 1-Click trên Windows
+Double-click trực tiếp vào file [run.bat](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/run.bat) tại thư mục gốc:
+* Script sẽ tự động nhận diện `JAVA_HOME`, kích hoạt bảng mã UTF-8 và khởi chạy máy chủ Spring Boot.
+* Mở trình duyệt web và truy cập:
+  * Website Khách hàng: `http://localhost:8080`
+  * Trang Đăng nhập: `http://localhost:8080/login`
+  * Trang Quản trị: `http://localhost:8080/admin`
+  * Bảng Shipper: `http://localhost:8080/shipper`
 
----
-
-#### Cách Khởi Chạy Chi Tiết Theo Nhu Cầu
-
-##### A. Chạy Tích Hợp Đóng Gói (Production Mode - Cổng 8080)
-Khi bạn có thay đổi mã nguồn trong thư mục `frontend` và muốn cập nhật lại bản build:
-1. **Build Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-   ```
-   *(Các file sản phẩm sẽ được tự động xuất vào thư mục `src/main/resources/static`)*.
-2. **Khởi chạy Backend**:
-   ```bash
-   .\mvnw.cmd spring-boot:run
-   ```
-
-##### B. Chạy Độc Lập Phục Vụ Phát Triển (Development Mode - Live Reload)
-Nếu bạn muốn vừa code giao diện vừa xem kết quả tức thì với Vite HMR:
+#### 🛠️ Cách 2: Khởi Chạy Phục Vụ Phát Triển (Development Live Reload)
+Nếu bạn muốn vừa chỉnh sửa code React vừa xem thay đổi tức thời:
 1. **Terminal 1 (Backend)**:
    ```bash
    .\mvnw.cmd spring-boot:run
@@ -494,7 +431,18 @@ Nếu bạn muốn vừa code giao diện vừa xem kết quả tức thì với
    cd frontend
    npm run dev
    ```
-   *(Frontend chạy tại `http://localhost:5173`, tự động proxy API sang cổng 8080)*.
+   *(Frontend chạy tại `http://localhost:5173`, tự động chuyển tiếp API sang cổng 8080)*.
+
+#### 📦 Cách 3: Đóng Gói Lại Bản Build Khi Sửa Giao Diện
+Khi thay đổi mã nguồn trong thư mục `frontend/`, chạy lệnh đóng gói để cập nhật vào Backend:
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+.\mvnw.cmd spring-boot:run
+```
+*(Các file sản phẩm sẽ được tự động xuất vào thư mục `src/main/resources/static`)*.
 
 ---
 
@@ -505,70 +453,78 @@ Nếu bạn muốn vừa code giao diện vừa xem kết quả tức thì với
 | **Xác Thực (Auth)** | `POST` | `/api/auth/login` | Public | Đăng nhập hệ thống, trả về Bearer JWT token |
 | | `POST` | `/api/auth/register` | Public | Đăng ký tài khoản khách hàng mới |
 | | `GET` | `/api/auth/me` | Authenticated | Lấy thông tin tài khoản đang đăng nhập |
-| **Sản Phẩm & Danh Mục** | `GET` | `/api/public/products` | Public | Danh sách sản phẩm, lọc theo danh mục, giá, từ khóa |
-| | `GET` | `/api/public/products/{id}` | Public | Lấy chi tiết thông tin 1 sản phẩm theo ID |
+| **Sản Phẩm & Danh Mục** | `GET` | `/api/public/products` | Public | Lấy danh sách sản phẩm, lọc theo danh mục, giá, từ khóa |
+| | `GET` | `/api/public/products/{id}` | Public | Lấy chi tiết thông tin 1 sản phẩm |
+| | `GET` | `/api/public/products/{id}/recommendations` | Public | **Gợi ý sản phẩm mua kèm bằng thuật toán Apriori** |
 | | `POST` | `/api/admin/products` | ADMIN | Thêm mới sản phẩm (Tồn kho tự động gán = 0) |
 | | `PUT` | `/api/admin/products/{id}` | ADMIN | Cập nhật sản phẩm (Khóa chỉnh sửa tồn kho trực tiếp) |
 | | `GET` | `/api/public/categories` | Public | Lấy danh sách danh mục sản phẩm |
 | | `POST` | `/api/admin/categories` | ADMIN | Thêm mới danh mục sản phẩm |
-| **Giỏ Hàng (Cart)** | `GET` | `/api/cart` | Authenticated | Lấy danh sách sản phẩm trong giỏ hàng hiện tại |
+| **Giỏ Hàng & Đơn Hàng** | `GET` | `/api/cart` | Authenticated | Lấy danh sách sản phẩm trong giỏ hàng |
 | | `POST` | `/api/cart/add` | Authenticated | Thêm sản phẩm vào giỏ hàng |
-| | `PUT` | `/api/cart/update` | Authenticated | Cập nhật số lượng sản phẩm trong giỏ |
-| | `DELETE` | `/api/cart/item/{id}` | Authenticated | Xóa 1 sản phẩm khỏi giỏ hàng |
-| **Đơn Hàng (Order)** | `POST` | `/api/orders` | Authenticated | Tạo đơn hàng mới từ giỏ hàng |
-| | `GET` | `/api/orders/my-orders` | Authenticated | Lịch sử đơn hàng của khách hàng đang đăng nhập |
+| | `POST` | `/api/orders` | Authenticated | **Tạo đơn hàng (Trừ kho FIFO, tách 2 dòng lô cận date & lô mới)** |
+| | `GET` | `/api/orders/my-orders` | Authenticated | Lịch sử đơn hàng của khách hàng |
 | | `GET` | `/api/admin/orders` | ADMIN | Danh sách toàn bộ đơn hàng hệ thống |
-| | `PATCH` | `/api/admin/orders/{id}/status` | ADMIN | Cập nhật trạng thái xử lý đơn hàng |
+| | `PATCH` | `/api/admin/orders/{id}/status` | ADMIN | Cập nhật trạng thái đơn & tự động duyệt thanh toán |
 | **Vận Chuyển & Shipper** | `GET` | `/api/admin/deliveries/shippers` | ADMIN | Lấy danh sách shipper và khu vực phụ trách |
-| | `POST` | `/api/admin/deliveries/assign` | ADMIN | Phân công shipper cho đơn hàng |
-| | `POST` | `/api/admin/deliveries/auto-assign` | ADMIN | **Tự động điều phối đơn hàng theo quận** |
+| | `POST` | `/api/admin/deliveries/auto-assign` | ADMIN | **Tự động điều phối đơn hàng theo quận huyện** |
+| | `POST` | `/api/admin/deliveries/assign` | ADMIN | Phân công shipper thủ công cho đơn hàng |
 | | `GET` | `/api/shipper/orders/my-deliveries` | SHIPPER | Danh sách đơn hàng được gán cho shipper đang đăng nhập |
 | | `PATCH` | `/api/shipper/orders/{id}/status` | SHIPPER | Cập nhật trạng thái giao (Thành công / Thất bại) |
-| **Lô Hàng & Hạn Sử Dụng** | `GET` | `/api/admin/batches` | ADMIN | Danh sách tất cả các lô hàng |
+| **Lô Hàng & Hạn Sử Dụng** | `GET` | `/api/admin/batches` | ADMIN | Danh sách tất cả các lô hàng kèm giá vốn |
 | | `GET` | `/api/admin/batches/expiring` | ADMIN | Danh sách lô hàng sắp hết hạn (cận date) |
-| | `POST` | `/api/admin/batches/{id}/clearance-sale` | ADMIN | **Áp dụng xả hàng giảm giá cận date** |
-| **Nhập Kho & Kiểm Định QC**| `GET` | `/api/admin/goods-receipts` | ADMIN | Danh sách phiếu nhập kho |
-| | `POST` | `/api/admin/goods-receipts` | ADMIN | Tạo phiếu nhập kho mới từ nhà cung cấp |
-| | `POST` | `/api/admin/goods-receipts/{id}/qc-inspection` | ADMIN | **Kiểm định chất lượng đầu vào (Duyệt hàng đạt chuẩn nhập kho, loại bỏ hàng lỗi/hỏng)** |
-| | `PUT` | `/api/admin/goods-receipts/{id}/complete` | ADMIN | Hoàn tất nhanh phiếu nhập |
-| | `GET` | `/api/admin/inventory-ledger` | ADMIN | Xem sổ cái / thẻ kho xuất nhập tồn |
-| **Hóa Đơn & Thanh Toán**| `GET` | `/api/public/payment-methods` | Public | Lấy các phương thức thanh toán đang bật |
-| | `POST` | `/api/admin/payment-methods/upload-qr` | ADMIN | Tải lên mã QR chuyển khoản ngân hàng/MoMo |
-| **Báo Cáo (Reports)** | `GET` | `/api/admin/reports/overview` | ADMIN | Báo cáo doanh thu, đơn hàng theo mốc thời gian |
-| **Trợ Lý Trí Tuệ Nhân Tạo**| `POST` | `/api/public/chat` | Public | Gửi tin nhắn trò chuyện với Trợ lý ảo Google Gemini |
-| **Chăm Sóc Khách Hàng** | `POST` | `/api/messages/send` | Authenticated | Khách hàng gửi tin nhắn phản hồi |
-| | `GET` | `/api/admin/messages/conversations` | ADMIN | Admin xem danh sách hội thoại khách hàng |
-| | `POST` | `/api/admin/messages/conversations/{id}/reply` | ADMIN | Admin trả lời tin nhắn của khách hàng |
+| | `GET` | `/api/admin/batches/expired` | ADMIN | **Danh sách lô hàng đã quá hạn sử dụng** |
+| | `POST` | `/api/admin/batches/{id}/dispose` | ADMIN | **Xuất hủy lô quá hạn, trừ kho và ghi sổ cái kho** |
+| | `POST` | `/api/admin/batches/batch/{id}/clearance-sale` | ADMIN | Thiết lập giá bán xả kho cho lô cụ thể |
+| **Nhập Kho & Kiểm Định QC**| `GET` | `/api/admin/goods-receipts` | ADMIN | Danh sách phiếu nhập kho từ nhà cung cấp |
+| | `POST` | `/api/admin/goods-receipts` | ADMIN | Lập phiếu nhập kho mới từ nhà cung cấp |
+| | `POST` | `/api/admin/goods-receipts/{id}/qc-inspection` | ADMIN | **Kiểm định chất lượng đầu vào (Nhập kho hàng đạt chuẩn, từ chối hàng lỗi)** |
+| | `PUT` | `/api/admin/goods-receipts/{id}/complete` | ADMIN | Hoàn tất phiếu nhập và đồng bộ giá vốn lô |
+| | `GET` | `/api/admin/inventory-ledger` | ADMIN | Tra cứu sổ cái / thẻ kho xuất nhập tồn |
+| **Mã Giảm Giá (Coupons)** | `GET` | `/api/public/coupons` | Public | Lấy danh sách voucher khuyến mãi khả dụng |
+| | `POST` | `/api/admin/coupons` | ADMIN | **Tạo mã giảm giá (hỗ trợ áp dụng theo danh mục & mức giảm tối đa)** |
+| **Hóa Đơn & Thanh Toán**| `GET` | `/api/public/payment-methods` | Public | Lấy danh sách các phương thức thanh toán đang mở |
+| | `POST` | `/api/admin/payment-methods/upload-qr` | ADMIN | Tải lên ảnh mã QR thanh toán ngân hàng/MoMo |
+| **Báo Cáo (Reports)** | `GET` | `/api/admin/reports/overview` | ADMIN | Báo cáo doanh thu và đơn hàng theo khoảng thời gian |
+| | `GET` | `/api/admin/reports/expired-batches` | ADMIN | **Báo cáo tổn thất vốn do hàng quá hạn bị tiêu hủy** |
+| **AI & Tin Nhắn Phản Hồi**| `POST` | `/api/public/chat` | Public | Gửi tin nhắn trò chuyện với Trợ lý ảo Google Gemini |
+| | `POST` | `/api/messages/send` | Authenticated | Khách hàng gửi tin nhắn phản hồi tới ban quản trị |
+| | `GET` | `/api/admin/messages/conversations` | ADMIN | Quản trị viên xem danh sách các cuộc hội thoại |
+| | `POST` | `/api/admin/messages/conversations/{id}/reply` | ADMIN | Quản trị viên trả lời tin nhắn của khách hàng |
 
 ---
 
 ## ⚙️ Cấu Hình Môi Trường & Lưu Ý Quan Trọng
 
-### 1. Cấu Hình Google Gemini AI
-Hệ thống đã tích hợp sẵn khóa API Gemini mã hóa Base64 trong file `application.properties`:
+### 1. Tài Liệu Quy Trình Nghiệp Vụ Chuẩn Hóa
+Toàn bộ chu trình vận hành của siêu thị từ bước mua sắm, duyệt đơn, điều phối shipper, nhập kho QC, xử lý lô cận date, đến tính toán tích điểm hội viên được mô tả chuẩn hóa dạng BPMN / Mermaid tại tài liệu:
+👉 **[QUY_TRINH_NGHIEP_VU_CHI_TIET.md](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/QUY_TRINH_NGHIEP_VU_CHI_TIET.md)** (Gồm 770+ dòng tài liệu chi tiết kèm sơ đồ tuần tự và lưu đồ giải thuật).
+
+### 2. Cấu Hình Google Gemini AI
+Hệ thống đã tích hợp sẵn khóa API Gemini mã hóa Base64 trong file [application.properties](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/resources/application.properties):
 ```properties
 gemini.api.key.base64=QVEuQWI4Uk42TEZMSWd1dnpYSTFGU1Radl83V3NBM2xXLTEwVTAxZW9qQXp0UGdKZVhLLXc=
 ```
 Nếu bạn muốn sử dụng API Key riêng của bạn:
-1. Đăng ký lấy API Key tại [Google AI Studio](https://aistudio.google.com/).
+1. Đăng ký lấy API Key miễn phí tại [Google AI Studio](https://aistudio.google.com/).
 2. Đặt biến môi trường hệ thống: `GEMINI_API_KEY=your_key_here` hoặc mã hóa Base64 và điền vào thuộc tính `gemini.api.key.base64`.
 
-### 2. Cấu Hình Đăng Nhập Mạng Xã Hội Google OAuth2
-Để bật tính năng "Đăng nhập bằng Google":
-1. Truy cập [Google Cloud Console](https://console.cloud.google.com) ➔ Tạo OAuth 2.0 Client ID (Loại: Web application).
+### 3. Cấu Hình Đăng Nhập Mạng Xã Hội Google OAuth2
+Để kích hoạt tính năng "Đăng nhập bằng Google":
+1. Truy cập [Google Cloud Console](https://console.cloud.google.com) ➔ Tạo OAuth 2.0 Client ID (Web Application).
 2. Thêm Authorized redirect URI: `http://localhost:8080/login/oauth2/code/google`.
-3. Điền thông tin vào `application.properties`:
+3. Điền Client ID và Client Secret vào [application.properties](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/resources/application.properties):
    ```properties
    spring.security.oauth2.client.registration.google.client-id=YOUR_GOOGLE_CLIENT_ID
    spring.security.oauth2.client.registration.google.client-secret=YOUR_GOOGLE_CLIENT_SECRET
    ```
 
-### 3. Tương Thích SQL Server & Chuẩn Hóa Tiếng Việt
-* Ứng dụng đã cấu hình `spring.jpa.properties.hibernate.use_nationalized_character_data=true`, đảm bảo tất cả chuỗi String được ánh xạ chuẩn sang kiểu dữ liệu `NVARCHAR` trong SQL Server, loại bỏ hoàn toàn lỗi hiển thị dấu tiếng Việt.
-* Trình điều khiển JDBC được cấu hình tương thích cả với các phiên bản SQL Server yêu cầu giao thức mã hóa TLS 1.0/1.1/1.2.
+### 4. Tương Thích SQL Server & Chuẩn Hóa Tiếng Việt
+* Ứng dụng đã cấu hình `spring.jpa.properties.hibernate.use_nationalized_character_data=true`, đảm bảo toàn bộ chuỗi ký tự được ánh xạ chuẩn sang kiểu dữ liệu `NVARCHAR` trong SQL Server, loại bỏ 100% lỗi font chữ dấu tiếng Việt.
+* Trình điều khiển JDBC được cấu hình tương thích cả với các phiên bản SQL Server yêu cầu giao thức bảo mật mã hóa TLS 1.0/1.1/1.2.
 
 ---
 
 ## 🎯 Tổng Kết
 
-Dự án **Website Quản Lý Siêu Thị Mini & Cửa Hàng Tiện Lợi (MiniMart)** là giải pháp công nghệ toàn diện kết hợp giữa khả năng xử lý nghiệp vụ mạnh mẽ, an toàn của Java Spring Boot và giao diện hiện đại, mượt mà của React SPA. Dự án không chỉ đáp ứng tốt yêu cầu đồ án môn học chuyên ngành Công Nghệ Java (CNJAVA) mà còn có tính ứng dụng thực tiễn cao trong quản lý chuỗi bán lẻ thực phẩm và siêu thị hiện đại.
+Dự án **Website Quản Lý Siêu Thị Mini & Cửa Hàng Tiện Lợi (MiniMart)** là giải pháp công nghệ toàn diện kết hợp giữa khả năng xử lý nghiệp vụ mạnh mẽ, chặt chẽ của **Java Spring Boot 3**, giao diện hiện đại mượt mà của **React 18 SPA**, và sức mạnh phân tích thông minh từ thuật toán **Apriori** cùng **Google Gemini AI**. Dự án không chỉ đáp ứng hoàn hảo yêu cầu đồ án môn học chuyên ngành Công Nghệ Java (CNJAVA) mà còn sở hữu tính ứng dụng thực tiễn cao trong quản lý chuỗi bán lẻ siêu thị hiện đại.
