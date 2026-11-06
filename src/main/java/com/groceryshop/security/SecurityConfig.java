@@ -80,9 +80,34 @@ public class SecurityConfig {
                 .requestMatchers("/login", "/register", "/forgot-password", "/products", "/products/**",
                         "/cart", "/checkout", "/orders", "/orders/**", "/profile", "/loyalty", "/loyalty/**",
                         "/admin", "/admin/**", "/shipper", "/shipper/**").permitAll()
+                // Phân hệ Giao diện Thymeleaf + Bootstrap (/mvc/**) có kiểm soát đăng nhập & phân quyền theo Role
+                .requestMatchers("/mvc/login", "/mvc/quick-login", "/mvc/logout").permitAll()
+                .requestMatchers("/mvc/categories/**", "/mvc/suppliers/**").hasRole("ADMIN")
+                .requestMatchers("/mvc/products/new", "/mvc/products/edit/**", "/mvc/products/save",
+                        "/mvc/products/delete/**", "/mvc/products/toggle/**").hasRole("ADMIN")
+                .requestMatchers("/mvc/orders/status/**").hasAnyRole("ADMIN", "SHIPPER")
+                .requestMatchers("/mvc", "/mvc/**").hasAnyRole("ADMIN", "SHIPPER", "USER")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/shipper/**").hasAnyRole("ADMIN", "SHIPPER")
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    String uri = request.getRequestURI();
+                    if (uri != null && uri.startsWith("/mvc")) {
+                        response.sendRedirect("/mvc/login");
+                    } else {
+                        response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                    }
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    String uri = request.getRequestURI();
+                    if (uri != null && uri.startsWith("/mvc")) {
+                        response.sendRedirect("/mvc/access-denied");
+                    } else {
+                        response.sendError(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN, "Access Denied");
+                    }
+                })
             )
             // Cấu hình OAuth2 Login
             .oauth2Login(oauth2 -> oauth2

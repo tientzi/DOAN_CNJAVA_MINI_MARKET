@@ -18,6 +18,9 @@ public class CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
 
+    @Autowired
+    private com.groceryshop.repository.ProductRepository productRepository;
+
     public List<CategoryDTO> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .map(EntityMapper::toCategoryDTO)
@@ -74,6 +77,9 @@ public class CategoryService {
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
+        if (productRepository.existsByCategoryId(id)) {
+            throw new BadRequestException("Danh mục '" + category.getName() + "' đang có sản phẩm liên kết, không thể xóa để bảo toàn dữ liệu!");
+        }
         categoryRepository.delete(category);
     }
 }

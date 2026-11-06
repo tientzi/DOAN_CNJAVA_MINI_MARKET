@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+<body>
+
+<header th:replace="~{fragments/layout :: header}"></header>
+<nav th:replace="~{fragments/layout :: menu}"></nav>
+<div th:replace="~{fragments/layout :: alerts}"></div>
+
+<main class="container py-4">
+    <!-- Banner tiêu đề -->
+    <div class="card card-minimart bg-white p-4 mb-4 border-start border-5 border-success">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h4 class="fw-bold text-success mb-1">
+                    <i class="bi bi-speedometer2 me-2"></i>Bảng Điều Khiển Tổng Quan (Thymeleaf + Bootstrap 5)
+                </h4>
+                <p class="text-muted mb-0">
+                    Đồng bộ trực tiếp với CSDL Microsoft SQL Server (`supermarket_db1`). Mọi thay đổi tại đây hiển thị tức thời trên cả giao diện React SPA.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2" th:if="${isAdmin}">
+                <a th:href="@{/mvc/products/new}" class="btn btn-minimart">
+                    <i class="bi bi-plus-circle me-1"></i> Thêm Sản phẩm
+                </a>
+                <a th:href="@{/mvc/categories/new}" class="btn btn-outline-success fw-semibold">
+                    <i class="bi bi-folder-plus me-1"></i> Thêm Danh mục
+                </a>
+                <a th:href="@{/mvc/suppliers/new}" class="btn btn-outline-primary fw-semibold">
+                    <i class="bi bi-building-add me-1"></i> Thêm Nhà cung cấp
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Thẻ KPI (Bootstrap Grid Responsive: col-12 col-sm-6 col-xl-3) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-minimart h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Doanh Thu Thực Thu</div>
+                        <div class="fs-4 fw-bold text-success mt-1"
+                             th:text="${#numbers.formatDecimal(stats.totalRevenue, 0, 'POINT', 0, 'COMMA')} + ' đ'">0 đ</div>
+                        <small class="text-muted">Đơn hàng đã hoàn thành</small>
+                    </div>
+                    <div class="bg-success-subtle text-success rounded-3 p-3 fs-3">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-minimart h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Tổng Đơn Đặt Hàng</div>
+                        <div class="fs-4 fw-bold text-primary mt-1" th:text="${stats.totalOrders}">50</div>
+                        <a th:href="@{/mvc/orders}" class="small text-decoration-none">Xem & điều phối đơn <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="bg-primary-subtle text-primary rounded-3 p-3 fs-3">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-minimart h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Sản Phẩm & Ngành Hàng</div>
+                        <div class="fs-4 fw-bold text-dark mt-1">
+                            <span th:text="${stats.totalProducts}">10</span> SP /
+                            <span th:text="${totalCategories}">5</span> DM
+                        </div>
+                        <a th:href="@{/mvc/products}" class="small text-decoration-none text-success">Quản lý sản phẩm <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="bg-warning-subtle text-warning-emphasis rounded-3 p-3 fs-3">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-minimart h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Cảnh Báo Tồn Kho Thấp</div>
+                        <div class="fs-4 fw-bold text-danger mt-1" th:text="${lowStockCount} + ' mặt hàng'">3 mặt hàng</div>
+                        <small class="text-muted">Nhà cung cấp đối tác: <strong th:text="${totalSuppliers}">2</strong></small>
+                    </div>
+                    <div class="bg-danger-subtle text-danger rounded-3 p-3 fs-3">
+                        <i class="bi bi-exclamation-octagon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Cột trái: Đơn hàng gần đây -->
+        <div class="col-12 col-lg-7">
+            <div class="card card-minimart h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-receipt text-success me-2"></i>Đơn Hàng Gần Đây Trong Hệ Thống</h6>
+                    <a th:href="@{/mvc/orders}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã ĐH</th>
+                                <th>Người nhận</th>
+                                <th>Thanh toán</th>
+                                <th class="text-end">Tổng tiền</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="o : ${recentOrders}">
+                                <td class="fw-bold text-success" th:text="'#' + ${o.id}">#1</td>
+                                <td>
+                                    <div class="fw-semibold" th:text="${o.shippingName}">Nguyễn Văn A</div>
+                                    <small class="text-muted" th:text="${o.shippingPhone}">0987654321</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border" th:text="${o.paymentMethod}">COD</span></td>
+                                <td class="text-end fw-bold"
+                                    th:text="${#numbers.formatDecimal(o.finalAmount, 0, 'POINT', 0, 'COMMA')} + ' đ'">100.000 đ</td>
+                                <td class="text-center">
+                                    <span class="badge"
+                                          th:classappend="${o.status == 'HOAN_THANH' ? 'bg-success' : (o.status == 'HUY' ? 'bg-danger' : (o.status == 'CHO_XAC_NHAN' ? 'bg-warning text-dark' : 'bg-info text-dark'))}"
+                                          th:text="${o.status}">HOAN_THANH</span>
+                                </td>
+                                <td class="text-center">
+                                    <a th:href="@{/mvc/orders/{id}(id=${o.id})}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: Cảnh báo tồn kho thấp -->
+        <div class="col-12 col-lg-5">
+            <div class="card card-minimart h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-danger">
+                        <i class="bi bi-bell-fill me-2"></i>Mặt Hàng Sắp Hết Tồn Kho (<= Ngưỡng tối thiểu)
+                    </h6>
+                    <a th:href="@{/mvc/products}" class="btn btn-sm btn-outline-secondary">Quản lý kho</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th class="text-center">Tồn hiện tại</th>
+                                <th class="text-center">Tối thiểu</th>
+                                <th>Vị trí kệ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(lowStockProducts)}">
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    Tất cả sản phẩm đều đảm bảo định mức tồn kho an toàn.
+                                </td>
+                            </tr>
+                            <tr th:each="p : ${lowStockProducts}">
+                                <td>
+                                    <div class="fw-semibold" th:text="${p.name}">Xà lách</div>
+                                    <small class="text-muted" th:text="'SKU: ' + ${p.sku}">SP001</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger" th:text="${p.currentStock}">3</span>
+                                </td>
+                                <td class="text-center" th:text="${p.minimumStock}">5</td>
+                                <td><small th:text="${p.location}">Kệ A1</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>
+

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+<body>
+
+<header th:replace="~{fragments/layout :: header}"></header>
+<nav th:replace="~{fragments/layout :: menu}"></nav>
+<div th:replace="~{fragments/layout :: alerts}"></div>
+
+<main class="container py-4">
+    <!-- Tiêu đề & Nút Thêm mới -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h4 class="fw-bold text-success mb-1">
+                <i class="bi bi-box-seam me-2"></i>Danh Sách & Quản Lý Sản Phẩm
+            </h4>
+            <p class="text-muted small mb-0">
+                Tổng cộng <strong th:text="${totalItems}">10</strong> sản phẩm trong CSDL SQL Server • Đang hiển thị trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages > 0 ? totalPages : 1}">1</strong>
+            </p>
+        </div>
+        <div th:if="${isAdmin}">
+            <a th:href="@{/mvc/products/new}" class="btn btn-minimart">
+                <i class="bi bi-plus-lg me-1"></i> Thêm Sản Phẩm Mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Bộ lọc Tìm kiếm, Lọc Danh mục / Thương hiệu & Sắp xếp (Tiêu chí 3.4) -->
+    <div class="card card-minimart bg-white p-3 mb-4">
+        <form th:action="@{/mvc/products}" method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4 col-lg-3">
+                <label class="form-label small fw-semibold mb-1">Từ khóa (Tên / SKU / Mô tả)</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="keyword" class="form-control" placeholder="Nhập tên hoặc mã SKU..."
+                           th:value="${keyword}">
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label small fw-semibold mb-1">Danh mục</label>
+                <select name="categoryId" class="form-select form-select-sm">
+                    <option value="">-- Tất cả danh mục --</option>
+                    <option th:each="c : ${categories}"
+                            th:value="${c.id}"
+                            th:text="${c.name}"
+                            th:selected="${categoryId != null and categoryId == c.id}"></option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label small fw-semibold mb-1">Thương hiệu</label>
+                <select name="brandId" class="form-select form-select-sm">
+                    <option value="">-- Tất cả thương hiệu --</option>
+                    <option th:each="b : ${brands}"
+                            th:value="${b.id}"
+                            th:text="${b.name}"
+                            th:selected="${brandId != null and brandId == b.id}"></option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label small fw-semibold mb-1">Sắp xếp theo</label>
+                <select name="sortBy" class="form-select form-select-sm">
+                    <option value="id_asc" th:selected="${sortBy == 'id_asc'}">Mã ID tăng dần</option>
+                    <option value="newest" th:selected="${sortBy == 'newest'}">Mới thêm gần nhất</option>
+                    <option value="price_asc" th:selected="${sortBy == 'price_asc'}">Giá bán: Thấp -> Cao</option>
+                    <option value="price_desc" th:selected="${sortBy == 'price_desc'}">Giá bán: Cao -> Thấp</option>
+                    <option value="name_asc" th:selected="${sortBy == 'name_asc'}">Tên sản phẩm: A -> Z</option>
+                    <option value="name_desc" th:selected="${sortBy == 'name_desc'}">Tên sản phẩm: Z -> A</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label small fw-semibold mb-1">Số dòng</label>
+                <select name="size" class="form-select form-select-sm">
+                    <option value="5" th:selected="${pageSize == 5}">5</option>
+                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                    <option value="20" th:selected="${pageSize == 20}">20</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-5 col-lg-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-minimart w-100">
+                    <i class="bi bi-funnel-fill me-1"></i> Lọc & Sắp xếp
+                </button>
+                <a th:href="@{/mvc/products}" class="btn btn-sm btn-outline-secondary" title="Xóa bộ lọc">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bảng dữ liệu Sản phẩm -->
+    <div class="card card-minimart bg-white overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 60px;">ID</th>
+                        <th style="width: 70px;">Ảnh</th>
+                        <th>Mã SKU & Tên sản phẩm</th>
+                        <th>Danh mục / Thương hiệu</th>
+                        <th class="text-end">Giá niêm yết</th>
+                        <th class="text-end">Giá KM</th>
+                        <th class="text-center">Tồn kho</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" th:if="${isAdmin}" style="width: 190px;">Thao tác (CRUD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(products)}">
+                        <td th:colspan="${isAdmin ? 9 : 8}" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            Không tìm thấy sản phẩm nào khớp với điều kiện tìm kiếm.
+                        </td>
+                    </tr>
+                    <tr th:each="p : ${products}">
+                        <td class="text-center fw-bold text-secondary" th:text="${p.id}">1</td>
+                        <td class="text-center">
+                            <img th:src="${p.mainImage != null and !p.mainImage.isEmpty() ? p.mainImage : '/uploads/xa_lach_thuy_canh.jpg'}"
+                                 class="thumb-img" alt="Ảnh SP"
+                                 onerror="this.src='https://placehold.co/52x52/16a34a/ffffff?text=SP'">
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark" th:text="${p.name}">Xà lách thủy canh</div>
+                            <div class="small text-muted">
+                                <span class="badge bg-light text-dark border me-1" th:text="${p.sku != null ? p.sku : 'N/A'}">SP001</span>
+                                <span th:text="'ĐVT: ' + (${p.unit != null ? p.unit : 'Cái'})">ĐVT: Kg</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="badge bg-success-subtle text-success mb-1" th:text="${p.categoryName}">Rau Củ Quả</div>
+                            <div class="small text-muted" th:text="${p.brandName}">VietGAP Farm</div>
+                        </td>
+                        <td class="text-end fw-semibold"
+                            th:text="${#numbers.formatDecimal(p.price, 0, 'POINT', 0, 'COMMA')} + ' đ'">25.000 đ</td>
+                        <td class="text-end">
+                            <span th:if="${p.salePrice != null}" class="text-danger fw-bold"
+                                  th:text="${#numbers.formatDecimal(p.salePrice, 0, 'POINT', 0, 'COMMA')} + ' đ'">20.000 đ</span>
+                            <span th:if="${p.salePrice == null}" class="text-muted small">-</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge"
+                                  th:classappend="${p.currentStock != null and p.minimumStock != null and p.currentStock <= p.minimumStock ? 'bg-danger' : 'bg-primary'}"
+                                  th:text="${p.currentStock != null ? p.currentStock : 0}">10</span>
+                            <div class="small text-muted" th:text="${p.location}">Kệ A1</div>
+                        </td>
+                        <td class="text-center">
+                            <span th:if="${p.isActive}" class="badge bg-success">Đang bán</span>
+                            <span th:if="${!p.isActive}" class="badge bg-secondary">Ngừng bán</span>
+                        </td>
+                        <td class="text-center" th:if="${isAdmin}">
+                            <div class="d-flex justify-content-center gap-1">
+                                <a th:href="@{/mvc/products/edit/{id}(id=${p.id})}" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </a>
+                                <form th:action="@{/mvc/products/toggle/{id}(id=${p.id})}" method="post" class="d-inline">
+                                    <input type="hidden" name="_mvcCsrf" th:value="${mvcCsrfToken}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Bật/Tắt trạng thái">
+                                        <i class="bi bi-power"></i>
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        th:attr="data-id=${p.id}, data-name=${p.name}"
+                                        onclick="openDeleteProductModal(this)">
+                                    <i class="bi bi-trash"></i> Xóa
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Thanh Phân trang (Pagination - Tiêu chí 3.4) -->
+        <div th:if="${totalPages > 1}" class="card-footer bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="small text-muted">
+                Trang <strong th:text="${currentPage + 1}">1</strong> / <strong th:text="${totalPages}">2</strong>
+                (Tổng <strong th:text="${totalItems}">10</strong> bản ghi)
+            </div>
+            <nav aria-label="Product pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                        <a class="page-link"
+                           th:href="@{/mvc/products(keyword=${keyword}, categoryId=${categoryId}, brandId=${brandId}, sortBy=${sortBy}, size=${pageSize}, page=${currentPage - 1})}">
+                            &laquo; Trước
+                        </a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${i == currentPage} ? 'active' : ''">
+                        <a class="page-link"
+                           th:href="@{/mvc/products(keyword=${keyword}, categoryId=${categoryId}, brandId=${brandId}, sortBy=${sortBy}, size=${pageSize}, page=${i})}"
+                           th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled' : ''">
+                        <a class="page-link"
+                           th:href="@{/mvc/products(keyword=${keyword}, categoryId=${categoryId}, brandId=${brandId}, sortBy=${sortBy}, size=${pageSize}, page=${currentPage + 1})}">
+                            Sau &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<!-- Bootstrap Modal Xác nhận Xóa Sản phẩm (Tiêu chí 3.3) -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa sản phẩm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Bạn có chắc chắn muốn xóa sản phẩm <strong id="modalProductName" class="text-danger"></strong> không?</p>
+                <div class="alert alert-warning small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Lưu ý bảo toàn dữ liệu (Mục 4.5):</strong> Nếu sản phẩm đã từng phát sinh trong Đơn hàng hoặc Phiếu nhập kho, hệ thống sẽ tự động chặn xóa và thông báo lỗi để bảo vệ lịch sử kế toán.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                <form id="deleteProductForm" method="post">
+                    <input type="hidden" name="_mvcCsrf" th:value="${mvcCsrfToken}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> Đồng ý Xóa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openDeleteProductModal(btn) {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        document.getElementById('modalProductName').textContent = name + ' (#' + id + ')';
+        document.getElementById('deleteProductForm').setAttribute('action', '/mvc/products/delete/' + id);
+        const modal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
+        modal.show();
+    }
+</script>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>
+

@@ -8,6 +8,9 @@ import com.groceryshop.mapper.EntityMapper;
 import com.groceryshop.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,60 @@ public class ProductService {
 
     @Autowired
     private InventoryLedgerService ledgerService;
+
+    @Autowired
+    private GoodsReceiptItemRepository goodsReceiptItemRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    public Page<ProductDTO> getProductsPagedAdmin(String keyword, Long categoryId, Long brandId, String sortBy, int page, int size) {
+        Specification<Product> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String likeKeyword = "%" + keyword.toLowerCase().trim() + "%";
+                Predicate nameLike = cb.like(cb.lower(root.get("name")), likeKeyword);
+                Predicate skuLike = cb.like(cb.lower(root.get("sku")), likeKeyword);
+                Predicate descLike = cb.like(cb.lower(root.get("description")), likeKeyword);
+                predicates.add(cb.or(nameLike, skuLike, descLike));
+            }
+
+            if (categoryId != null) {
+                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            }
+
+            if (brandId != null) {
+                predicates.add(cb.equal(root.get("brand").get("id"), brandId));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Sort sort = Sort.by(Sort.Direction.ASC, "id");
+        if (sortBy != null) {
+            switch (sortBy) {
+                case "price_asc":
+                    sort = Sort.by(Sort.Direction.ASC, "price");
+                    break;
+                case "price_desc":
+                    sort = Sort.by(Sort.Direction.DESC, "price");
+                    break;
+                case "name_asc":
+                    sort = Sort.by(Sort.Direction.ASC, "name");
+                    break;
+                case "name_desc":
+                    sort = Sort.by(Sort.Direction.DESC, "name");
+                    break;
+                case "newest":
+                    sort = Sort.by(Sort.Direction.DESC, "createdAt");
+                    break;
+            }
+        }
+
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
+        return productRepository.findAll(spec, pageable).map(EntityMapper::toProductDTO);
+    }
 
     public List<ProductDTO> getAllProductsAdmin() {
         return productRepository.findAll(Sort.by(Sort.Direction.ASC, "id")).stream()
@@ -110,6 +167,9 @@ public class ProductService {
         if (productRepository.findByName(dto.getName()).isPresent()) {
             throw new BadRequestException("Tên sản phẩm đã tồn tại");
         }
+        if (dto.getSku() != null && !dto.getSku().trim().isEmpty() && productRepository.findBySku(dto.getSku().trim()).isPresent()) {
+            throw new BadRequestException("Mã SKU '" + dto.getSku().trim() + "' đã tồn tại");
+        }
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + dto.getCategoryId()));
@@ -168,6 +228,14 @@ public class ProductService {
                         throw new BadRequestException("Tên sản phẩm đã được sử dụng");
                     }
                 });
+        if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
+            productRepository.findBySku(dto.getSku().trim())
+                    .ifPresent(existing -> {
+                        if (!existing.getId().equals(id)) {
+                            throw new BadRequestException("Mã SKU '" + dto.getSku().trim() + "' đã được sử dụng");
+                        }
+                    });
+        }
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + dto.getCategoryId()));
@@ -238,6 +306,9 @@ public class ProductService {
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
+        if (goodsReceiptItemRepository.existsByProductId(id) || orderItemRepository.existsByProductId(id)) {
+            throw new BadRequestException("Sản phẩm '" + product.getName() + "' đã phát sinh trong đơn hàng hoặc phiếu nhập kho, không thể xóa để đảm bảo toàn vẹn dữ liệu! Vui lòng chuyển sang trạng thái Ngừng kinh doanh.");
+        }
         productRepository.delete(product);
     }
 }

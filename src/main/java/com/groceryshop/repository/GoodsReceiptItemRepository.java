@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface GoodsReceiptItemRepository extends JpaRepository<GoodsReceiptItem, Long> {
     List<GoodsReceiptItem> findByGoodsReceiptSupplierId(Long supplierId);
+    boolean existsByProductId(Long productId);
 }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+<body>
+
+<header th:replace="~{fragments/layout :: header}"></header>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-7 col-lg-5">
+            <div class="card card-minimart p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 56px; height: 56px;">
+                        <i class="bi bi-shield-lock-fill fs-3"></i>
+                    </div>
+                    <h4 class="fw-bold text-success mb-1">Đăng nhập MiniMart MVC</h4>
+                    <p class="text-muted small mb-0">Phân hệ Quản lý & Nghiệp vụ bằng Thymeleaf + Bootstrap 5</p>
+                </div>
+
+                <div th:if="${successMessage}" class="alert alert-success py-2 small" th:text="${successMessage}"></div>
+                <div th:if="${errorMessage}" class="alert alert-danger py-2 small" th:text="${errorMessage}"></div>
+
+                <form th:action="@{/mvc/login}" method="post" class="mb-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên đăng nhập</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" name="username" class="form-control" placeholder="Nhập username (VD: admin)"
+                                   th:value="${username != null ? username : 'admin'}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input type="password" name="password" class="form-control" placeholder="Nhập mật khẩu"
+                                   value="pass1234" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-minimart w-100 py-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập Hệ thống
+                    </button>
+                </form>
+
+                <hr>
+                <div class="text-center">
+                    <p class="small text-muted fw-semibold mb-2">Đăng nhập nhanh 1-Click phục vụ Demo phân quyền (Mục 3.5):</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <form th:action="@{/mvc/quick-login}" method="post">
+                            <input type="hidden" name="username" value="admin">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-person-gear"></i> Quản trị viên (`admin`)
+                            </button>
+                        </form>
+                        <form th:action="@{/mvc/quick-login}" method="post">
+                            <input type="hidden" name="username" value="shipper1">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-bicycle"></i> Shipper (`shipper1`)
+                            </button>
+                        </form>
+                        <form th:action="@{/mvc/quick-login}" method="post">
+                            <input type="hidden" name="username" value="user1">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person"></i> Khách VIP (`user1`)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>
+
