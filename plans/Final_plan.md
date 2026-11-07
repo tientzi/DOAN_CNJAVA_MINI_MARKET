@@ -296,3 +296,93 @@ Theo yêu cầu chuẩn hóa giao diện và trải nghiệm người dùng, to�
 | **8** | **Client Đồ họa (5.3, 5.4)** | `MiniMartGuiClient.java` | Chạy Client Swing GUI | Giao diện đồ họa hiển thị tiếng Việt, nút test 3 Client cùng lúc | Giao diện hiển thị tiếng Việt mượt mà, test 3 client đa luồng thành công | ✅ **PASS** |
 | **9** | **Bảo toàn CSDL** | Kiểm tra cấu trúc CSDL SQL Server | Kiểm tra schema các bảng | Tuyệt đối không thay đổi bảng/cột của database | Giữ nguyên 100% cấu trúc 22 bảng trong `supermarket_db1` | ✅ **PASS** |
 | **10** | **Đồng bộ Giao diện** | Kiểm tra Thymeleaf MVC và React SPA | Truy cập `/mvc` và React | Nhận diện thương hiệu `MART ADMIN` đồng nhất | Giao diện đồng bộ tông cam `#ff5722`, bố cục sidebar và thanh điều hướng khớp 100% | ✅ **PASS** |
+
+
+---
+
+## PHẦN 12: HỢP NHẤT THYMELEAF MVC VÀO BÊN TRONG REACT SPA (1 GIAO DIỆN DUY NHẤT)
+
+Để hệ thống hoàn toàn là **một ứng dụng duy nhất** (không tách rời thành 2 giao diện hay 2 phân hệ), dự án đã thực hiện kiến trúc nhúng trực tiếp:
+
+1. **Loại bỏ hoàn toàn sự phân tách 2 phân hệ**:
+   - Đã gỡ bỏ các nút chuyển hướng sang phân hệ riêng trên `AdminLayout.jsx` và `UserLayout.jsx`.
+   - Trong `fragments/layout.html`, khi được hiển thị bên trong React SPA (`window.self !== window.top`), lớp CSS `embedded-in-react` tự động ẩn toàn bộ thanh Sidebar/Header bao ngoài (nhưng vẫn giữ nguyên vẹn 3 fragment `header`, `menu`, `footer` trong cây DOM để đạt 100% tiêu chí 3.1).
+2. **Nhúng trực tiếp Thymeleaf MVC vào các màn hình của React SPA (`ThymeleafEmbed.jsx`)**:
+   - Tự động co giãn chiều cao theo nội dung thực tế qua `ResizeObserver` và `postMessage` (`THYMELEAF_EMBED_RESIZE`), không có khung viền, không có thanh cuộn phụ.
+   - **Sản phẩm & Danh mục (`/admin/products` – `ProductManager.jsx`)**: Nhúng trực tiếp `/mvc/products` ở tab *Sản phẩm & Tồn kho* và `/mvc/categories` ở tab *Danh mục*, giữ tab *Bảng giá & Xuất Excel* cho công cụ in ấn/xuất CSV.
+   - **Nhà cung cấp & Thương hiệu (`/admin/suppliers` – `SupplierManager.jsx`)**: Nhúng trực tiếp `/mvc/suppliers` ở tab *Nhà cung cấp*, giữ tab *Thương hiệu* bên cạnh.
+   - **Đơn hàng (`/admin/orders` – `OrderManager.jsx`)**: Nhúng trực tiếp `/mvc/orders` ở tab *Quản lý & Xử lý Đơn hàng*, giữ tab *In Phiếu Đóng Gói & Xuất Excel* bên cạnh.
+   - **Báo cáo tổng quan (`/admin/reports` – `ReportManager.jsx`) & Shipper (`/shipper` – `ShipperDashboard.jsx`)**: Nhúng trực tiếp bảng tổng hợp `/mvc` và xử lý đơn giao hàng `/mvc/orders`.
+3. **Đồng bộ Đăng nhập 1 lần duy nhất qua Cookie `jwt_token`**:
+   - Khi đăng nhập tại `/login` trên React, `AuthContext.jsx` tự động lưu JWT vào Cookie `jwt_token`.
+   - `JwtAuthenticationFilter.java` tự động đọc `jwt_token` từ Cookie và đồng bộ `SecurityContext` vào `HttpSession`. Tất cả các đường dẫn `/mvc/**` trả về `HTTP 200 OK` ngay lập tức mà không bao giờ yêu cầu đăng nhập lần 2.
+
+---
+
+## PHẦN 13: DIỄN GIẢI NGHIỆP VỤ XỬ LÝ ĐỒNG THỜI & LẬP TRÌNH MẠNG BẰNG NGÔN NGỮ TỰ NHIÊN (DÙNG CHO BÁO CÁO MỤC 1.5, CHƯƠNG 4 & VẤN ĐÁP)
+
+### 13.1. Kịch bản 1: Nhiều khách hàng cùng bấm mua một món hàng sắp hết kho cùng lúc (Xử lý đồng thời – Chống âm kho / Tiêu chí 5.2)
+
+- **1. Tình huống thực tế diễn ra như thế nào?**
+  - Giả sử trong kho của siêu thị hiện chỉ còn đúng **10 bó Xà lách thủy canh** đang giảm giá.
+  - Đúng vào lúc 9h00 sáng, có **20 khách hàng** đang mở web trên điện thoại của họ và **cùng bấm nút "Thanh toán / Đặt hàng"** ở cùng một tích tắc (chỉ cách nhau vài phần nghìn giây).
+- **2. Chuyện gì sẽ xảy ra nếu hệ thống bình thường KHÔNG xử lý đồng thời?**
+  - Khi 20 yêu cầu gửi lên cùng lúc, cả 20 luồng xử lý của máy chủ cùng nhìn vào cơ sở dữ liệu tại cùng một thời điểm và đều thấy: *"Trong kho vẫn đang còn 10 bó, đủ hàng để bán!"*.
+  - Cả 20 luồng đều cho phép tạo đơn hàng thành công và mỗi luồng trừ đi 1 bó.
+  - **Hậu quả**: Siêu thị chỉ có 10 bó nhưng lại nhận tới 20 đơn hàng (bán lố 10 đơn không có hàng giao cho khách), và con số tồn kho trong máy tính bị tụt xuống **-10 (âm kho)**.
+- **3. Hệ thống của chúng ta giải quyết bài toán đó ra sao?**
+  - Áp dụng cơ chế **"Xếp hàng khóa sổ từng người một tại quầy kho"** (*Khóa bi quan – JPA Pessimistic Write Lock* `@Lock(LockModeType.PESSIMISTIC_WRITE)` tại `InventoryRepository.findByProductIdForUpdate` được gọi trong `OrderService.createOrder`).
+  - Ngay khi luồng của **Khách hàng thứ 1** vừa chạm vào dòng dữ liệu tồn kho của bó Xà lách để kiểm tra và trừ kho, hệ thống lập tức **khóa dòng tồn kho đó lại**.
+  - Trong vài phần nghìn giây mà Khách hàng thứ 1 đang được kiểm tra và trừ kho (từ 10 xuống 9), **19 khách hàng còn lại bắt buộc phải đứng chờ**, chưa ai được phép đọc hay sửa con số tồn kho đó.
+- **4. Kịch bản diễn ra từ đầu đến cuối:**
+  1. **Khách thứ 1** vào → Khóa kho → Thấy còn 10 → Trừ 1 còn 9 → Tạo đơn thành công → Mở khóa.
+  2. **Khách thứ 2** vào ngay sau đó → Khóa kho → Thấy còn 9 (chứ không phải 10) → Trừ 1 còn 8 → Tạo đơn thành công → Mở khóa.
+  3. Quá trình nối đuôi nhau diễn ra cho đến **Khách thứ 10**: thấy còn 1 → Trừ 1 còn **0** → Tạo đơn thành công → Mở khóa.
+  4. Đến lượt **Khách thứ 11 đến Khách thứ 20** bước vào: Lúc này kho đã về **0**. Hệ thống lập tức báo lại cho 10 người này: *"Rất tiếc, sản phẩm vừa hết hàng!"* và từ chối giao dịch.
+  5. **Kết quả cuối cùng**: Đúng **10 người mua được hàng**, **10 người nhận thông báo hết hàng**, và **tồn kho dừng ở con số 0 tròn trĩnh**, tuyệt đối không bao giờ bị âm kho.
+
+---
+
+### 13.2. Kịch bản 2: Khách đặt hàng xong nhận kết quả ngay, các việc phụ đẩy ra chạy ngầm (Đa luồng bất đồng bộ `@Async` / Tiêu chí 5.1)
+
+- **1. Tình huống thực tế diễn ra như thế nào?**
+  - Khi khách hàng bấm nút "Đặt hàng" hoặc khi Admin/Shipper bấm "Cập nhật trạng thái đơn hàng", hệ thống phải làm 2 nhóm việc:
+    - **Việc chính**: Kiểm tra kho, trừ kho và lưu hóa đơn vào cơ sở dữ liệu (việc này khách hàng cần biết kết quả ngay).
+    - **Việc phụ**: Soạn thông báo xác nhận đơn hàng, gửi tin nhắn/email cho khách, và ghi nhật ký kiểm toán hệ thống (Audit Log).
+- **2. Vấn đề nếu chỉ dùng 1 luồng duy nhất?**
+  - Nếu bắt khách hàng phải đứng đợi hệ thống vừa lưu đơn, vừa kết nối máy chủ gửi thông báo, vừa ghi sổ nhật ký xong xuôi hết rồi mới hiện màn hình *"Đặt hàng thành công"*, khách hàng sẽ phải chờ 3–5 giây, gây cảm giác ứng dụng bị chậm/đơ.
+- **3. Hệ thống giải quyết ra sao và kịch bản diễn ra như thế nào?**
+  1. Khi khách bấm "Đặt hàng", **Luồng chính (luồng phục vụ Web)** chỉ làm đúng việc quan trọng nhất là kiểm tra kho và lưu đơn hàng vào CSDL (mất chưa tới 0,1 giây) rồi **trả kết quả "Đặt hàng thành công!" ngay lập tức** cho màn hình của khách.
+  2. Cùng lúc đó, Luồng chính bàn giao việc gửi thông báo và ghi nhật ký cho một **Nhân viên chạy ngầm ở hậu trường** (`@Async("taskExecutor")` trong `AsyncNotificationService.java`, chạy trên các luồng mang tên `async-task-1`, `async-task-2`...).
+  3. Luồng phụ này âm thầm soạn thông báo và ghi nhật ký ở phía sau mà khách hàng không phải chờ đợi.
+
+---
+
+### 13.3. Kịch bản 3: Nhân viên trực kho tự động kiểm tra hàng sắp hết và hàng cận hạn sử dụng (Đa luồng định kỳ `@Scheduled` / Tiêu chí 5.1)
+
+- **1. Tình huống thực tế diễn ra như thế nào?**
+  - Ở siêu thị thực phẩm tươi sống, có 2 rủi ro lớn: **hàng bán chạy bị hết sạch trên kệ mà không biết để nhập thêm**, và **thực phẩm (sữa, thịt, rau) để trong kho sắp hết hạn sử dụng mà không ai phát hiện kịp để đem ra giảm giá/thu hồi**.
+  - Quản lý siêu thị không thể ngồi tải lại màn hình liên tục cả ngày để đếm từng món hàng.
+- **2. Hệ thống giải quyết ra sao và kịch bản diễn ra như thế nào?**
+  1. Hệ thống cử ra một **Luồng trực ca định kỳ** (`@Scheduled` trong `ScheduledInventoryTask.java`, chạy ngầm hoàn toàn độc lập với việc mua bán trên web).
+  2. Cứ đúng mỗi **5 phút một lần** (và chạy ngay lần đầu sau khi bật máy chủ 15 giây), luồng này tự động đi "tuần tra" một vòng qua toàn bộ kho hàng trong cơ sở dữ liệu.
+  3. Luồng lọc ra danh sách tất cả những mặt hàng có số lượng tồn kho rơi xuống dưới mức tối thiểu (`currentStock <= minimumStock`) và các lô hàng đã hết hạn hoặc chỉ còn dưới 7 ngày nữa là hết hạn.
+  4. Sau khi kiểm đếm xong, luồng xuất bảng báo cáo cảnh báo kèm tên luồng thực thi và bộ đếm `AtomicInteger` lên nhật ký hệ thống để người quản lý nắm bắt tức thời.
+
+---
+
+### 13.4. Kịch bản 4: Nhiều nhân viên tại quầy/kho dùng phần mềm máy trạm rời để tra cứu cùng lúc (Lập trình mạng Client – Server đa luồng / Tiêu chí 5.3 & 5.4)
+
+- **1. Tình huống thực tế diễn ra như thế nào?**
+  - Trong siêu thị, ngoài trang Web bán hàng cho khách, các nhân viên kiểm kho hoặc thu ngân tại quầy sử dụng một **chương trình máy trạm (Client) gọn nhẹ chạy riêng trên máy tính của họ** (`MiniMartGuiClient.java` hoặc `MiniMartClient.java`) để tra cứu nhanh: *"Mã hàng số 1 còn bao nhiêu trong kho?"*, *"Những mặt hàng nào đang báo động sắp hết?"*, hoặc *"Đơn hàng số 1 của khách đã thanh toán chưa?"*.
+  - Tại cùng một thời điểm, có **3 đến 5 nhân viên ở các quầy khác nhau** cùng mở phần mềm Client này lên và bấm tra cứu cùng lúc.
+- **2. Vấn đề nếu Máy chủ (Socket Server) chỉ có 1 luồng?**
+  - Nếu máy chủ cổng `9090` chỉ xử lý đơn luồng: Khi **Nhân viên Quầy 1** đang kết nối vào máy chủ và chưa thoát ra, thì **Nhân viên Quầy 2 và Quầy 3** mở phần mềm lên sẽ bị treo cứng, không thể hỏi được máy chủ cho đến khi Quầy 1 đóng phần mềm.
+- **3. Hệ thống giải quyết ra sao và kịch bản diễn ra như thế nào?**
+  1. **Trên Máy chủ (`MiniMartSocketServer.java` – Cổng 9090)**: Có một luồng "Lễ tân trực tổng đài" (`server-listener`) luôn đứng ở cổng 9090 chỉ làm đúng một việc là đón nhận kết nối mới (`serverSocket.accept()`).
+  2. **Khi Nhân viên 1 mở phần mềm Client lên**: Lễ tân đón nhận kết nối rồi lập tức cử ngay một **Nhân viên phục vụ riêng số 1 (`socket-worker-1`)** từ `ExecutorService` ra nói chuyện và tra cứu CSDL SQL Server cho Nhân viên 1, còn Lễ tân quay lại cổng đón người tiếp theo ngay.
+  3. **Cùng giây đó, Nhân viên 2 và Nhân viên 3 cũng bấm nút tra cứu**: Lễ tân lập tức cử tiếp **`socket-worker-2`** phục vụ Nhân viên 2, và **`socket-worker-3`** phục vụ Nhân viên 3.
+  4. **Trao đổi dữ liệu thực tế**:
+     - Máy trạm gửi lệnh `LOW_STOCK` qua đường truyền mạng TCP → Luồng `socket-worker` của máy chủ vào thẳng SQL Server lấy các mặt hàng tồn dưới 10 → Gửi danh sách về lại màn hình của máy trạm đó.
+     - Máy trạm gửi `ORDER 1` → Máy chủ vào SQL Server lấy thông tin đơn hàng `#1` trả về ngay.
+     - Khi nhân viên bấm thoát (`QUIT`) hoặc tắt phần mềm, luồng phục vụ tương ứng tự động thu dọn và đóng kết nối mạng an toàn (`try-with-resources`) mà không làm ảnh hưởng đến bất kỳ máy trạm nào khác đang mở.
