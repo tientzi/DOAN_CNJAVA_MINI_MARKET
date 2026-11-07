@@ -1,7 +1,10 @@
 package com.groceryshop.client;
 
 import java.io.BufferedReader;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -20,6 +23,11 @@ public class MiniMartHttpClient {
     private static final String DEFAULT_URL = "http://localhost:8080/api/public/products";
 
     public static void main(String[] args) {
+        try {
+            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
+            System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
+        } catch (Exception ignored) {}
+
         String targetUrl = args.length > 0 ? args[0] : DEFAULT_URL;
 
         System.out.println("==================================================");

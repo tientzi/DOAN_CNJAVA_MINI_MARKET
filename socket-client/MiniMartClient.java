@@ -71,7 +71,7 @@ public class MiniMartClient {
                 if (!consoleScanner.hasNextLine()) {
                     break;
                 }
-                String userInput = consoleScanner.nextLine().trim();
+                String userInput = consoleScanner.nextLine().replace("\uFEFF", "").trim();
                 if (userInput.isEmpty()) {
                     continue;
                 }
