@@ -3,241 +3,453 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${title != null ? title + ' | MiniMart MVC' : 'MiniMart - Hệ thống Quản lý Siêu thị (Thymeleaf + Bootstrap)'}">MiniMart MVC</title>
+    <title th:text="${title != null ? title + ' | MiniMart Admin MVC' : 'MiniMart - Hệ thống Quản trị Siêu thị (Thymeleaf + Bootstrap)'}">MiniMart Admin MVC</title>
+    <!-- Google Font 'Be Vietnam Pro' đồng bộ 100% với React Frontend -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Bootstrap 5.3 CSS & Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
-            --minimart-green: #16a34a;
-            --minimart-green-dark: #15803d;
-            --minimart-bg: #f8fafc;
+            --primary: #ff5722;
+            --primary-hover: #e64a19;
+            --primary-light: #fbe9e7;
+            --secondary: #4caf50;
+            --secondary-hover: #388e3c;
+            --secondary-light: #e8f5e9;
+            --dark: #1e293b;
+            --dark-light: #334155;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --radius-md: 12px;
+            --radius-lg: 16px;
         }
+
         body {
-            background-color: var(--minimart-bg);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: var(--gray-50);
+            color: var(--dark);
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
+        }
+
+        /* Sidebar cố định phong cách MART ADMIN đồng bộ với React */
+        .admin-sidebar {
+            width: 260px;
+            background-color: var(--dark);
+            color: var(--gray-200);
             display: flex;
             flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1040;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            transition: transform 0.3s ease;
         }
-        .topbar-minimart {
-            background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            text-align: center;
+            border-bottom: 1px solid var(--dark-light);
+        }
+
+        .brand-title {
+            font-weight: 900;
+            font-size: 1.3rem;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+        }
+
+        .brand-badge {
+            font-size: 0.65rem;
+            background-color: var(--primary);
             color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            margin-top: 4px;
         }
-        .navbar-minimart {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex-grow: 1;
         }
-        .navbar-minimart .nav-link {
+
+        .nav-group-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--gray-400);
+            letter-spacing: 0.8px;
+            padding: 0.6rem 0.8rem 0.3rem 0.8rem;
+            opacity: 0.85;
+        }
+
+        .nav-item-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0.9rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            color: var(--gray-400);
+            text-decoration: none;
+        }
+
+        .nav-item-link:hover {
+            background-color: var(--dark-light);
+            color: #ffffff;
+        }
+
+        .nav-item-link.active {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
             font-weight: 600;
-            color: #334155;
-            padding: 0.6rem 1rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s;
         }
-        .navbar-minimart .nav-link:hover,
-        .navbar-minimart .nav-link.active {
-            background-color: #dcfce7;
-            color: #15803d;
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--dark-light);
         }
-        .card-minimart {
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-        }
-        .btn-minimart {
-            background-color: var(--minimart-green);
-            border-color: var(--minimart-green);
-            color: #fff;
+
+        .logout-btn-sidebar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1rem;
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
             font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: var(--radius-md);
+            transition: all 0.2s ease;
         }
-        .btn-minimart:hover {
-            background-color: var(--minimart-green-dark);
-            border-color: var(--minimart-green-dark);
-            color: #fff;
+
+        .logout-btn-sidebar:hover {
+            background-color: #ef4444;
+            color: #ffffff;
         }
+
+        /* Container chính nằm cạnh Sidebar */
+        .admin-main-container {
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-width: 0;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Header kính mờ (glass) đồng bộ với React */
+        .admin-header-glass {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .admin-profile {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            border-left: 1px solid var(--gray-200);
+            padding-left: 1rem;
+        }
+
+        .admin-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .admin-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        .card-custom {
+            background: #ffffff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary);
+            border: 1px solid var(--primary);
+            color: #ffffff;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.55rem 1.15rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
+        }
+
+        .btn-outline-custom {
+            background-color: transparent;
+            border: 1.5px solid var(--gray-200);
+            color: var(--dark-light);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-custom:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background-color: var(--primary-light);
+        }
+
         .thumb-img {
-            width: 52px;
-            height: 52px;
+            width: 48px;
+            height: 48px;
             object-fit: cover;
-            border-radius: 0.5rem;
-            border: 1px solid #e2e8f0;
-            background: #fff;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
         }
-        main {
-            flex: 1;
+
+        /* Responsive cho Mobile (< 992px) */
+        @media (max-width: 991.98px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+            .admin-sidebar.show-mobile {
+                transform: translateX(0);
+            }
+            .admin-main-container {
+                margin-left: 0;
+            }
+            .sidebar-backdrop {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1035;
+            }
+            .sidebar-backdrop.show {
+                display: block;
+            }
         }
     </style>
 </head>
 <body>
 
-<!-- ==================== 1. FRAGMENT HEADER ==================== -->
-<header th:fragment="header" class="topbar-minimart py-2">
-    <div class="container">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <a th:href="@{/mvc}" class="text-white text-decoration-none d-flex align-items-center gap-2">
-                    <span class="bg-white text-success rounded-circle d-inline-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px;">
-                        <i class="bi bi-basket2-fill"></i>
-                    </span>
-                    <div>
-                        <span class="fw-bold fs-5">MiniMart Fresh</span>
-                        <span class="badge bg-warning text-dark ms-1">Thymeleaf + Bootstrap 5</span>
-                    </div>
-                </a>
-            </div>
+<!-- Backdrop cho Mobile Sidebar -->
+<div id="sidebarBackdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
 
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <!-- Nút chuyển đổi nhanh giữa các vai trò khi Demo -->
-                <div th:if="${isAuthenticated}" class="d-flex align-items-center gap-1 bg-white bg-opacity-10 rounded px-2 py-1">
-                    <small class="text-white-50 me-1 d-none d-md-inline"><i class="bi bi-person-Check"></i> Chuyển nhanh Role:</small>
-                    <form th:action="@{/mvc/quick-login}" method="post" class="d-inline">
-                        <input type="hidden" name="username" value="admin">
-                        <button type="submit" class="btn btn-sm py-0 px-2"
-                                th:classappend="${isAdmin} ? 'btn-light text-success fw-bold' : 'btn-outline-light'">
-                            Admin
-                        </button>
-                    </form>
-                    <form th:action="@{/mvc/quick-login}" method="post" class="d-inline">
-                        <input type="hidden" name="username" value="shipper1">
-                        <button type="submit" class="btn btn-sm py-0 px-2"
-                                th:classappend="${isShipper} ? 'btn-light text-success fw-bold' : 'btn-outline-light'">
-                            Shipper
-                        </button>
-                    </form>
-                    <form th:action="@{/mvc/quick-login}" method="post" class="d-inline">
-                        <input type="hidden" name="username" value="user1">
-                        <button type="submit" class="btn btn-sm py-0 px-2"
-                                th:classappend="${isUser} ? 'btn-light text-success fw-bold' : 'btn-outline-light'">
-                            Khách VIP
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Thông tin tài khoản đang đăng nhập -->
-                <div th:if="${isAuthenticated}" class="d-flex align-items-center gap-2">
-                    <span class="badge bg-light text-dark">
-                        <i class="bi bi-person-circle text-success me-1"></i>
-                        <span th:text="${currentUsername}">admin</span>
-                        (<span th:text="${currentRole}">ROLE_ADMIN</span>)
-                    </span>
-                    <form th:action="@{/mvc/logout}" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-danger" title="Đăng xuất">
-                            <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Đăng xuất</span>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Chuyển sang Giao diện React SPA -->
-                <a href="/" class="btn btn-sm btn-warning fw-semibold">
-                    <i class="bi bi-lightning-charge-fill"></i> Mở Giao diện React SPA
-                </a>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- ==================== 2. FRAGMENT MENU ==================== -->
-<nav th:fragment="menu" class="navbar navbar-expand-lg navbar-minimart sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold text-success d-lg-none" th:href="@{/mvc}">
-            <i class="bi bi-grid-fill me-1"></i> Menu Quản lý
+<!-- ==================== 1. FRAGMENT MENU (SIDEBAR MART ADMIN) ==================== -->
+<aside th:fragment="menu" class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+        <a th:href="@{/mvc}" class="text-decoration-none">
+            <div class="brand-title">MART ADMIN</div>
+            <span class="brand-badge">THYMELEAF + BOOTSTRAP</span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#minimartMvcNavbar"
-                aria-controls="minimartMvcNavbar" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+    </div>
 
-        <div class="collapse navbar-collapse" id="minimartMvcNavbar">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
-                <!-- Mọi vai trò đã đăng nhập đều thấy Tổng quan & Sản phẩm & Đơn hàng -->
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/mvc}"
-                       th:classappend="${currentUri == '/mvc' or currentUri == '/mvc/'} ? 'active' : ''">
-                        <i class="bi bi-speedometer2 me-1"></i> Tổng quan
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/mvc/products}"
-                       th:classappend="${currentUri != null and currentUri.startsWith('/mvc/products')} ? 'active' : ''">
-                        <i class="bi bi-box-seam me-1"></i> Sản phẩm
-                    </a>
-                </li>
+    <nav class="sidebar-nav">
+        <!-- Nhóm 1: Báo cáo & Tổng quan -->
+        <div class="nav-group">
+            <div class="nav-group-title">BÁO CÁO & TỔNG QUAN</div>
+            <a th:href="@{/mvc}" class="nav-item-link"
+               th:classappend="${currentUri == '/mvc' or currentUri == '/mvc/'} ? 'active' : ''">
+                <i class="bi bi-speedometer2 fs-5"></i>
+                <span>Báo cáo tổng quan</span>
+            </a>
+        </div>
 
-                <!-- Chỉ ROLE_ADMIN mới thấy menu Quản lý Danh mục & Nhà cung cấp (Tiêu chí 3.5) -->
-                <li class="nav-item" th:if="${isAdmin}">
-                    <a class="nav-link" th:href="@{/mvc/categories}"
-                       th:classappend="${currentUri != null and currentUri.startsWith('/mvc/categories')} ? 'active' : ''">
-                        <i class="bi bi-tags me-1"></i> Danh mục Ngành hàng
-                    </a>
-                </li>
-                <li class="nav-item" th:if="${isAdmin}">
-                    <a class="nav-link" th:href="@{/mvc/suppliers}"
-                       th:classappend="${currentUri != null and currentUri.startsWith('/mvc/suppliers')} ? 'active' : ''">
-                        <i class="bi bi-truck me-1"></i> Nhà cung cấp
-                    </a>
-                </li>
+        <!-- Nhóm 2: Quản lý Đơn hàng & Giao hàng -->
+        <div class="nav-group">
+            <div class="nav-group-title">QUẢN LÝ ĐƠN HÀNG</div>
+            <a th:href="@{/mvc/orders}" class="nav-item-link"
+               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/orders')} ? 'active' : ''">
+                <i class="bi bi-bag-check fs-5"></i>
+                <span th:text="${isShipper ? 'Đơn giao hàng (Shipper)' : (isAdmin ? 'Quản lý đơn hàng' : 'Đơn hàng của tôi')}">Đơn hàng</span>
+            </a>
+        </div>
 
-                <!-- Đơn hàng hiển thị theo vai trò -->
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/mvc/orders}"
-                       th:classappend="${currentUri != null and currentUri.startsWith('/mvc/orders')} ? 'active' : ''">
-                        <i class="bi bi-receipt-cutoff me-1"></i>
-                        <span th:text="${isShipper ? 'Đơn cần giao (Shipper)' : (isAdmin ? 'Quản lý Đơn hàng' : 'Tra cứu Đơn hàng')}">Đơn hàng</span>
-                    </a>
-                </li>
-            </ul>
+        <!-- Nhóm 3: Sản phẩm & Kho hàng -->
+        <div class="nav-group">
+            <div class="nav-group-title">SẢN PHẨM & KHO HÀNG</div>
+            <a th:href="@{/mvc/products}" class="nav-item-link"
+               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/products')} ? 'active' : ''">
+                <i class="bi bi-apple fs-5"></i>
+                <span>Sản phẩm & Tồn kho</span>
+            </a>
+            <a th:if="${isAdmin}" th:href="@{/mvc/categories}" class="nav-item-link"
+               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/categories')} ? 'active' : ''">
+                <i class="bi bi-folder2-open fs-5"></i>
+                <span>Danh mục ngành hàng</span>
+            </a>
+            <a th:if="${isAdmin}" th:href="@{/mvc/suppliers}" class="nav-item-link"
+               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/suppliers')} ? 'active' : ''">
+                <i class="bi bi-building fs-5"></i>
+                <span>Nhà cung cấp đối tác</span>
+            </a>
+        </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <span th:if="${isAdmin}" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                    <i class="bi bi-shield-lock-fill me-1"></i> Quyền Quản trị toàn hệ thống (Full CRUD)
-                </span>
-                <span th:if="${isShipper}" class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2">
-                    <i class="bi bi-bicycle me-1"></i> Quyền Nhân viên Giao hàng (Shipper)
-                </span>
-                <span th:if="${isUser}" class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-3 py-2">
-                    <i class="bi bi-eye me-1"></i> Quyền Khách hàng (Chỉ xem & tra cứu)
-                </span>
+        <!-- Nhóm 4: Chuyển đổi giao diện React -->
+        <div class="nav-group">
+            <div class="nav-group-title">CHUYỂN ĐỔI GIAO DIỆN</div>
+            <a href="/" class="nav-item-link text-warning">
+                <i class="bi bi-shop fs-5"></i>
+                <span>Cửa hàng (React)</span>
+            </a>
+            <a href="/admin" class="nav-item-link text-info">
+                <i class="bi bi-cpu fs-5"></i>
+                <span>Admin Console (React)</span>
+            </a>
+            <a href="/shipper" class="nav-item-link text-success">
+                <i class="bi bi-truck fs-5"></i>
+                <span>Shipper Hub (React)</span>
+            </a>
+            <a href="http://localhost:9090" target="_blank" class="nav-item-link text-light">
+                <i class="bi bi-hdd-network fs-5"></i>
+                <span>Socket Cổng 9090</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="sidebar-footer">
+        <form th:action="@{/mvc/logout}" method="post" class="m-0">
+            <button type="submit" class="logout-btn-sidebar">
+                <i class="bi bi-box-arrow-right fs-5"></i>
+                <span>Đăng xuất</span>
+            </button>
+        </form>
+    </div>
+</aside>
+
+<!-- Wrapper chính bọc Header, Content và Footer -->
+<div class="admin-main-container">
+
+    <!-- ==================== 2. FRAGMENT HEADER ==================== -->
+    <header th:fragment="header" class="admin-header-glass">
+        <!-- Nút mở menu trên Mobile + Tiêu đề trang -->
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary d-lg-none py-1 px-2" onclick="toggleMobileSidebar()" title="Mở Menu">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            <h5 class="fw-bold mb-0 d-none d-sm-block text-dark">Hệ thống quản trị Siêu thị MiniMart</h5>
+            <span class="badge bg-warning text-dark fw-bold d-none d-md-inline ms-1">MVC Phân hệ</span>
+        </div>
+
+        <!-- Khu vực chuyển đổi nhanh Role Demo & Profile -->
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <!-- Nút chuyển đổi nhanh Role -->
+            <div class="d-flex align-items-center gap-1 bg-light rounded-pill p-1 border">
+                <small class="text-muted px-2 d-none d-xl-inline"><i class="bi bi-person-gear"></i> Role Demo:</small>
+                <a th:href="@{/mvc/quick-login(role='admin')}" class="btn btn-sm py-0 px-2 rounded-pill"
+                   th:classappend="${isAdmin} ? 'btn-danger text-white fw-bold' : 'btn-light text-secondary'">Admin</a>
+                <a th:href="@{/mvc/quick-login(role='shipper')}" class="btn btn-sm py-0 px-2 rounded-pill"
+                   th:classappend="${isShipper} ? 'btn-success text-white fw-bold' : 'btn-light text-secondary'">Shipper</a>
+                <a th:href="@{/mvc/quick-login(role='user')}" class="btn btn-sm py-0 px-2 rounded-pill"
+                   th:classappend="${isUser} ? 'btn-primary text-white fw-bold' : 'btn-light text-secondary'">Khách</a>
+            </div>
+
+            <a href="/" class="btn btn-outline-custom btn-sm d-none d-md-inline-flex align-items-center gap-1">
+                <i class="bi bi-shop"></i> Xem Shop React
+            </a>
+
+            <!-- User Info Badge -->
+            <div class="admin-profile">
+                <span class="admin-name" th:text="${currentUsername != null ? currentUsername : 'Admin'}">admin</span>
+                <span class="admin-badge" th:text="${isShipper ? 'Shipper' : (isAdmin ? 'Quản trị viên' : 'Khách hàng')}">Quản trị viên</span>
             </div>
         </div>
-    </div>
-</nav>
+    </header>
 
-<!-- ==================== FRAGMENT ALERTS ==================== -->
-<div th:fragment="alerts" class="container mt-3">
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show shadow-sm d-flex align-items-center" role="alert">
-        <i class="bi bi-check-circle-fill fs-5 me-2"></i>
-        <div th:text="${successMessage}">Thao tác thành công!</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- ==================== FRAGMENT ALERTS ==================== -->
+    <div th:fragment="alerts" class="px-4 pt-3">
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show card-custom border-success-subtle shadow-sm d-flex align-items-center mb-0" role="alert">
+            <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+            <div class="fw-medium text-dark" th:text="${successMessage}">Thao tác thành công!</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show card-custom border-danger-subtle shadow-sm d-flex align-items-center mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
+            <div class="fw-medium text-dark" th:text="${errorMessage}">Đã xảy ra lỗi!</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show shadow-sm d-flex align-items-center" role="alert">
-        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
-        <div th:text="${errorMessage}">Đã xảy ra lỗi!</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+
+    <!-- Script Đồng bộ Auth (SSO sang localStorage của React) -->
+    <script th:if="${jwtSyncToken != null and userSyncJson != null}" th:inline="javascript">
+        /*<![CDATA[*/
+        try {
+            localStorage.setItem('token', /*[[${jwtSyncToken}]]*/ '');
+            localStorage.setItem('user', /*[[${userSyncJson}]]*/ '');
+        } catch(e) {}
+        /*]]>*/
+    </script>
+
+    <!-- Script đóng/mở Mobile Sidebar -->
+    <script>
+        function toggleMobileSidebar() {
+            var sidebar = document.getElementById('adminSidebar');
+            var backdrop = document.getElementById('sidebarBackdrop');
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('show');
+        }
+    </script>
+
+    <!-- ==================== 3. FRAGMENT FOOTER ==================== -->
+    <footer th:fragment="footer" class="py-3 px-4 border-top mt-auto bg-white text-muted small">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                &copy; 2026 <strong>MiniMart Supermarket</strong> &mdash; Phân hệ Quản trị MVC (Spring Boot 3 + Thymeleaf + Bootstrap 5.3)
+            </div>
+            <div class="d-flex gap-3">
+                <a th:href="@{/mvc}" class="text-secondary text-decoration-none">Tổng quan MVC</a>
+                <a href="/" class="text-secondary text-decoration-none">Cửa hàng React</a>
+                <a href="/admin" class="text-secondary text-decoration-none">Admin React</a>
+                <a href="http://localhost:9090" target="_blank" class="text-secondary text-decoration-none">Socket Server 9090</a>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    </footer>
+
 </div>
-
-<!-- ==================== 3. FRAGMENT FOOTER ==================== -->
-<footer th:fragment="footer" class="bg-white border-top py-4 mt-5">
-    <div class="container">
-        <div class="row align-items-center gy-2">
-            <div class="col-md-6 text-center text-md-start">
-                <div class="fw-bold text-success">
-                    <i class="bi bi-basket2-fill me-1"></i> Hệ Thống Quản Lý Siêu Thị MiniMart (Spring Boot 3 + Thymeleaf + Bootstrap 5)
-                </div>
-                <small class="text-muted">Kết nối trực tiếp CSDL Microsoft SQL Server (`supermarket_db1`) qua Spring Data JPA & Hibernate.</small>
-            </div>
-            <div class="col-md-6 text-center text-md-end">
-                <a th:href="@{/mvc}" class="text-decoration-none text-secondary me-3"><i class="bi bi-house"></i> Trang chủ MVC</a>
-                <a href="/" class="text-decoration-none text-secondary me-3"><i class="bi bi-shop"></i> Cổng Khách hàng React</a>
-                <a href="/admin" class="text-decoration-none text-secondary"><i class="bi bi-gear"></i> Admin Console React</a>
-            </div>
-        </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</footer>
 
 </body>
 </html>
-

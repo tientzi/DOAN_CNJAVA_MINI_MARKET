@@ -48,6 +48,10 @@ public class ProductService {
     private OrderItemRepository orderItemRepository;
 
     public Page<ProductDTO> getProductsPagedAdmin(String keyword, Long categoryId, Long brandId, String sortBy, int page, int size) {
+        return getProductsPagedAdmin(keyword, categoryId, brandId, "ALL", sortBy, page, size);
+    }
+
+    public Page<ProductDTO> getProductsPagedAdmin(String keyword, Long categoryId, Long brandId, String stockFilter, String sortBy, int page, int size) {
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -65,6 +69,18 @@ public class ProductService {
 
             if (brandId != null) {
                 predicates.add(cb.equal(root.get("brand").get("id"), brandId));
+            }
+
+            if (stockFilter != null && !stockFilter.equalsIgnoreCase("ALL")) {
+                jakarta.persistence.criteria.Join<Product, com.groceryshop.entity.Inventory> invJoin = root.join("inventory", jakarta.persistence.criteria.JoinType.LEFT);
+                if ("IN_STOCK".equalsIgnoreCase(stockFilter)) {
+                    predicates.add(cb.gt(invJoin.get("currentStock"), 0));
+                } else if ("LOW_STOCK".equalsIgnoreCase(stockFilter)) {
+                    predicates.add(cb.gt(invJoin.get("currentStock"), 0));
+                    predicates.add(cb.le(invJoin.get("currentStock"), invJoin.get("minimumStock")));
+                } else if ("OUT_OF_STOCK".equalsIgnoreCase(stockFilter)) {
+                    predicates.add(cb.or(cb.isNull(invJoin.get("currentStock")), cb.equal(invJoin.get("currentStock"), 0)));
+                }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

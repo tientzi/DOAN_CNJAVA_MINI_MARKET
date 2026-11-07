@@ -48,6 +48,9 @@ public class OrderService {
     @Autowired
     private ProductBatchRepository productBatchRepository;
 
+    @Autowired
+    private AsyncNotificationService asyncNotificationService;
+
     @Transactional
     public OrderDTO createOrder(Long userId, OrderDTO orderDTO) {
         User user = userRepository.findById(userId)
@@ -76,7 +79,8 @@ public class OrderService {
             if (!product.getIsActive()) {
                 throw new BadRequestException("Sản phẩm '" + product.getName() + "' hiện tại không hoạt động");
             }
-            Inventory inventory = product.getInventory();
+            Inventory inventory = inventoryRepository.findByProductIdWithLock(product.getId())
+                    .orElse(product.getInventory());
             int currentStock = inventory != null ? inventory.getCurrentStock() : 0;
             if (item.getQuantity() > currentStock) {
                 throw new BadRequestException("Sản phẩm '" + product.getName() + "' không đủ hàng trong kho (Còn lại: " + currentStock + ")");
@@ -209,7 +213,8 @@ public class OrderService {
 
         for (CartItem item : cart.getItems()) {
             Product product = item.getProduct();
-            Inventory inventory = product.getInventory();
+            Inventory inventory = inventoryRepository.findByProductIdWithLock(product.getId())
+                    .orElse(product.getInventory());
             if (inventory != null) {
                 inventory.setCurrentStock(inventory.getCurrentStock() - item.getQuantity());
                 inventoryRepository.save(inventory);
@@ -259,6 +264,13 @@ public class OrderService {
 
         cart.getItems().clear();
         cartRepository.save(cart);
+
+        // Kích hoạt tác vụ bất đồng bộ gửi thông báo & audit log đơn hàng
+        asyncNotificationService.sendOrderCreatedNotification(
+                savedOrder.getId(),
+                savedOrder.getShippingName() != null ? savedOrder.getShippingName() : (user != null ? user.getFullName() : "Khách hàng"),
+                savedOrder.getFinalAmount()
+        );
 
         return EntityMapper.toOrderDTO(savedOrder);
     }

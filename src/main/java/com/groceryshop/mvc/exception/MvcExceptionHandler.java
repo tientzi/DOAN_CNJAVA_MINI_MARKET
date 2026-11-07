@@ -56,6 +56,14 @@ public class MvcExceptionHandler {
             model.addAttribute("isShipper", false);
             model.addAttribute("isUser", false);
         }
+        String jwtSyncToken = (String) session.getAttribute("jwtSyncToken");
+        String userSyncJson = (String) session.getAttribute("userSyncJson");
+        if (jwtSyncToken != null) {
+            model.addAttribute("jwtSyncToken", jwtSyncToken);
+        }
+        if (userSyncJson != null) {
+            model.addAttribute("userSyncJson", userSyncJson);
+        }
     }
 
     public static void verifyCsrf(HttpSession session, String submittedToken) {

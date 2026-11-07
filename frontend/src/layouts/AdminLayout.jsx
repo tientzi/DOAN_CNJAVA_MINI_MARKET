@@ -96,6 +96,17 @@ const AdminLayout = () => {
               })}
             </div>
           ))}
+          <div className="nav-group">
+            <div className="nav-group-title">CHUYỂN ĐỔI GIAO DIỆN</div>
+            <a href="http://localhost:8080/mvc" className="nav-item" style={{ color: '#ff5722', fontWeight: 600 }}>
+              <FileText size={18} />
+              <span>Phân hệ Thymeleaf MVC</span>
+            </a>
+            <a href="http://localhost:9090" target="_blank" rel="noreferrer" className="nav-item" style={{ color: '#38bdf8' }}>
+              <PackageCheck size={18} />
+              <span>Socket Server (:9090)</span>
+            </a>
+          </div>
         </nav>
         <div className="sidebar-footer">
           <button onClick={handleLogout} className="logout-btn-sidebar">
@@ -111,6 +122,14 @@ const AdminLayout = () => {
             <h2>Hệ thống quản trị Siêu thị MiniMart</h2>
           </div>
           <div className="header-admin-info">
+            <a 
+              href="http://localhost:8080/mvc" 
+              className="btn btn-outline home-btn" 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderColor: '#ff5722', color: '#ff5722', fontWeight: 600 }}
+              title="Chuyển sang phân hệ Quản trị MVC dùng Thymeleaf & Bootstrap"
+            >
+              <FileText size={16} /> Phân hệ Thymeleaf MVC
+            </a>
             <Link to="/" className="btn btn-outline home-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <Home size={16} /> Xem cửa hàng
             </Link>

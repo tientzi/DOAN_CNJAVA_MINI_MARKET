@@ -6,6 +6,7 @@ import com.groceryshop.mvc.exception.MvcExceptionHandler;
 import com.groceryshop.mvc.form.MvcProductForm;
 import com.groceryshop.service.BrandService;
 import com.groceryshop.service.CategoryService;
+import com.groceryshop.service.FileStorageService;
 import com.groceryshop.service.ProductService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -30,17 +32,21 @@ public class MvcProductController {
     @Autowired
     private BrandService brandService;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     @GetMapping
     public String listProducts(@RequestParam(required = false) String keyword,
                                @RequestParam(required = false) Long categoryId,
                                @RequestParam(required = false) Long brandId,
+                               @RequestParam(defaultValue = "ALL") String stockFilter,
                                @RequestParam(defaultValue = "id_asc") String sortBy,
                                @RequestParam(defaultValue = "0") int page,
-                               @RequestParam(defaultValue = "5") int size,
+                               @RequestParam(defaultValue = "8") int size,
                                Model model) {
-        Page<ProductDTO> productPage = productService.getProductsPagedAdmin(keyword, categoryId, brandId, sortBy, page, size);
+        Page<ProductDTO> productPage = productService.getProductsPagedAdmin(keyword, categoryId, brandId, stockFilter, sortBy, page, size);
 
-        model.addAttribute("pageTitle", "Quản lý Sản phẩm (CRUD + Tìm kiếm + Phân trang + Sắp xếp)");
+        model.addAttribute("pageTitle", "Quản lý Sản phẩm & Tồn kho");
         model.addAttribute("productPage", productPage);
         model.addAttribute("products", productPage.getContent());
         model.addAttribute("categories", categoryService.getAllCategories());
@@ -48,6 +54,7 @@ public class MvcProductController {
         model.addAttribute("keyword", keyword != null ? keyword : "");
         model.addAttribute("categoryId", categoryId);
         model.addAttribute("brandId", brandId);
+        model.addAttribute("stockFilter", stockFilter);
         model.addAttribute("sortBy", sortBy);
         model.addAttribute("currentPage", productPage.getNumber());
         model.addAttribute("totalPages", productPage.getTotalPages());
@@ -59,7 +66,7 @@ public class MvcProductController {
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         MvcProductForm form = MvcProductForm.builder()
-                .unit("Hộp")
+                .unit("Cái")
                 .weightG(500)
                 .minimumStock(5)
                 .location("Kệ A1")
@@ -81,11 +88,22 @@ public class MvcProductController {
     @PostMapping("/save")
     public String saveProduct(@Valid @ModelAttribute("productForm") MvcProductForm form,
                               BindingResult bindingResult,
+                              @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
                               @RequestParam(name = "_mvcCsrf", required = false) String csrfToken,
                               HttpSession session,
                               Model model,
                               RedirectAttributes redirectAttributes) {
         MvcExceptionHandler.verifyCsrf(session, csrfToken);
+
+        // Upload file ảnh nếu người dùng chọn file từ máy tính
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                String savedUrl = fileStorageService.saveFile(imageFile);
+                form.setMainImage(savedUrl);
+            } catch (Exception e) {
+                bindingResult.rejectValue("mainImage", "mainImage.upload", "Lỗi tải ảnh lên: " + e.getMessage());
+            }
+        }
 
         if (form.getSalePrice() != null && form.getPrice() != null
                 && form.getSalePrice().compareTo(form.getPrice()) > 0) {
@@ -159,4 +177,3 @@ public class MvcProductController {
         model.addAttribute("brands", brandService.getAllBrands());
     }
 }
-

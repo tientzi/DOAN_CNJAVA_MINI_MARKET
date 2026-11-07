@@ -31,7 +31,7 @@ public class AuthController {
     private UserService userService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest loginRequest) {
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest loginRequest, jakarta.servlet.http.HttpServletRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsernameOrEmail(),
@@ -40,6 +40,12 @@ public class AuthController {
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Đồng bộ phiên làm việc sang HttpSession để truy cập /mvc không bị hỏi đăng nhập lại
+        try {
+            jakarta.servlet.http.HttpSession session = request.getSession(true);
+            session.setAttribute(org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+        } catch (Exception ignored) {}
 
         String jwt = tokenProvider.generateToken(authentication, loginRequest.isRememberMe());
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();

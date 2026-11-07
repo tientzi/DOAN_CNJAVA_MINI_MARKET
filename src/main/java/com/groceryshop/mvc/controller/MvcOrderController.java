@@ -1,11 +1,18 @@
 package com.groceryshop.mvc.controller;
 
 import com.groceryshop.dto.OrderDTO;
+import com.groceryshop.entity.User;
 import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.mvc.exception.MvcExceptionHandler;
+import com.groceryshop.repository.UserRepository;
+import com.groceryshop.security.UserPrincipal;
+import com.groceryshop.service.DeliveryService;
 import com.groceryshop.service.OrderService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +30,12 @@ public class MvcOrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private DeliveryService deliveryService;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping
     public String listOrders(@RequestParam(required = false) String keyword,
                              @RequestParam(required = false) String status,
@@ -30,7 +43,31 @@ public class MvcOrderController {
                              @RequestParam(defaultValue = "0") int page,
                              @RequestParam(defaultValue = "8") int size,
                              Model model) {
-        List<OrderDTO> filtered = orderService.getAllOrders().stream()
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentRole = "ROLE_ADMIN";
+        Long currentUserId = null;
+
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            currentRole = auth.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .orElse("ROLE_USER");
+            currentUserId = getUserIdFromAuth(auth);
+        }
+
+        List<OrderDTO> baseList;
+        if ("ROLE_USER".equals(currentRole) && currentUserId != null) {
+            // Khách hàng thường chỉ xem đơn hàng của chính mình (đồng bộ với React OrderHistory)
+            baseList = orderService.getMyOrders(currentUserId);
+        } else if ("ROLE_SHIPPER".equals(currentRole) && currentUserId != null) {
+            // Shipper xem các đơn được giao cho mình
+            baseList = orderService.getMyDeliveries(currentUserId);
+        } else {
+            // Admin xem toàn bộ đơn hàng
+            baseList = orderService.getAllOrders();
+        }
+
+        List<OrderDTO> filtered = baseList.stream()
                 .filter(o -> {
                     if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase(o.getStatus())) {
                         return false;
@@ -65,7 +102,7 @@ public class MvcOrderController {
         int toIndex = Math.min(fromIndex + pageSize, totalItems);
         List<OrderDTO> pagedList = filtered.subList(fromIndex, toIndex);
 
-        model.addAttribute("pageTitle", "Quản lý & Điều phối Đơn hàng");
+        model.addAttribute("pageTitle", "ROLE_SHIPPER".equals(currentRole) ? "Bảng Giao Hàng Shipper" : "Quản lý & Điều phối Đơn hàng");
         model.addAttribute("orders", pagedList);
         model.addAttribute("keyword", keyword != null ? keyword : "");
         model.addAttribute("status", status != null ? status : "");
@@ -82,6 +119,7 @@ public class MvcOrderController {
         OrderDTO order = orderService.getOrderById(id);
         model.addAttribute("pageTitle", "Chi tiết Đơn hàng #" + id);
         model.addAttribute("order", order);
+        model.addAttribute("shippers", deliveryService.getAvailableShippers());
         return "mvc/order-detail";
     }
 
@@ -102,5 +140,58 @@ public class MvcOrderController {
         }
         return "redirect:/mvc/orders/" + id;
     }
-}
 
+    /**
+     * Admin phân công Shipper trực tiếp cho đơn hàng (gọi DeliveryService)
+     */
+    @PostMapping("/assign-shipper/{id}")
+    public String assignShipper(@PathVariable Long id,
+                                @RequestParam Long shipperId,
+                                @RequestParam(name = "_mvcCsrf", required = false) String csrfToken,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        MvcExceptionHandler.verifyCsrf(session, csrfToken);
+        try {
+            deliveryService.assignOrdersToShipper(List.of(id), shipperId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã phân công Shipper thành công cho đơn hàng #" + id);
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi phân công: " + ex.getMessage());
+        }
+        return "redirect:/mvc/orders/" + id;
+    }
+
+    /**
+     * Shipper cập nhật trạng thái giao hàng (Đang giao / Đã giao / Giao thất bại)
+     */
+    @PostMapping("/delivery-status/{id}")
+    public String updateDeliveryStatus(@PathVariable Long id,
+                                       @RequestParam String newStatus,
+                                       @RequestParam(required = false) String deliveryNote,
+                                       @RequestParam(required = false) String deliveryFailedReason,
+                                       @RequestParam(name = "_mvcCsrf", required = false) String csrfToken,
+                                       HttpSession session,
+                                       RedirectAttributes redirectAttributes) {
+        MvcExceptionHandler.verifyCsrf(session, csrfToken);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long shipperUserId = getUserIdFromAuth(auth);
+
+        try {
+            orderService.updateDeliveryStatus(id, shipperUserId, newStatus, deliveryNote, deliveryFailedReason);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã cập nhật tiến độ giao hàng cho đơn #" + id + " sang: " + newStatus);
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/mvc/orders/" + id;
+    }
+
+    private Long getUserIdFromAuth(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) return 1L;
+        if (auth.getPrincipal() instanceof UserPrincipal up) {
+            return up.getId();
+        }
+        User user = userRepository.findByUsername(auth.getName()).orElse(null);
+        return user != null ? user.getId() : 1L;
+    }
+}

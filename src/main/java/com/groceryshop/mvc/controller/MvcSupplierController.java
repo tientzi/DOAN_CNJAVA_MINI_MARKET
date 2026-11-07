@@ -129,6 +129,19 @@ public class MvcSupplierController {
         }
     }
 
+    @PostMapping("/toggle/{id}")
+    public String toggleStatus(@PathVariable Long id,
+                               @RequestParam(name = "_mvcCsrf", required = false) String csrfToken,
+                               HttpSession session,
+                               RedirectAttributes redirectAttributes) {
+        MvcExceptionHandler.verifyCsrf(session, csrfToken);
+        SupplierDTO updated = supplierService.toggleSupplierStatus(id);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã đổi trạng thái nhà cung cấp '" + updated.getName() + "' sang: "
+                        + (Boolean.TRUE.equals(updated.getIsActive()) ? "Đang hợp tác" : "Ngừng hợp tác"));
+        return "redirect:/mvc/suppliers";
+    }
+
     @PostMapping("/delete/{id}")
     public String deleteSupplier(@PathVariable Long id,
                                  @RequestParam(name = "_mvcCsrf", required = false) String csrfToken,

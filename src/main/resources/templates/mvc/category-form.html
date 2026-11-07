@@ -3,70 +3,72 @@
 <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
 <body>
 
-<header th:replace="~{fragments/layout :: header}"></header>
-<nav th:replace="~{fragments/layout :: menu}"></nav>
-<div th:replace="~{fragments/layout :: alerts}"></div>
+<aside th:replace="~{fragments/layout :: menu}"></aside>
 
-<main class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="card card-minimart bg-white p-4">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
-                    <div>
-                        <h4 class="fw-bold text-success mb-1" th:text="${pageTitle}">Thêm / Sửa Danh Mục</h4>
-                        <small class="text-muted">Kiểm tra không trùng tên danh mục & báo lỗi cạnh ô nhập.</small>
-                    </div>
-                    <a th:href="@{/mvc/categories}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i> Quay lại
-                    </a>
-                </div>
+<div class="admin-main-container">
+    <header th:replace="~{fragments/layout :: header}"></header>
+    <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <form th:action="@{/mvc/categories/save}" th:object="${categoryForm}" method="post" novalidate>
-                    <input type="hidden" name="_mvcCsrf" th:value="${mvcCsrfToken}">
-                    <input type="hidden" th:field="*{id}">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Tên danh mục ngành hàng <span class="text-danger">*</span></label>
-                        <input type="text" th:field="*{name}" class="form-control"
-                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
-                               placeholder="VD: Thực Phẩm Tươi Sống">
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Lỗi tên danh mục</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Mô tả ngành hàng</label>
-                        <textarea th:field="*{description}" rows="3" class="form-control"
-                                  th:classappend="${#fields.hasErrors('description')} ? 'is-invalid' : ''"
-                                  placeholder="Mô tả các mặt hàng thuộc danh mục này..."></textarea>
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Đường dẫn ảnh đại diện (Thumbnail)</label>
-                        <input type="text" th:field="*{image}" class="form-control" placeholder="/uploads/cat_rau_cu_qua.jpg">
-                    </div>
-
-                    <div class="mb-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" th:field="*{isActive}" id="catActiveSwitch">
-                            <label class="form-check-label fw-semibold" for="catActiveSwitch">Kích hoạt hiển thị danh mục</label>
+    <main class="p-3 p-md-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div class="card card-custom p-4">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                        <div>
+                            <h4 class="fw-bold mb-1" style="color: var(--primary);" th:text="${pageTitle}">Thêm / Sửa Danh Mục</h4>
+                            <small class="text-muted">Kiểm tra hợp lệ bằng <code>@Valid</code> và báo lỗi cạnh trường nhập.</small>
                         </div>
+                        <a th:href="@{/mvc/categories}" class="btn btn-outline-custom btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i> Quay lại
+                        </a>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                        <a th:href="@{/mvc/categories}" class="btn btn-outline-secondary px-4">Hủy bỏ</a>
-                        <button type="submit" class="btn btn-minimart px-4">
-                            <i class="bi bi-floppy-fill me-1"></i> Lưu Danh Mục
-                        </button>
-                    </div>
-                </form>
+                    <form th:action="@{/mvc/categories/save}" th:object="${categoryForm}" method="post" novalidate>
+                        <input type="hidden" name="_mvcCsrf" th:value="${mvcCsrfToken}">
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tên danh mục ngành hàng <span class="text-danger">*</span></label>
+                            <input type="text" th:field="*{name}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                                   placeholder="VD: Thực Phẩm Tươi Sống">
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Lỗi tên danh mục</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mô tả ngành hàng</label>
+                            <textarea th:field="*{description}" rows="3" class="form-control"
+                                      th:classappend="${#fields.hasErrors('description')} ? 'is-invalid' : ''"
+                                      placeholder="Mô tả các mặt hàng thuộc danh mục này..."></textarea>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Đường dẫn ảnh đại diện (Thumbnail)</label>
+                            <input type="text" th:field="*{image}" class="form-control" placeholder="/uploads/cat_rau_cu_qua.jpg">
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" th:field="*{isActive}" id="catActiveSwitch">
+                                <label class="form-check-label fw-semibold" for="catActiveSwitch">Kích hoạt hiển thị danh mục</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                            <a th:href="@{/mvc/categories}" class="btn btn-outline-custom px-4">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-primary-custom px-4">
+                                <i class="bi bi-floppy-fill me-1"></i> Lưu Danh Mục
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
-</main>
+    </main>
 
-<footer th:replace="~{fragments/layout :: footer}"></footer>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+</div>
 
 </body>
 </html>
-
