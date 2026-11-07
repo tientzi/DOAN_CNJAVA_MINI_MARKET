@@ -158,7 +158,7 @@ public class MiniMartSocketServer implements CommandLineRunner {
                 String line;
                 // B4 (Slide 25): Trao đổi dữ liệu với client theo vòng lặp
                 while ((line = reader.readLine()) != null) {
-                    String command = line.trim();
+                    String command = line.replace("\uFEFF", "").trim();
                     log.info("[{}] [Luồng: {}] Nhận lệnh: '{}'", clientInfo, threadName, command);
 
                     if (command.equalsIgnoreCase("QUIT") || command.equalsIgnoreCase("EXIT")) {
@@ -248,8 +248,8 @@ public class MiniMartSocketServer implements CommandLineRunner {
             writer.println("            <li class=\"list-group-item px-0\"><code>QUIT</code>: Đóng kết nối an toàn với máy chủ</li>");
             writer.println("        </ul>");
             writer.println("        <div class=\"d-flex gap-2\">");
-            writer.println("            <a href=\"http://localhost:8080/mvc\" class=\"btn btn-orange\"><i class=\"bi bi-speedometer2 me-1\"></i> Mở Quản trị Thymeleaf MVC</a>");
-            writer.println("            <a href=\"http://localhost:8080/\" class=\"btn btn-outline-secondary\"><i class=\"bi bi-shop me-1\"></i> Mở Cửa hàng React SPA</a>");
+            writer.println("            <a href=\"http://localhost:8080/admin\" class=\"btn btn-orange\"><i class=\"bi bi-speedometer2 me-1\"></i> Mở Bảng Quản Trị Admin</a>");
+            writer.println("            <a href=\"http://localhost:8080/\" class=\"btn btn-outline-secondary\"><i class=\"bi bi-shop me-1\"></i> Mở Cửa Hàng MiniMart</a>");
             writer.println("        </div>");
             writer.println("    </div>");
             writer.println("</div>");

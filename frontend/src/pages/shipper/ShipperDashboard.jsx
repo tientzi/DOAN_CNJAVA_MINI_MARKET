@@ -4,7 +4,6 @@ import {
   Package, Truck, CheckCircle2, XCircle, MapPin, Phone, User, 
   Clock, Eye, AlertTriangle, RefreshCw, DollarSign, Calendar, Navigation
 } from 'lucide-react'
-import ThymeleafEmbed from '../../components/ThymeleafEmbed'
 import '../admin/AdminPages.css'
 
 const ShipperDashboard = () => {
@@ -184,32 +183,7 @@ const ShipperDashboard = () => {
             {historyOrders.length}
           </span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('MVC_ORDERS')}
-          style={{
-            padding: '12px 20px',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: '1rem',
-            color: activeTab === 'MVC_ORDERS' ? '#ff5722' : '#64748b',
-            borderBottom: activeTab === 'MVC_ORDERS' ? '3px solid #ff5722' : '3px solid transparent',
-            marginBottom: '-2px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <Package size={20} />
-          <span>Bảng tra cứu & Xử lý đơn (Chi tiết)</span>
-        </button>
       </div>
-
-      {activeTab === 'MVC_ORDERS' && (
-        <ThymeleafEmbed src="/mvc/orders" />
-      )}
 
       {/* TAB 1: ĐƠN ĐƯỢC PHÂN CÔNG / ĐANG GIAO */}
       {activeTab === 'DELIVERING' && (

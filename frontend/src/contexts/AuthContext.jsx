@@ -3,18 +3,6 @@ import api from '../services/api'
 
 export const AuthContext = createContext()
 
-const syncJwtCookie = (tokenValue) => {
-  try {
-    if (tokenValue) {
-      document.cookie = `jwt_token=${tokenValue}; path=/; max-age=86400; SameSite=Lax`
-    } else {
-      document.cookie = 'jwt_token=; path=/; max-age=0; SameSite=Lax'
-    }
-  } catch (e) {
-    // ignore cookie errors
-  }
-}
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
@@ -26,9 +14,6 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && storedUser) {
       setToken(storedToken)
       setUser(JSON.parse(storedUser))
-      syncJwtCookie(storedToken)
-    } else {
-      syncJwtCookie(null)
     }
     setLoading(false)
   }, [])
@@ -45,7 +30,6 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', accessToken)
       localStorage.setItem('user', JSON.stringify(userData))
-      syncJwtCookie(accessToken)
       
       return userData
     } catch (error) {
@@ -71,7 +55,6 @@ export const AuthProvider = ({ children }) => {
     
     localStorage.setItem('token', accessToken)
     localStorage.setItem('user', JSON.stringify(userData))
-    syncJwtCookie(accessToken)
     
     return userData
   }
@@ -94,7 +77,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    syncJwtCookie(null)
   }
 
   const forgotPassword = async (email, newPassword) => {
