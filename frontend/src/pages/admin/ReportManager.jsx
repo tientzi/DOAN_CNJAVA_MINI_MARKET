@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
   CartesianGrid, PieChart, Pie, Cell, Legend
 } from 'recharts'
+import ThymeleafEmbed from '../../components/ThymeleafEmbed'
 import './AdminPages.css'
 
 const ReportManager = () => {
@@ -651,6 +652,10 @@ const ReportManager = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="no-print" style={{ marginTop: '24px' }}>
+            <ThymeleafEmbed src="/mvc" minHeight={580} />
           </div>
         </>
       )}

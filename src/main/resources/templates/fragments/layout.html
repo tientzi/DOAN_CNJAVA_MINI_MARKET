@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="vi">
-<head th:fragment="head(title)">
+<head th:fragment="head(pageTitle)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${title != null ? title + ' | MiniMart Admin MVC' : 'MiniMart - Hệ thống Quản trị Siêu thị (Thymeleaf + Bootstrap)'}">MiniMart Admin MVC</title>
-    <!-- Google Font 'Be Vietnam Pro' đồng bộ 100% với React Frontend -->
+    <title th:text="${pageTitle != null ? pageTitle + ' - MiniMart' : 'MiniMart'}">MiniMart</title>
+    <!-- Phát hiện ngay lập tức nếu đang được nhúng bên trong React SPA -->
+    <script>
+        if (window.self !== window.top) {
+            document.documentElement.classList.add('embedded-in-react');
+        }
+    </script>
+    <!-- Google Fonts: Be Vietnam Pro (Đồng bộ 100% với React SPA) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Bootstrap 5.3 CSS & Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -17,186 +23,50 @@
             --primary-hover: #e64a19;
             --primary-light: #fbe9e7;
             --secondary: #4caf50;
-            --secondary-hover: #388e3c;
-            --secondary-light: #e8f5e9;
             --dark: #1e293b;
             --dark-light: #334155;
             --gray-50: #f8fafc;
             --gray-100: #f1f5f9;
             --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
             --gray-400: #94a3b8;
             --gray-500: #64748b;
-            --radius-md: 12px;
-            --radius-lg: 16px;
+            --radius-md: 0.65rem;
+            --radius-lg: 1rem;
         }
 
         body {
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--gray-50);
             color: var(--dark);
             margin: 0;
             padding: 0;
-            min-height: 100vh;
         }
 
-        /* Sidebar cố định phong cách MART ADMIN đồng bộ với React */
-        .admin-sidebar {
-            width: 260px;
-            background-color: var(--dark);
-            color: var(--gray-200);
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 1040;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar-brand {
-            padding: 1.5rem 1.25rem;
-            text-align: center;
-            border-bottom: 1px solid var(--dark-light);
-        }
-
-        .brand-title {
-            font-weight: 900;
-            font-size: 1.3rem;
-            letter-spacing: 1.5px;
-            color: #ffffff;
-        }
-
-        .brand-badge {
-            font-size: 0.65rem;
-            background-color: var(--primary);
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
-            display: inline-block;
-            margin-top: 4px;
-        }
-
-        .sidebar-nav {
-            padding: 1rem 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            flex-grow: 1;
-        }
-
-        .nav-group-title {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--gray-400);
-            letter-spacing: 0.8px;
-            padding: 0.6rem 0.8rem 0.3rem 0.8rem;
-            opacity: 0.85;
-        }
-
-        .nav-item-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.7rem 0.9rem;
-            border-radius: var(--radius-md);
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            color: var(--gray-400);
-            text-decoration: none;
-        }
-
-        .nav-item-link:hover {
-            background-color: var(--dark-light);
-            color: #ffffff;
-        }
-
-        .nav-item-link.active {
-            background-color: var(--primary);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
-            font-weight: 600;
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid var(--dark-light);
-        }
-
-        .logout-btn-sidebar {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.7rem 1rem;
-            background: none;
-            border: none;
-            color: var(--gray-400);
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border-radius: var(--radius-md);
-            transition: all 0.2s ease;
-        }
-
-        .logout-btn-sidebar:hover {
-            background-color: #ef4444;
-            color: #ffffff;
-        }
-
-        /* Container chính nằm cạnh Sidebar */
+        /* Container chính đồng nhất, không tạo sidebar thứ 2 khi nhúng trong React SPA */
         .admin-main-container {
-            margin-left: 260px;
+            margin-left: 0;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            min-height: 100%;
             min-width: 0;
-            transition: margin-left 0.3s ease;
         }
 
-        /* Header kính mờ (glass) đồng bộ với React */
-        .admin-header-glass {
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            border-bottom: 1px solid var(--gray-200);
-            position: sticky;
-            top: 0;
-            z-index: 1020;
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        /* Khi nhúng trực tiếp trong React SPA: ẩn thanh header/menu/footer bao ngoài để hòa làm 1 giao diện duy nhất */
+        html.embedded-in-react .standalone-only-chrome {
+            display: none !important;
         }
 
-        .admin-profile {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            border-left: 1px solid var(--gray-200);
-            padding-left: 1rem;
+        html.embedded-in-react body {
+            background-color: transparent;
+            overflow-x: hidden;
         }
 
-        .admin-name {
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: var(--dark);
+        html.embedded-in-react main {
+            padding: 0.25rem 0 !important;
         }
 
-        .admin-badge {
-            font-size: 0.7rem;
-            font-weight: 700;
-            background-color: var(--primary-light);
-            color: var(--primary);
-            padding: 1px 6px;
-            border-radius: 4px;
+        html.embedded-in-react .alerts-wrapper {
+            padding: 0 0 0.75rem 0 !important;
         }
 
         .card-custom {
@@ -213,7 +83,7 @@
             color: #ffffff;
             font-weight: 600;
             border-radius: var(--radius-md);
-            padding: 0.55rem 1.15rem;
+            padding: 0.5rem 1.1rem;
             transition: all 0.2s ease;
         }
 
@@ -231,7 +101,7 @@
             color: var(--dark-light);
             font-weight: 600;
             border-radius: var(--radius-md);
-            padding: 0.5rem 1rem;
+            padding: 0.45rem 0.95rem;
             transition: all 0.2s ease;
         }
 
@@ -249,204 +119,115 @@
             border: 1px solid var(--gray-200);
         }
 
-        /* Responsive cho Mobile (< 992px) */
-        @media (max-width: 991.98px) {
-            .admin-sidebar {
-                transform: translateX(-100%);
-            }
-            .admin-sidebar.show-mobile {
-                transform: translateX(0);
-            }
-            .admin-main-container {
-                margin-left: 0;
-            }
-            .sidebar-backdrop {
-                display: none;
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 1035;
-            }
-            .sidebar-backdrop.show {
-                display: block;
-            }
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .pagination .page-link {
+            color: var(--dark);
         }
     </style>
 </head>
 <body>
 
-<!-- Backdrop cho Mobile Sidebar -->
-<div id="sidebarBackdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
-
-<!-- ==================== 1. FRAGMENT MENU (SIDEBAR MART ADMIN) ==================== -->
-<aside th:fragment="menu" class="admin-sidebar" id="adminSidebar">
-    <div class="sidebar-brand">
-        <a th:href="@{/mvc}" class="text-decoration-none">
-            <div class="brand-title">MART ADMIN</div>
-            <span class="brand-badge">THYMELEAF + BOOTSTRAP</span>
-        </a>
-    </div>
-
-    <nav class="sidebar-nav">
-        <!-- Nhóm 1: Báo cáo & Tổng quan -->
-        <div class="nav-group">
-            <div class="nav-group-title">BÁO CÁO & TỔNG QUAN</div>
-            <a th:href="@{/mvc}" class="nav-item-link"
-               th:classappend="${currentUri == '/mvc' or currentUri == '/mvc/'} ? 'active' : ''">
-                <i class="bi bi-speedometer2 fs-5"></i>
-                <span>Báo cáo tổng quan</span>
+<!-- ==================== 1. FRAGMENT MENU (THYMELEAF FRAGMENT - TIÊU CHÍ 3.1) ==================== -->
+<aside th:fragment="menu" class="standalone-only-chrome bg-dark text-white py-2 px-3 border-bottom">
+    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <a th:href="@{/}" class="text-decoration-none text-white fw-bold">
+                <i class="bi bi-shop me-1" style="color: var(--primary);"></i> MART ADMIN
             </a>
+            <nav class="d-flex flex-wrap gap-2 small">
+                <a th:href="@{/mvc}" class="text-white-50 text-decoration-none px-2 py-1 rounded"
+                   th:classappend="${currentUri == '/mvc' or currentUri == '/mvc/'} ? 'bg-secondary text-white fw-semibold' : ''">Tổng quan</a>
+                <a th:href="@{/mvc/products}" class="text-white-50 text-decoration-none px-2 py-1 rounded"
+                   th:classappend="${currentUri != null and currentUri.startsWith('/mvc/products')} ? 'bg-secondary text-white fw-semibold' : ''">Sản phẩm</a>
+                <a th:if="${isAdmin}" th:href="@{/mvc/categories}" class="text-white-50 text-decoration-none px-2 py-1 rounded"
+                   th:classappend="${currentUri != null and currentUri.startsWith('/mvc/categories')} ? 'bg-secondary text-white fw-semibold' : ''">Danh mục</a>
+                <a th:if="${isAdmin}" th:href="@{/mvc/suppliers}" class="text-white-50 text-decoration-none px-2 py-1 rounded"
+                   th:classappend="${currentUri != null and currentUri.startsWith('/mvc/suppliers')} ? 'bg-secondary text-white fw-semibold' : ''">Nhà cung cấp</a>
+                <a th:href="@{/mvc/orders}" class="text-white-50 text-decoration-none px-2 py-1 rounded"
+                   th:classappend="${currentUri != null and currentUri.startsWith('/mvc/orders')} ? 'bg-secondary text-white fw-semibold' : ''">Đơn hàng</a>
+            </nav>
         </div>
-
-        <!-- Nhóm 2: Quản lý Đơn hàng & Giao hàng -->
-        <div class="nav-group">
-            <div class="nav-group-title">QUẢN LÝ ĐƠN HÀNG</div>
-            <a th:href="@{/mvc/orders}" class="nav-item-link"
-               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/orders')} ? 'active' : ''">
-                <i class="bi bi-bag-check fs-5"></i>
-                <span th:text="${isShipper ? 'Đơn giao hàng (Shipper)' : (isAdmin ? 'Quản lý đơn hàng' : 'Đơn hàng của tôi')}">Đơn hàng</span>
-            </a>
-        </div>
-
-        <!-- Nhóm 3: Sản phẩm & Kho hàng -->
-        <div class="nav-group">
-            <div class="nav-group-title">SẢN PHẨM & KHO HÀNG</div>
-            <a th:href="@{/mvc/products}" class="nav-item-link"
-               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/products')} ? 'active' : ''">
-                <i class="bi bi-apple fs-5"></i>
-                <span>Sản phẩm & Tồn kho</span>
-            </a>
-            <a th:if="${isAdmin}" th:href="@{/mvc/categories}" class="nav-item-link"
-               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/categories')} ? 'active' : ''">
-                <i class="bi bi-folder2-open fs-5"></i>
-                <span>Danh mục ngành hàng</span>
-            </a>
-            <a th:if="${isAdmin}" th:href="@{/mvc/suppliers}" class="nav-item-link"
-               th:classappend="${currentUri != null and currentUri.startsWith('/mvc/suppliers')} ? 'active' : ''">
-                <i class="bi bi-building fs-5"></i>
-                <span>Nhà cung cấp đối tác</span>
-            </a>
-        </div>
-
-        <!-- Nhóm 4: Chuyển đổi giao diện React -->
-        <div class="nav-group">
-            <div class="nav-group-title">CHUYỂN ĐỔI GIAO DIỆN</div>
-            <a href="/" class="nav-item-link text-warning">
-                <i class="bi bi-shop fs-5"></i>
-                <span>Cửa hàng (React)</span>
-            </a>
-            <a href="/admin" class="nav-item-link text-info">
-                <i class="bi bi-cpu fs-5"></i>
-                <span>Admin Console (React)</span>
-            </a>
-            <a href="/shipper" class="nav-item-link text-success">
-                <i class="bi bi-truck fs-5"></i>
-                <span>Shipper Hub (React)</span>
-            </a>
-            <a href="http://localhost:9090" target="_blank" class="nav-item-link text-light">
-                <i class="bi bi-hdd-network fs-5"></i>
-                <span>Socket Cổng 9090</span>
-            </a>
-        </div>
-    </nav>
-
-    <div class="sidebar-footer">
-        <form th:action="@{/mvc/logout}" method="post" class="m-0">
-            <button type="submit" class="logout-btn-sidebar">
-                <i class="bi bi-box-arrow-right fs-5"></i>
-                <span>Đăng xuất</span>
-            </button>
-        </form>
+        <a href="/admin" class="btn btn-sm btn-outline-light py-0">Về Bảng điều khiển chính</a>
     </div>
 </aside>
 
-<!-- Wrapper chính bọc Header, Content và Footer -->
 <div class="admin-main-container">
 
-    <!-- ==================== 2. FRAGMENT HEADER ==================== -->
-    <header th:fragment="header" class="admin-header-glass">
-        <!-- Nút mở menu trên Mobile + Tiêu đề trang -->
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary d-lg-none py-1 px-2" onclick="toggleMobileSidebar()" title="Mở Menu">
-                <i class="bi bi-list fs-5"></i>
-            </button>
-            <h5 class="fw-bold mb-0 d-none d-sm-block text-dark">Hệ thống quản trị Siêu thị MiniMart</h5>
-            <span class="badge bg-warning text-dark fw-bold d-none d-md-inline ms-1">MVC Phân hệ</span>
-        </div>
-
-        <!-- Khu vực chuyển đổi nhanh Role Demo & Profile -->
-        <div class="d-flex align-items-center gap-2 gap-md-3">
-            <!-- Nút chuyển đổi nhanh Role -->
-            <div class="d-flex align-items-center gap-1 bg-light rounded-pill p-1 border">
-                <small class="text-muted px-2 d-none d-xl-inline"><i class="bi bi-person-gear"></i> Role Demo:</small>
-                <a th:href="@{/mvc/quick-login(role='admin')}" class="btn btn-sm py-0 px-2 rounded-pill"
-                   th:classappend="${isAdmin} ? 'btn-danger text-white fw-bold' : 'btn-light text-secondary'">Admin</a>
-                <a th:href="@{/mvc/quick-login(role='shipper')}" class="btn btn-sm py-0 px-2 rounded-pill"
-                   th:classappend="${isShipper} ? 'btn-success text-white fw-bold' : 'btn-light text-secondary'">Shipper</a>
-                <a th:href="@{/mvc/quick-login(role='user')}" class="btn btn-sm py-0 px-2 rounded-pill"
-                   th:classappend="${isUser} ? 'btn-primary text-white fw-bold' : 'btn-light text-secondary'">Khách</a>
-            </div>
-
-            <a href="/" class="btn btn-outline-custom btn-sm d-none d-md-inline-flex align-items-center gap-1">
-                <i class="bi bi-shop"></i> Xem Shop React
-            </a>
-
-            <!-- User Info Badge -->
-            <div class="admin-profile">
-                <span class="admin-name" th:text="${currentUsername != null ? currentUsername : 'Admin'}">admin</span>
-                <span class="admin-badge" th:text="${isShipper ? 'Shipper' : (isAdmin ? 'Quản trị viên' : 'Khách hàng')}">Quản trị viên</span>
-            </div>
+    <!-- ==================== 2. FRAGMENT HEADER (THYMELEAF FRAGMENT - TIÊU CHÍ 3.1) ==================== -->
+    <header th:fragment="header" class="standalone-only-chrome bg-white border-bottom py-2 px-3">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="fw-semibold small text-secondary" th:text="${pageTitle}">Quản lý</span>
+            <span class="badge bg-light text-dark border" th:text="${currentUsername != null ? currentUsername : 'Admin'}">admin</span>
         </div>
     </header>
 
     <!-- ==================== FRAGMENT ALERTS ==================== -->
-    <div th:fragment="alerts" class="px-4 pt-3">
-        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show card-custom border-success-subtle shadow-sm d-flex align-items-center mb-0" role="alert">
+    <div th:fragment="alerts" class="alerts-wrapper px-3 pt-2">
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show card-custom border-success-subtle shadow-sm d-flex align-items-center mb-2 py-2" role="alert">
             <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
             <div class="fw-medium text-dark" th:text="${successMessage}">Thao tác thành công!</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show card-custom border-danger-subtle shadow-sm d-flex align-items-center mb-0" role="alert">
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show card-custom border-danger-subtle shadow-sm d-flex align-items-center mb-2 py-2" role="alert">
             <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
             <div class="fw-medium text-dark" th:text="${errorMessage}">Đã xảy ra lỗi!</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </div>
 
-    <!-- Script Đồng bộ Auth (SSO sang localStorage của React) -->
-    <script th:if="${jwtSyncToken != null and userSyncJson != null}" th:inline="javascript">
-        /*<![CDATA[*/
-        try {
-            localStorage.setItem('token', /*[[${jwtSyncToken}]]*/ '');
-            localStorage.setItem('user', /*[[${userSyncJson}]]*/ '');
-        } catch(e) {}
-        /*]]>*/
-    </script>
-
-    <!-- Script đóng/mở Mobile Sidebar -->
-    <script>
-        function toggleMobileSidebar() {
-            var sidebar = document.getElementById('adminSidebar');
-            var backdrop = document.getElementById('sidebarBackdrop');
-            sidebar.classList.toggle('show-mobile');
-            backdrop.classList.toggle('show');
-        }
-    </script>
-
-    <!-- ==================== 3. FRAGMENT FOOTER ==================== -->
-    <footer th:fragment="footer" class="py-3 px-4 border-top mt-auto bg-white text-muted small">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-                &copy; 2026 <strong>MiniMart Supermarket</strong> &mdash; Phân hệ Quản trị MVC (Spring Boot 3 + Thymeleaf + Bootstrap 5.3)
-            </div>
-            <div class="d-flex gap-3">
-                <a th:href="@{/mvc}" class="text-secondary text-decoration-none">Tổng quan MVC</a>
-                <a href="/" class="text-secondary text-decoration-none">Cửa hàng React</a>
-                <a href="/admin" class="text-secondary text-decoration-none">Admin React</a>
-                <a href="http://localhost:9090" target="_blank" class="text-secondary text-decoration-none">Socket Server 9090</a>
-            </div>
+    <!-- ==================== 3. FRAGMENT FOOTER (THYMELEAF FRAGMENT - TIÊU CHÍ 3.1) ==================== -->
+    <footer th:fragment="footer" class="py-2 px-3 mt-2 text-muted small">
+        <div class="standalone-only-chrome border-top pt-2 d-flex justify-content-between align-items-center">
+            <span>&copy; 2026 <strong>MiniMart Supermarket</strong></span>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script th:if="${jwtSyncToken != null and userSyncJson != null}" th:inline="javascript">
+            /*<![CDATA[*/
+            try {
+                localStorage.setItem('token', /*[[${jwtSyncToken}]]*/ '');
+                localStorage.setItem('user', /*[[${userSyncJson}]]*/ '');
+            } catch(e) {}
+            /*]]>*/
+        </script>
+        <!-- Script tự động đồng bộ chiều cao khung nhúng vào React SPA -->
+        <script>
+            (function() {
+                if (window.self === window.top) return;
+                function notifyHeight() {
+                    var body = document.body;
+                    var html = document.documentElement;
+                    var height = Math.max(
+                        body ? body.scrollHeight : 0,
+                        body ? body.offsetHeight : 0,
+                        html ? html.offsetHeight : 0
+                    );
+                    window.parent.postMessage({
+                        type: 'THYMELEAF_EMBED_RESIZE',
+                        height: height + 24,
+                        path: window.location.pathname + window.location.search
+                    }, '*');
+                }
+                window.addEventListener('load', notifyHeight);
+                window.addEventListener('resize', notifyHeight);
+                if (typeof ResizeObserver !== 'undefined' && document.body) {
+                    var ro = new ResizeObserver(notifyHeight);
+                    ro.observe(document.body);
+                }
+                document.addEventListener('shown.bs.modal', function() {
+                    window.parent.postMessage({ type: 'THYMELEAF_EMBED_MODAL', open: true }, '*');
+                });
+                document.addEventListener('hidden.bs.modal', function() {
+                    notifyHeight();
+                });
+                setTimeout(notifyHeight, 150);
+                setTimeout(notifyHeight, 500);
+            })();
+        </script>
     </footer>
 
 </div>

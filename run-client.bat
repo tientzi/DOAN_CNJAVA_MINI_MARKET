@@ -24,3 +24,4 @@ if "%opt%"=="1" (
     echo Lua chon khong hop le.
 )
 pause
+

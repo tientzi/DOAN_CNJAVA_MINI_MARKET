@@ -10,15 +10,15 @@
     <div th:replace="~{fragments/layout :: alerts}"></div>
 
     <main class="p-3 p-md-4">
-        <!-- Tabs chuyển đổi gộp trang giống hệt React ProductManager -->
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
-            <div class="d-flex gap-2">
-                <a th:href="@{/mvc/products}" class="btn btn-sm btn-primary-custom">
-                    <i class="bi bi-apple me-1"></i> Sản phẩm & Tồn kho
-                </a>
-                <a th:if="${isAdmin}" th:href="@{/mvc/categories}" class="btn btn-sm btn-outline-custom">
-                    <i class="bi bi-folder2-open me-1"></i> Danh mục Ngành hàng
-                </a>
+        <!-- Header & Nút Thêm mới -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div>
+                <h4 class="fw-bold mb-1" style="color: var(--dark);">
+                    <i class="bi bi-apple me-2" style="color: var(--primary);"></i>Quản Lý Sản Phẩm & Tồn Kho
+                </h4>
+                <p class="text-muted small mb-0">
+                    Tổng cộng <strong th:text="${totalItems}">41</strong> mặt hàng • Trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages > 0 ? totalPages : 1}">1</strong>
+                </p>
             </div>
             <div th:if="${isAdmin}">
                 <a th:href="@{/mvc/products/new}" class="btn btn-primary-custom btn-sm">

@@ -3,9 +3,11 @@ import api from '../../services/api'
 import { Eye, CheckCircle2, Truck, XCircle, FileText, ShoppingBag, MapPin, User, DollarSign, Calendar, Download, Printer, Search, X } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import { matchesRelative } from '../../utils/searchUtils'
+import ThymeleafEmbed from '../../components/ThymeleafEmbed'
 import './AdminPages.css'
 
 const OrderManager = () => {
+  const [activeTab, setActiveTab] = useState('mvc')
   const [orders, setOrders] = useState([])
   const [filteredOrders, setFilteredOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
@@ -199,7 +201,61 @@ const OrderManager = () => {
 
   return (
     <div className="admin-crud-page">
-      <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="no-print" style={{
+        display: 'flex',
+        gap: '8px',
+        borderBottom: '2px solid #e2e8f0',
+        marginBottom: '20px',
+        paddingBottom: '2px'
+      }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('mvc')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'none',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'mvc' ? 700 : 500,
+            color: activeTab === 'mvc' ? '#ff5722' : '#64748b',
+            borderBottom: activeTab === 'mvc' ? '3px solid #ff5722' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ShoppingBag size={18} /> Quản lý & Xử lý Đơn hàng ({orders.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveTab('print'); fetchOrders(); }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'none',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'print' ? 700 : 500,
+            color: activeTab === 'print' ? '#ff5722' : '#64748b',
+            borderBottom: activeTab === 'print' ? '3px solid #ff5722' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Printer size={18} /> In Phiếu Đóng Gói & Xuất Excel
+        </button>
+      </div>
+
+      {activeTab === 'mvc' ? (
+        <ThymeleafEmbed src="/mvc/orders" />
+      ) : (
+        <>
+          <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2>Quản lý Đơn hàng</h2>
           <p style={{ color: 'var(--admin-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
@@ -687,6 +743,8 @@ const OrderManager = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

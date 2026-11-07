@@ -94,9 +94,6 @@ const UserLayout = () => {
                       🚚 Bảng điều khiển Shipper
                     </Link>
                   )}
-                  <a href="http://localhost:8080/mvc" className="dropdown-item" style={{ color: '#ff5722', fontWeight: 600 }}>
-                    🍃 Phân hệ Thymeleaf MVC
-                  </a>
                   <button onClick={logout} className="dropdown-item logout-btn">
                     <LogOut size={16} /> Đăng xuất
                   </button>
@@ -136,15 +133,7 @@ const UserLayout = () => {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>
-            &copy; 2026 MiniMart Supermarket. All rights reserved. &nbsp;|&nbsp;
-            <a href="http://localhost:8080/mvc" style={{ color: '#ff5722', textDecoration: 'none', fontWeight: 600 }}>
-              🍃 Phân hệ Thymeleaf MVC
-            </a> &nbsp;|&nbsp;
-            <a href="http://localhost:9090" target="_blank" rel="noreferrer" style={{ color: '#64748b', textDecoration: 'none' }}>
-              🌐 Socket Server (:9090)
-            </a>
-          </p>
+          <p>&copy; 2026 MiniMart Supermarket. All rights reserved.</p>
         </div>
       </footer>
       <CustomerFeedbackWidget />

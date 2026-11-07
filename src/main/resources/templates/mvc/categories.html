@@ -10,23 +10,6 @@
     <div th:replace="~{fragments/layout :: alerts}"></div>
 
     <main class="p-3 p-md-4">
-        <!-- Tabs chuyển đổi gộp trang giống hệt React ProductManager -->
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
-            <div class="d-flex gap-2">
-                <a th:href="@{/mvc/products}" class="btn btn-sm btn-outline-custom">
-                    <i class="bi bi-apple me-1"></i> Sản phẩm & Tồn kho
-                </a>
-                <a th:href="@{/mvc/categories}" class="btn btn-sm btn-primary-custom">
-                    <i class="bi bi-folder2-open me-1"></i> Danh mục Ngành hàng
-                </a>
-            </div>
-            <div>
-                <a th:href="@{/mvc/categories/new}" class="btn btn-primary-custom btn-sm">
-                    <i class="bi bi-plus-lg me-1"></i> Thêm Danh Mục Mới
-                </a>
-            </div>
-        </div>
-
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
             <div>
                 <h4 class="fw-bold mb-1" style="color: var(--dark);">
@@ -35,6 +18,11 @@
                 <p class="text-muted small mb-0">
                     Tổng cộng <strong th:text="${totalItems}">5</strong> danh mục • Trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages > 0 ? totalPages : 1}">1</strong>
                 </p>
+            </div>
+            <div>
+                <a th:href="@{/mvc/categories/new}" class="btn btn-primary-custom btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm Danh Mục Mới
+                </a>
             </div>
         </div>
 

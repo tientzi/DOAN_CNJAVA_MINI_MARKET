@@ -7,6 +7,7 @@ import {
   Apple, FolderKanban
 } from 'lucide-react'
 import CategoryManager from './CategoryManager'
+import ThymeleafEmbed from '../../components/ThymeleafEmbed'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import { matchesRelative } from '../../utils/searchUtils'
 import './AdminPages.css'
@@ -14,8 +15,12 @@ import './AdminPages.css'
 const ProductManager = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('tab') === 'categories' ? 'categories' : 'products'
-  const handleTabChange = (tab) => setSearchParams({ tab })
+  const tabParam = searchParams.get('tab')
+  const activeTab = tabParam === 'categories' ? 'categories' : (tabParam === 'price-board' ? 'price-board' : 'products')
+  const handleTabChange = (tab) => {
+    setSearchParams({ tab })
+    fetchData()
+  }
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
@@ -343,10 +348,33 @@ const ProductManager = () => {
         >
           <FolderKanban size={18} /> Danh mục ({categories.length})
         </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('price-board')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'none',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'price-board' ? 700 : 500,
+            color: activeTab === 'price-board' ? '#ff5722' : '#64748b',
+            borderBottom: activeTab === 'price-board' ? '3px solid #ff5722' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Printer size={18} /> Bảng giá & Xuất Excel
+        </button>
       </div>
 
-      {activeTab === 'categories' ? (
-        <CategoryManager onCategoryUpdated={fetchData} />
+      {activeTab === 'products' ? (
+        <ThymeleafEmbed src="/mvc/products" />
+      ) : activeTab === 'categories' ? (
+        <ThymeleafEmbed src="/mvc/categories" />
       ) : (
         <>
           <div className="crud-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>

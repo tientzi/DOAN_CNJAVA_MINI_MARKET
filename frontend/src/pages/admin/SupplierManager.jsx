@@ -5,6 +5,7 @@ import {
   Search, X, Package, Eye, EyeOff, Trash2, Calendar, CheckCircle2
 } from 'lucide-react'
 import { matchesRelative } from '../../utils/searchUtils'
+import ThymeleafEmbed from '../../components/ThymeleafEmbed'
 import './AdminPages.css'
 
 const SupplierManager = () => {
@@ -248,7 +249,7 @@ const SupplierManager = () => {
         paddingBottom: '8px'
       }}>
         <button
-          onClick={() => setActiveTab('SUPPLIERS')}
+          onClick={() => { setActiveTab('SUPPLIERS'); fetchSuppliers(); }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -260,7 +261,7 @@ const SupplierManager = () => {
             border: 'none',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'SUPPLIERS' ? '#2563eb' : '#f1f5f9',
+            backgroundColor: activeTab === 'SUPPLIERS' ? '#ff5722' : '#f1f5f9',
             color: activeTab === 'SUPPLIERS' ? '#ffffff' : '#64748b'
           }}
         >
@@ -290,7 +291,7 @@ const SupplierManager = () => {
             border: 'none',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'BRANDS' ? '#2563eb' : '#f1f5f9',
+            backgroundColor: activeTab === 'BRANDS' ? '#ff5722' : '#f1f5f9',
             color: activeTab === 'BRANDS' ? '#ffffff' : '#64748b'
           }}
         >
@@ -308,8 +309,12 @@ const SupplierManager = () => {
         </button>
       </div>
 
-      {/* ==================== TAB 1: NHÀ CUNG CẤP ==================== */}
+      {/* ==================== TAB 1: NHÀ CUNG CẤP (THYMELEAF MVC EMBEDDED) ==================== */}
       {activeTab === 'SUPPLIERS' && (
+        <ThymeleafEmbed src="/mvc/suppliers" />
+      )}
+
+      {activeTab === 'REACT_SUPPLIERS' && (
         <>
           <div className="crud-header">
             <div>
