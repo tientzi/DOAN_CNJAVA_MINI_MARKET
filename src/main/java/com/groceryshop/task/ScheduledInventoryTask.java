@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +31,7 @@ public class ScheduledInventoryTask {
      * Luồng thực thi: scheduled-scan-*
      */
     @Scheduled(fixedRate = 300000, initialDelay = 20000)
+    @Transactional(readOnly = true)
     public void scanLowStockAndExpiringBatches() {
         String threadName = Thread.currentThread().getName();
         log.info("[Luồng: {}] [ĐỊNH KỲ] Bắt đầu quét kiểm tra tự động cảnh báo kho hàng...", threadName);
