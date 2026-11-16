@@ -98,10 +98,8 @@ public class CartService {
             throw new BadRequestException("Sản phẩm hiện không hoạt động");
         }
 
-        Inventory inventory = product.getInventory();
-        int availableStock = inventory != null ? inventory.getCurrentStock() : 0;
-        if (availableStock <= 0) {
-            throw new BadRequestException("Sản phẩm đã hết hàng");
+        if (quantity < 1) {
+            throw new BadRequestException("Số lượng sản phẩm phải từ 1 trở lên");
         }
 
         Cart cart = getOrCreateCart(userId);
@@ -117,10 +115,6 @@ public class CartService {
             cartItem = CartItem.builder().cart(cart).product(product).build();
         }
 
-        if (newQuantity > availableStock) {
-            throw new BadRequestException("Không thể mua vượt quá số lượng tồn kho có sẵn (" + availableStock + ")");
-        }
-
         cartItem.setQuantity(newQuantity);
         cartItemRepository.save(cartItem);
 
@@ -129,18 +123,15 @@ public class CartService {
 
     @Transactional
     public CartDTO updateCartItem(Long userId, Long productId, int quantity) {
-        Product product = productRepository.findById(productId)
+        if (quantity < 1) {
+            throw new BadRequestException("Số lượng sản phẩm phải từ 1 trở lên");
+        }
+        productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
 
         Cart cart = getOrCreateCart(userId);
         CartItem cartItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
-
-        Inventory inventory = product.getInventory();
-        int availableStock = inventory != null ? inventory.getCurrentStock() : 0;
-        if (quantity > availableStock) {
-            throw new BadRequestException("Không thể mua vượt quá số lượng tồn kho có sẵn (" + availableStock + ")");
-        }
 
         cartItem.setQuantity(quantity);
         cartItemRepository.save(cartItem);

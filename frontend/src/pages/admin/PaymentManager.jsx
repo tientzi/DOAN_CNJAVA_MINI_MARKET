@@ -92,22 +92,26 @@ const PaymentManager = () => {
 
   const [txFilter, setTxFilter] = useState('ALL')
   const [approvingId, setApprovingId] = useState(null)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [approveConfirmTx, setApproveConfirmTx] = useState(null)
 
-  const handleApprovePayment = async (tx) => {
-    const isCod = tx.paymentMethod === 'COD' || tx.paymentMethod === 'TIEN_MAT'
-    const confirmPrompt = isCod
-      ? `Xác nhận DUYỆT ĐƠN HÀNG COD #${tx.orderId}?\nĐơn hàng sẽ chuyển sang "Đã xác nhận" và sẵn sàng xuất hiện trong Quản lý giao hàng để phân công shipper.`
-      : `Xác nhận DUYỆT THANH TOÁN QR cho đơn #${tx.orderId} (Số tiền: ${tx.amount?.toLocaleString()}đ)?\nThanh toán sẽ thành "Hoàn thành" và đơn hàng chuyển sang "Đã xác nhận" để giao hàng.`
-      
-    if (!window.confirm(confirmPrompt)) return
+  const handleApprovePayment = (tx) => {
+    setApproveConfirmTx(tx)
+  }
+
+  const executeApprovePayment = async () => {
+    if (!approveConfirmTx) return
+    const tx = approveConfirmTx
+    setApproveConfirmTx(null)
     setApprovingId(tx.id)
+    setErrorMsg('')
     try {
       const res = await api.post(`/api/admin/payments/transactions/${tx.id}/approve`)
-      setSuccessMsg(`✅ ${res.data?.message || 'Đã duyệt giao dịch thành công!'}`)
+      setSuccessMsg(res.data?.message || 'Đã duyệt giao dịch thành công.')
       setTimeout(() => setSuccessMsg(''), 3500)
       fetchPaymentData()
     } catch (err) {
-      alert('Lỗi khi duyệt: ' + (err.response?.data?.error || err.message))
+      setErrorMsg('Lỗi khi duyệt: ' + (err.response?.data?.error || err.message))
     } finally {
       setApprovingId(null)
     }
@@ -180,6 +184,9 @@ const PaymentManager = () => {
         <div style={{ padding: '0.75rem 1.25rem', background: '#dcfce7', color: '#15803d', borderRadius: '10px', marginBottom: '1.5rem', fontWeight: 600 }}>
           {successMsg}
         </div>
+      )}
+      {errorMsg && (
+        <div className="form-error">{errorMsg}</div>
       )}
 
       {/* TAB 1: CẤU HÌNH PHƯƠNG THỨC THANH TOÁN */}
@@ -521,18 +528,23 @@ const PaymentManager = () => {
                           )}
                           {tx.paymentStatus === 'PENDING' && (
                             <span className="status-pill warning">
-                              ⏳ Chờ duyệt
+                              Chờ duyệt
+                            </span>
+                          )}
+                          {tx.paymentStatus === 'UNPAID' && (
+                            <span className="status-pill warning" style={{ background: '#ffedd5', color: '#c2410c', borderColor: '#fdba74' }}>
+                              Chưa thanh toán
                             </span>
                           )}
                           {tx.paymentStatus === 'FAILED' && (
                             <span className="status-pill danger">
-                              ✕ Từ chối / Đã hủy
+                              Thanh toán không thành công
                             </span>
                           )}
                         </td>
                         <td>{tx.paidAt ? new Date(tx.paidAt).toLocaleString('vi-VN') : tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '—'}</td>
                         <td>
-                          {tx.paymentStatus === 'PENDING' ? (
+                          {(tx.paymentStatus === 'PENDING' || tx.paymentStatus === 'UNPAID') ? (
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                               <Link
                                 to="/admin/orders"
@@ -588,6 +600,34 @@ const PaymentManager = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+      {/* Modal xác nhận duyệt thanh toán */}
+      {approveConfirmTx && (
+        <div className="admin-form-overlay" style={{ zIndex: 1200 }}>
+          <div className="admin-popup-form glass" style={{ maxWidth: '460px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+              Xác nhận duyệt giao dịch đơn #{approveConfirmTx.orderId}
+            </h3>
+            <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.55, marginBottom: '1.5rem' }}>
+              {(approveConfirmTx.paymentMethod === 'COD' || approveConfirmTx.paymentMethod === 'TIEN_MAT')
+                ? `Xác nhận duyệt đơn hàng COD #${approveConfirmTx.orderId}? Đơn hàng sẽ chuyển sang "Đã xác nhận" để phân công Shipper.`
+                : `Xác nhận đã nhận ${(approveConfirmTx.amount || 0).toLocaleString()}đ và duyệt thanh toán QR cho đơn #${approveConfirmTx.orderId}?`}
+            </p>
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button type="button" onClick={() => setApproveConfirmTx(null)} className="btn btn-outline">
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={executeApprovePayment}
+                className="btn btn-primary"
+                style={{ background: '#16a34a', borderColor: '#16a34a' }}
+              >
+                Xác nhận duyệt
+              </button>
+            </div>
           </div>
         </div>
       )}

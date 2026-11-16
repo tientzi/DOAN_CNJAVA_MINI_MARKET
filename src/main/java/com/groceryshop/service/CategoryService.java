@@ -7,6 +7,10 @@ import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.mapper.EntityMapper;
 import com.groceryshop.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -20,6 +24,23 @@ public class CategoryService {
 
     @Autowired
     private com.groceryshop.repository.ProductRepository productRepository;
+
+    public Page<CategoryDTO> getPaged(String keyword, String sortBy, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.ASC, "id");
+        if ("name_asc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.ASC, "name");
+        } else if ("name_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "name");
+        } else if ("newest".equalsIgnoreCase(sortBy) || "id_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "id");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            return categoryRepository.findByNameContainingIgnoreCase(keyword.trim(), pageable)
+                    .map(EntityMapper::toCategoryDTO);
+        }
+        return categoryRepository.findAll(pageable).map(EntityMapper::toCategoryDTO);
+    }
 
     public List<CategoryDTO> getAllCategories() {
         return categoryRepository.findAll().stream()

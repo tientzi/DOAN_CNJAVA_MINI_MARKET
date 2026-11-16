@@ -14,6 +14,8 @@ const OrderManager = () => {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+  const [confirmModal, setConfirmModal] = useState(null) // { orderId, newStatus, title, message, isDanger }
 
   const fetchOrders = async () => {
     try {
@@ -92,10 +94,17 @@ const OrderManager = () => {
         </span>
       )
     }
+    if (payStatus === 'UNPAID') {
+      return (
+        <span className="status-pill warning" style={{ fontSize: '0.75rem', padding: '2px 7px', background: '#ffedd5', color: '#c2410c', border: '1px solid #fdba74', display: 'inline-block' }}>
+          Chưa thanh toán
+        </span>
+      )
+    }
     if (payStatus === 'FAILED') {
       return (
         <span className="status-pill inactive" style={{ fontSize: '0.75rem', padding: '2px 7px', display: 'inline-block' }}>
-          Thanh toán hủy
+          Thanh toán không thành công
         </span>
       )
     }
@@ -106,22 +115,43 @@ const OrderManager = () => {
     )
   }
 
-  const handleUpdateStatus = async (orderId, newStatus, targetOrder = null) => {
+  const handleUpdateStatus = (orderId, newStatus, targetOrder = null) => {
     const currentOrd = targetOrder || orders.find(o => o.id === orderId) || selectedOrder
     const isCod = currentOrd?.paymentMethod === 'COD' || currentOrd?.paymentMethod === 'TIEN_MAT'
+    const isUnpaid = currentOrd?.paymentStatus === 'UNPAID'
 
-    let confirmMsg = `Bạn có chắc muốn cập nhật trạng thái đơn hàng sang "${getStatusLabel(newStatus)}"?`
+    let title = 'Xác nhận cập nhật trạng thái'
+    let message = `Bạn có chắc muốn cập nhật trạng thái đơn hàng #${orderId} sang "${getStatusLabel(newStatus)}"?`
+    let isDanger = false
+
     if (newStatus === 'DA_XAC_NHAN') {
-      confirmMsg = isCod
-        ? `Xác nhận DUYỆT ĐƠN HÀNG COD #${orderId}?\n• Đơn hàng chuyển sang "Đã xác nhận".\n• Tự động duyệt thanh toán COD (thu tiền khi giao nhận).\n• Đơn hàng sẵn sàng để phân công Shipper giao ngay.`
-        : `Xác nhận DUYỆT ĐƠN HÀNG & THANH TOÁN QR #${orderId}?\n• Đơn hàng chuyển sang "Đã xác nhận".\n• Tự động xác nhận ĐÃ THANH TOÁN (Số tiền: ${currentOrd?.finalAmount?.toLocaleString()}đ).\n• Đơn hàng sẵn sàng để phân công Shipper giao ngay.`
+      title = `Duyệt đơn hàng #${orderId}`
+      if (isCod) {
+        message = `Xác nhận duyệt đơn hàng COD #${orderId}? Đơn hàng sẽ chuyển sang "Đã xác nhận", duyệt thanh toán COD và sẵn sàng phân công Shipper.`
+      } else if (isUnpaid) {
+        message = `Khách hàng chưa bấm xác nhận chuyển khoản trên web (đang ở trạng thái Chưa thanh toán). Nếu bạn đã kiểm tra nhận đủ ${(currentOrd?.finalAmount || 0).toLocaleString()}đ, bấm Xác nhận để duyệt đơn #${orderId}.`
+      } else {
+        message = `Xác nhận duyệt đơn hàng & thanh toán QR #${orderId} (${(currentOrd?.finalAmount || 0).toLocaleString()}đ)? Đơn hàng sẽ chuyển sang "Đã xác nhận" để phân công Shipper.`
+      }
     } else if (newStatus === 'HUY') {
-      confirmMsg = `⚠️ CẢNH BÁO: Xác nhận HỦY ĐƠN HÀNG #${orderId}?\n• Đơn hàng và thanh toán sẽ hủy (FAILED).\n• Tự động hoàn trả tồn kho theo từng lô hạn dùng.`
+      title = `Hủy đơn hàng #${orderId}`
+      message = `Xác nhận hủy đơn hàng #${orderId}? Thanh toán sẽ bị hủy (FAILED) và hệ thống tự động hoàn trả tồn kho theo từng lô hạn dùng.`
+      isDanger = true
+    } else if (newStatus === 'HOAN_THANH') {
+      title = `Hoàn thành đơn hàng #${orderId}`
+      message = `Xác nhận đánh dấu đơn hàng #${orderId} đã hoàn thành?`
     }
 
-    if (!window.confirm(confirmMsg)) return
+    setConfirmModal({ orderId, newStatus, title, message, isDanger })
+  }
+
+  const executeUpdateStatus = async () => {
+    if (!confirmModal) return
+    const { orderId, newStatus } = confirmModal
+    setConfirmModal(null)
     setUpdating(true)
     setError('')
+    setSuccessMsg('')
     try {
       const response = await api.put(`/api/admin/orders/${orderId}/status`, { status: newStatus })
       const updatedOrder = response.data
@@ -129,11 +159,15 @@ const OrderManager = () => {
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder(updatedOrder)
       }
-      fetchOrders()
-      alert(newStatus === 'DA_XAC_NHAN' ? '✅ Đã duyệt đơn hàng và thanh toán thành công!' : 'Cập nhật trạng thái thành công!')
+      await fetchOrders()
+      setSuccessMsg(newStatus === 'DA_XAC_NHAN'
+        ? `Đã duyệt đơn hàng #${orderId} và xác nhận thanh toán thành công.`
+        : `Đã cập nhật trạng thái đơn #${orderId} thành công.`)
+      setTimeout(() => setSuccessMsg(''), 4000)
     } catch (err) {
       console.error(err)
-      alert(err.response?.data?.error || 'Lỗi khi cập nhật trạng thái đơn hàng')
+      setError(err.response?.data?.error || `Lỗi khi cập nhật trạng thái đơn hàng #${orderId}`)
+      await fetchOrders()
     } finally {
       setUpdating(false)
     }
@@ -155,12 +189,14 @@ const OrderManager = () => {
 
   const getStatusLabel = (status) => {
     switch (status) {
+      case 'CHO_TIEP_NHAN': return 'Chờ xử lý (Hàng đợi)'
       case 'CHO_XAC_NHAN': return 'Chờ xác nhận'
       case 'DA_XAC_NHAN': return 'Đã xác nhận'
       case 'DA_NHAN_DON': return 'Shipper nhận đơn'
       case 'DANG_GIAO': return 'Đang giao hàng'
       case 'DA_GIAO': return 'Đã giao hàng'
       case 'HOAN_THANH': return 'Hoàn thành'
+      case 'TU_CHOI': return 'Từ chối (Thiếu kho)'
       case 'HUY': return 'Đã hủy'
       default: return status
     }
@@ -168,10 +204,12 @@ const OrderManager = () => {
 
   const getStatusPillClass = (status) => {
     switch (status) {
+      case 'CHO_TIEP_NHAN': return 'warning'
       case 'CHO_XAC_NHAN': return 'warning'
       case 'DA_XAC_NHAN': return 'active' // Blueish in CSS
       case 'DANG_GIAO': return 'active' // Violet/Blueish
       case 'HOAN_THANH': return 'active' // Greenish
+      case 'TU_CHOI':
       case 'HUY': return 'inactive' // Redish
       default: return ''
     }
@@ -252,10 +290,12 @@ const OrderManager = () => {
               }}
             >
               <option value="ALL">Tất cả đơn hàng</option>
+              <option value="CHO_TIEP_NHAN">Chờ xử lý (Hàng đợi)</option>
               <option value="CHO_XAC_NHAN">Chờ xác nhận</option>
               <option value="DA_XAC_NHAN">Đã xác nhận</option>
               <option value="DANG_GIAO">Đang giao hàng</option>
               <option value="HOAN_THANH">Hoàn thành</option>
+              <option value="TU_CHOI">Từ chối (Thiếu kho)</option>
               <option value="HUY">Đã hủy</option>
             </select>
           </div>
@@ -269,6 +309,11 @@ const OrderManager = () => {
         </div>
       </div>
 
+      {successMsg && (
+        <div style={{ padding: '0.75rem 1.15rem', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600 }}>
+          {successMsg}
+        </div>
+      )}
       {error && <div className="form-error">{error}</div>}
 
       {/* Danh sách đơn hàng */}
@@ -670,7 +715,7 @@ const OrderManager = () => {
                   </button>
                 )}
 
-                {(selectedOrder.status === 'HOAN_THANH' || selectedOrder.status === 'HUY') && (
+                {(selectedOrder.status === 'HOAN_THANH' || selectedOrder.status === 'HUY' || selectedOrder.status === 'TU_CHOI') && (
                   <span style={{ 
                     padding: '0.5rem 1rem', 
                     borderRadius: '8px', 
@@ -680,10 +725,42 @@ const OrderManager = () => {
                     fontSize: '0.9rem',
                     border: '1px solid ' + (selectedOrder.status === 'HOAN_THANH' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)')
                   }}>
-                    {selectedOrder.status === 'HOAN_THANH' ? 'Đơn hàng đã hoàn thành' : 'Đơn hàng đã bị hủy'}
+                    {selectedOrder.status === 'HOAN_THANH' ? 'Đơn hàng đã hoàn thành' : selectedOrder.status === 'TU_CHOI' ? 'Đơn bị từ chối (Thiếu tồn kho)' : 'Đơn hàng đã bị hủy'}
                   </span>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận thao tác (tránh phụ thuộc window.confirm bị trình duyệt chặn) */}
+      {confirmModal && (
+        <div className="admin-form-overlay" style={{ zIndex: 1200 }}>
+          <div className="admin-popup-form glass" style={{ maxWidth: '460px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>{confirmModal.title}</h3>
+            <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.55, marginBottom: '1.5rem' }}>
+              {confirmModal.message}
+            </p>
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="btn btn-outline"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={executeUpdateStatus}
+                disabled={updating}
+                className="btn btn-primary"
+                style={confirmModal.isDanger
+                  ? { background: '#dc2626', borderColor: '#dc2626' }
+                  : { background: '#10b981', borderColor: '#10b981' }}
+              >
+                <CheckCircle2 size={16} /> Xác nhận
+              </button>
             </div>
           </div>
         </div>

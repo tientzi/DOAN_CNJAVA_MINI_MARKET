@@ -5,23 +5,46 @@ import { Trash2, ShoppingBag, ArrowRight, Info, Tag } from 'lucide-react'
 import './Cart.css'
 
 const Cart = () => {
-  const { cart, cartSubtotal, updateCartItem, removeCartItem, loading } = useContext(CartContext)
+  const {
+    cart,
+    computeSubtotal,
+    updateCartItem,
+    removeCartItem,
+    loading,
+    selectedProductIds,
+    setSelectedProductIds
+  } = useContext(CartContext)
   const [errorMap, setErrorMap] = useState({})
   const navigate = useNavigate()
 
-  const handleQtyChange = async (productId, newQty, maxStock) => {
-    if (newQty < 1) return
-    if (newQty > maxStock) {
-      setErrorMap(prev => ({ ...prev, [productId]: `Chỉ còn ${maxStock} sản phẩm trong kho` }))
-      setTimeout(() => {
-        setErrorMap(prev => ({ ...prev, [productId]: '' }))
-      }, 2000)
-      return
+  const allProductIds = (cart.items || []).map(i => i.productId)
+  const effectiveSelectedIds = selectedProductIds.filter(id => allProductIds.includes(id))
+  const isAllSelected = allProductIds.length > 0 && effectiveSelectedIds.length === allProductIds.length
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedProductIds([])
+    } else {
+      setSelectedProductIds(allProductIds)
     }
+  }
+
+  const toggleSelectItem = (productId) => {
+    setSelectedProductIds(prev =>
+      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+    )
+  }
+
+  const selectedItems = (cart.items || []).filter(i => effectiveSelectedIds.includes(i.productId))
+  const selectedSubtotal = computeSubtotal ? computeSubtotal(selectedItems) : 0
+
+  const handleQtyChange = async (productId, newQty) => {
+    const parsedQty = Number(newQty)
+    if (!Number.isFinite(parsedQty) || parsedQty < 1) return
 
     setErrorMap(prev => ({ ...prev, [productId]: '' }))
     try {
-      await updateCartItem(productId, newQty)
+      await updateCartItem(productId, parsedQty)
     } catch (err) {
       setErrorMap(prev => ({ ...prev, [productId]: err }))
     }
@@ -47,7 +70,30 @@ const Cart = () => {
         <div className="cart-grid">
           {/* List Items */}
           <div className="cart-items-list glass">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderBottom: '1px solid #e2e8f0',
+              marginBottom: '6px'
+            }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.94rem', color: '#0f172a' }}>
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={toggleSelectAll}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                />
+                <span>Chọn tất cả ({cart.items.length} sản phẩm)</span>
+              </label>
+              <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                Đã chọn <strong>{selectedItems.length}</strong> sản phẩm
+              </span>
+            </div>
+
             {cart.items.map(item => {
+              const isChecked = effectiveSelectedIds.includes(item.productId)
               const isMultiBatchSplit = item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity
               const saleQty = item.saleBatchQuantity || 0
               const normalQty = item.quantity - saleQty
@@ -65,12 +111,28 @@ const Cart = () => {
               }
 
               return (
-                <div key={item.id} className="cart-item-row" style={{ flexWrap: 'wrap', gap: '12px' }}>
-                  <div className="cart-item-img">
+                <div
+                  key={item.id}
+                  className="cart-item-row"
+                  style={{
+                    gap: '12px',
+                    padding: '1rem 8px',
+                    background: isChecked ? 'transparent' : '#f8fafc',
+                    opacity: isChecked ? 1 : 0.72
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleSelectItem(item.productId)}
+                    style={{ width: '18px', height: '18px', flexShrink: 0, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                    title="Chọn sản phẩm để thanh toán"
+                  />
+                  <div className="cart-item-img" style={{ flexShrink: 0 }}>
                     <img src={item.productMainImage} alt={item.productName} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=150&auto=format&fit=crop' }} />
                   </div>
                   
-                  <div className="cart-item-details" style={{ flex: '1 1 220px' }}>
+                  <div className="cart-item-details" style={{ flex: '1 1 180px', minWidth: 0 }}>
                     <Link to={`/products/${item.productId}`} className="item-name">{item.productName}</Link>
                     <span className="item-stock-warning" style={{ display: 'block', marginTop: '2px' }}>Kho còn: {item.maxStock} sản phẩm</span>
 
@@ -125,10 +187,34 @@ const Cart = () => {
 
                   <div className="cart-item-qty">
                     <div className="quantity-selector qty-cart">
-                      <button onClick={() => handleQtyChange(item.productId, item.quantity - 1, item.maxStock)}>-</button>
-                      <span>{item.quantity}</span>
-                      <button onClick={() => handleQtyChange(item.productId, item.quantity + 1, item.maxStock)}>+</button>
+                      <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)}>-</button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          if (!isNaN(val) && val >= 1) {
+                            handleQtyChange(item.productId, val)
+                          }
+                        }}
+                        style={{
+                          width: '46px',
+                          textAlign: 'center',
+                          border: 'none',
+                          background: 'transparent',
+                          fontWeight: 600,
+                          fontSize: '0.95rem',
+                          outline: 'none'
+                        }}
+                      />
+                      <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)}>+</button>
                     </div>
+                    {item.quantity > item.maxStock && (
+                      <span style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 600, textAlign: 'center' }}>
+                        Vượt tồn kho ({item.maxStock}) - Sẽ kiểm tra ở hàng đợi
+                      </span>
+                    )}
                     {errorMap[item.productId] && <span className="item-qty-error">{errorMap[item.productId]}</span>}
                   </div>
 
@@ -149,8 +235,8 @@ const Cart = () => {
             <h3>Tóm tắt đơn hàng</h3>
             
             <div className="summary-row">
-              <span>Tạm tính ({cart.items.length} mặt hàng)</span>
-              <span>{cartSubtotal.toLocaleString()}đ</span>
+              <span>Tạm tính ({selectedItems.length} sản phẩm đã chọn)</span>
+              <span>{selectedSubtotal.toLocaleString()}đ</span>
             </div>
 
             <div className="summary-row">
@@ -160,11 +246,16 @@ const Cart = () => {
 
             <div className="summary-total-row">
               <span>Tổng thanh toán</span>
-              <strong>{cartSubtotal.toLocaleString()}đ</strong>
+              <strong>{selectedSubtotal.toLocaleString()}đ</strong>
             </div>
 
-            <button onClick={() => navigate('/checkout')} className="btn btn-primary checkout-btn">
-              Tiến hành thanh toán <ArrowRight size={18} />
+            <button
+              onClick={() => navigate('/checkout')}
+              disabled={selectedItems.length === 0}
+              className="btn btn-primary checkout-btn"
+              style={{ opacity: selectedItems.length === 0 ? 0.55 : 1, cursor: selectedItems.length === 0 ? 'not-allowed' : 'pointer' }}
+            >
+              Tiến hành thanh toán ({selectedItems.length}) <ArrowRight size={18} />
             </button>
 
             <Link to="/products" className="continue-shopping">Tiếp tục mua sắm</Link>

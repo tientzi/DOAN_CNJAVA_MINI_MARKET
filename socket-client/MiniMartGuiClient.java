@@ -96,27 +96,33 @@ public class MiniMartGuiClient extends JFrame {
         leftPanel.add(Box.createVerticalStrut(10));
 
         JButton btnPing = createActionButton("1. Kiểm tra máy chủ (PING)", () -> sendCommand("PING"), fontUi);
-        JButton btnProducts = createActionButton("2. Xem DS sản phẩm (PRODUCTS)", () -> sendCommand("PRODUCTS"), fontUi);
-        JButton btnProduct1 = createActionButton("3. Xem chi tiết SP #1", () -> sendCommand("PRODUCT 1"), fontUi);
+        JButton btnStats = createActionButton("2. Thống kê kết nối (STATS)", () -> sendCommand("STATS"), fontUi);
+        JButton btnProducts = createActionButton("3. Xem DS sản phẩm (PRODUCTS)", () -> sendCommand("PRODUCTS"), fontUi);
         JButton btnLowStock = createActionButton("4. SP sắp hết hàng (LOW_STOCK)", () -> sendCommand("LOW_STOCK"), fontUi);
-        JButton btnOrder1 = createActionButton("5. Tra cứu đơn hàng #1", () -> sendCommand("ORDER 1"), fontUi);
-        JButton btnHelp = createActionButton("6. Trợ giúp (HELP)", () -> sendCommand("HELP"), fontUi);
+        JButton btnOrder1 = createActionButton("5. Xem đơn hàng #1 (ORDER 1)", () -> sendCommand("ORDER 1"), fontUi);
+        JButton btnCreateOrder = createActionButton("6. Tạo đơn thật (ORDER 1 1)", () -> sendCommand("ORDER 1 1"), fontUi);
+        JButton btnRestock = createActionButton("7. Cộng kho thật (RESTOCK 1 5)", () -> sendCommand("RESTOCK 1 5"), fontUi);
+        JButton btnHelp = createActionButton("8. Trợ giúp (HELP)", () -> sendCommand("HELP"), fontUi);
         JButton btnClear = createActionButton("Xóa màn hình log", () -> logArea.setText(""), fontUi);
 
         leftPanel.add(btnPing);
-        leftPanel.add(Box.createVerticalStrut(6));
+        leftPanel.add(Box.createVerticalStrut(5));
+        leftPanel.add(btnStats);
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(btnProducts);
-        leftPanel.add(Box.createVerticalStrut(6));
-        leftPanel.add(btnProduct1);
-        leftPanel.add(Box.createVerticalStrut(6));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(btnLowStock);
-        leftPanel.add(Box.createVerticalStrut(6));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(btnOrder1);
-        leftPanel.add(Box.createVerticalStrut(6));
+        leftPanel.add(Box.createVerticalStrut(5));
+        leftPanel.add(btnCreateOrder);
+        leftPanel.add(Box.createVerticalStrut(5));
+        leftPanel.add(btnRestock);
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(btnHelp);
-        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(btnClear);
-        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(Box.createVerticalStrut(10));
 
         // Nút Demo 3 Client cùng lúc (Rubric 5.4)
         JButton btnDemo3 = new JButton("<html><center><b>⚡ DEMO 3 CLIENT<br>ĐA LUỒNG CÙNG LÚC</b></center></html>");
@@ -253,9 +259,10 @@ public class MiniMartGuiClient extends JFrame {
 
         ExecutorService pool = Executors.newFixedThreadPool(3);
         CountDownLatch startGun = new CountDownLatch(1);
+        CountDownLatch allConnectedLatch = new CountDownLatch(3);
         CountDownLatch doneGate = new CountDownLatch(3);
 
-        String[] testCmds = {"PRODUCTS", "LOW_STOCK", "PRODUCT 1"};
+        String[] testCmds = {"STATS", "LOW_STOCK", "PRODUCTS"};
 
         for (int i = 1; i <= 3; i++) {
             final int cId = i;
@@ -268,19 +275,28 @@ public class MiniMartGuiClient extends JFrame {
                          PrintWriter w = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8), true)) {
 
                         while (!"READY".equals(r.readLine())) {}
+                        // Đợi cả 3 client đều đã mở kết nối thành công để connectedClientsCount đạt đỉnh cùng lúc
+                        allConnectedLatch.countDown();
+                        allConnectedLatch.await();
+
                         w.println(cmd);
 
                         String line;
                         int linesCount = 0;
+                        StringBuilder detail = new StringBuilder();
                         while ((line = r.readLine()) != null) {
                             if ("END_OF_RESPONSE".equals(line)) break;
                             linesCount++;
+                            if (line.contains("connectedClientsCount") || line.contains("currentWorkerThread")) {
+                                detail.append(" | ").append(line.trim());
+                            }
                         }
                         w.println("QUIT");
 
-                        appendLog(String.format(" -> [Client #%d] Gửi '%s' THÀNH CÔNG! Đã nhận %d dòng phản hồi tức thời.", cId, cmd, linesCount));
+                        appendLog(String.format(" -> [Client #%d] Gửi '%s' THÀNH CÔNG! Nhận %d dòng phản hồi%s", cId, cmd, linesCount, detail));
                     }
                 } catch (Exception ex) {
+                    allConnectedLatch.countDown();
                     appendLog(String.format(" -> [Client #%d] LỖI: %s", cId, ex.getMessage()));
                 } finally {
                     doneGate.countDown();

@@ -40,4 +40,5 @@ public class OrderDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<OrderItemDTO> items;
+    private List<Long> selectedProductIds;
 }

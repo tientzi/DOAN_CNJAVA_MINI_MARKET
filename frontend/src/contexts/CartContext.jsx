@@ -7,7 +7,17 @@ export const CartContext = createContext()
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState({ items: [] })
   const [loading, setLoading] = useState(false)
+  const [selectedProductIds, setSelectedProductIds] = useState([])
   const { isAuthenticated } = useContext(AuthContext)
+
+  const syncSelectedWithCart = (items) => {
+    const validIds = (items || []).map(i => i.productId)
+    setSelectedProductIds(prev => {
+      if (!prev || prev.length === 0) return validIds
+      const filtered = prev.filter(id => validIds.includes(id))
+      return filtered.length > 0 ? filtered : validIds
+    })
+  }
 
   const fetchCart = async () => {
     if (!isAuthenticated) return
@@ -15,6 +25,7 @@ export const CartProvider = ({ children }) => {
     try {
       const response = await api.get('/api/cart')
       setCart(response.data)
+      syncSelectedWithCart(response.data?.items)
     } catch (error) {
       console.error('Không thể lấy giỏ hàng', error)
     } finally {
@@ -62,11 +73,13 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setCart({ items: [] })
+    setSelectedProductIds([])
   }
 
-  const totalItemsCount = cart.items ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0
-  
-  const cartSubtotal = cart.items ? cart.items.reduce((sum, item) => {
+  // Icon giỏ hàng hiển thị số lượng từng loại sản phẩm trong giỏ (VD: SP1 có 5 món -> hiển thị 1)
+  const totalItemsCount = cart.items ? cart.items.length : 0
+
+  const computeSubtotal = (itemsList) => (itemsList || []).reduce((sum, item) => {
     if (item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity) {
       const salePart = item.saleBatchQuantity * item.saleBatchPrice
       const regularPart = (item.quantity - item.saleBatchQuantity) * item.productPrice
@@ -76,10 +89,16 @@ export const CartProvider = ({ children }) => {
       ? item.saleBatchPrice
       : (item.productSalePrice != null ? item.productSalePrice : item.productPrice)
     return sum + price * item.quantity
-  }, 0) : 0
+  }, 0)
+
+  const cartSubtotal = computeSubtotal(cart.items)
 
   return (
-    <CartContext.Provider value={{ cart, loading, fetchCart, addToCart, updateCartItem, removeCartItem, clearCart, totalItemsCount, cartSubtotal }}>
+    <CartContext.Provider value={{
+      cart, loading, fetchCart, addToCart, updateCartItem, removeCartItem, clearCart,
+      totalItemsCount, cartSubtotal, computeSubtotal,
+      selectedProductIds, setSelectedProductIds
+    }}>
       {children}
     </CartContext.Provider>
   )

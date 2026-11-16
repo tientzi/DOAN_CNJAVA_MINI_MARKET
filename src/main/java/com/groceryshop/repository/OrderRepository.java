@@ -2,6 +2,7 @@ package com.groceryshop.repository;
 
 import com.groceryshop.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
@@ -10,4 +11,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatusAndShipperIsNullOrderByCreatedAtAsc(String status);
     List<Order> findByShipperIdOrderByCreatedAtDesc(Long shipperId);
     List<Order> findByShipperIdAndStatusOrderByCreatedAtDesc(Long shipperId, String status);
+    List<Order> findByStatusOrderByCreatedAtAsc(String status);
+    List<Order> findByStatusAndCreatedAtAfterOrderByCreatedAtAsc(String status, LocalDateTime after);
 }

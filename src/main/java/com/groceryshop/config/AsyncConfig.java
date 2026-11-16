@@ -29,7 +29,7 @@ public class AsyncConfig {
     public ThreadPoolTaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(2);
-        scheduler.setThreadNamePrefix("scheduled-scan-");
+        scheduler.setThreadNamePrefix("scheduling-");
         scheduler.initialize();
         return scheduler;
     }

@@ -51,8 +51,18 @@ public class AuthController {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
         String role = userPrincipal.getAuthorities().iterator().next().getAuthority();
+        UserDTO profile = userService.getUserProfile(userPrincipal.getId());
 
-        return ResponseEntity.ok(new AuthResponse(jwt, userPrincipal.getId(), userPrincipal.getUsername(), userPrincipal.getEmail(), role));
+        return ResponseEntity.ok(new AuthResponse(
+                jwt,
+                userPrincipal.getId(),
+                userPrincipal.getUsername(),
+                userPrincipal.getEmail(),
+                role,
+                profile.getFullName(),
+                profile.getMembershipTier(),
+                profile.getLoyaltyPoints()
+        ));
     }
 
     @PostMapping("/register")

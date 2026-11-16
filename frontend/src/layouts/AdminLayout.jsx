@@ -4,7 +4,7 @@ import { AuthContext } from '../contexts/AuthContext'
 import { 
   LayoutDashboard, FolderKanban, Apple, PackageCheck, Tag, ShoppingBag, 
   Users, Star, LogOut, Home, ClipboardList, Truck, FileText, CalendarRange,
-  BarChart3, Receipt, CreditCard, Building2, ShoppingCart
+  BarChart3, Receipt, CreditCard, Building2, ShoppingCart, Layers, DatabaseBackup
 } from 'lucide-react'
 import './Layouts.css'
 
@@ -54,6 +54,13 @@ const AdminLayout = () => {
         { path: '/admin/coupons', name: 'Mã giảm giá', icon: <Tag size={18} /> },
         { path: '/admin/users', name: 'Người dùng', icon: <Users size={18} /> },
         { path: '/admin/reviews', name: 'Đánh giá', icon: <Star size={18} /> },
+      ]
+    },
+    {
+      group: 'HỆ THỐNG & HÀNG ĐỢI',
+      items: [
+        { path: '/admin/queue', name: 'Hàng đợi xử lý', icon: <Layers size={18} /> },
+        { path: '/admin/backups', name: 'Sao lưu & Phục hồi', icon: <DatabaseBackup size={18} /> },
       ]
     }
   ]

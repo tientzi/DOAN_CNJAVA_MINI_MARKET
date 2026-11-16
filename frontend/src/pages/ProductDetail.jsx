@@ -190,19 +190,34 @@ const ProductDetail = () => {
 
           <p className="detail-desc-text">{product.description || 'Sản phẩm siêu thị mini đảm bảo an toàn chất lượng cho mọi nhà.'}</p>
 
-          {!isOutOfStock && (
-            <div className="detail-actions-box">
-              <div className="quantity-selector">
-                <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
-                <span>{quantity}</span>
-                <button onClick={() => setQuantity(q => Math.min(product.currentStock, q + 1))}>+</button>
-              </div>
-
-              <button className="btn btn-primary detail-cart-btn" onClick={handleAddToCart}>
-                <ShoppingCart size={20} /> Thêm vào giỏ hàng
-              </button>
+          <div className="detail-actions-box">
+            <div className="quantity-selector">
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10)
+                  setQuantity(isNaN(val) || val < 1 ? 1 : val)
+                }}
+                style={{
+                  width: '54px',
+                  textAlign: 'center',
+                  border: 'none',
+                  background: 'transparent',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  outline: 'none'
+                }}
+              />
+              <button onClick={() => setQuantity(q => q + 1)}>+</button>
             </div>
-          )}
+
+            <button className="btn btn-primary detail-cart-btn" onClick={handleAddToCart}>
+              <ShoppingCart size={20} /> Thêm vào giỏ hàng
+            </button>
+          </div>
 
           {cartSuccess && <div className="detail-alert success-alert">{cartSuccess}</div>}
           {cartError && <div className="detail-alert error-alert">{cartError}</div>}

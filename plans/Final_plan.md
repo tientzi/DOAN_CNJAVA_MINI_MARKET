@@ -386,3 +386,257 @@ Theo yêu cầu chuẩn hóa giao diện và trải nghiệm người dùng, to�
      - Máy trạm gửi lệnh `LOW_STOCK` qua đường truyền mạng TCP → Luồng `socket-worker` của máy chủ vào thẳng SQL Server lấy các mặt hàng tồn dưới 10 → Gửi danh sách về lại màn hình của máy trạm đó.
      - Máy trạm gửi `ORDER 1` → Máy chủ vào SQL Server lấy thông tin đơn hàng `#1` trả về ngay.
      - Khi nhân viên bấm thoát (`QUIT`) hoặc tắt phần mềm, luồng phục vụ tương ứng tự động thu dọn và đóng kết nối mạng an toàn (`try-with-resources`) mà không làm ảnh hưởng đến bất kỳ máy trạm nào khác đang mở.
+
+---
+
+## PHẦN 14: KỊCH BẢN KIỂM THỬ NGHIỆP VỤ CHI TIẾT (BUSINESS TEST SCENARIOS – ĐA LUỒNG, ĐỒNG THỜI & CLIENT-SERVER)
+
+Dưới đây là bộ kịch bản kiểm thử nghiệp vụ thực tế (gồm cả **Kiểm thử thao tác trực tiếp khi Demo** và **Kiểm thử tự động bằng JUnit**) cho 3 hạng mục kỹ thuật trọng tâm của đồ án:
+
+---
+
+### 14.1. NHÓM 1: KỊCH BẢN KIỂM THỬ ĐA LUỒNG & TÁC VỤ NỀN (`@Async` & `@Scheduled` – Tiêu chí 5.1)
+
+#### Kịch bản TC-MT01: Xử lý thông báo và ghi nhật ký chạy ngầm bất đồng bộ (`@Async`) khi Khách đặt hàng hoặc Admin duyệt đơn
+- **Mục tiêu nghiệp vụ**: Đảm bảo khi khách hàng bấm đặt mua hàng (hoặc khi Admin/Shipper cập nhật trạng thái đơn hàng trên giao diện React SPA), đơn hàng được phản hồi ngay lập tức trên giao diện mà không bị nghẽn bởi tác vụ gửi thông báo xác nhận và ghi nhật ký kiểm toán (Audit Log).
+- **File xử lý chính**: [`AsyncConfig.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/config/AsyncConfig.java), [`AsyncNotificationService.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/AsyncNotificationService.java), [`OrderService.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/OrderService.java).
+- **Điều kiện tiên quyết**: Server Spring Boot đang chạy ở cổng `8080`.
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. **Cách 1 (Thao tác trên giao diện React SPA)**:
+     - Mở trình duyệt truy cập `http://localhost:8080/admin/orders` (hoặc đặt một đơn hàng mới từ giỏ hàng khách hàng tại `http://localhost:8080/`).
+     - Bấm đổi trạng thái một đơn hàng (ví dụ: từ `CHO_XAC_NHAN` sang `DA_XAC_NHAN` hoặc `DANG_GIAO`).
+     - Quan sát thời gian phản hồi trên màn hình Web và mở cửa sổ Terminal đang chạy Server Spring Boot để kiểm tra Log.
+  2. **Cách 2 (Chạy lệnh kiểm thử JUnit tự động)**:
+     ```powershell
+     .\mvnw.cmd test -Dtest=ConcurrencyAndMultiThreadingTest#testAsyncThreadPoolExecution
+     ```
+- **Kết quả kỳ vọng (Expected Result)**:
+  - **Về mặt nghiệp vụ**: Giao diện Web báo cập nhật/đặt hàng thành công tức thì (dưới `100ms`), người dùng không bị xoay vòng chờ.
+  - **Về mặt kỹ thuật (Quan sát trên Console Log)**:
+    - Luồng chính (`http-nio-8080-exec-*`) hoàn tất lưu đơn vào SQL Server và trả kết quả HTTP ngay.
+    - Một luồng phụ độc lập từ Thread Pool (`async-task-1`, `async-task-2`...) tự động xuất hiện trong Log:
+      ```text
+      [Luồng: async-task-1] Đang xử lý tạo thông báo ngầm cho đơn hàng #...
+      [Luồng: async-task-1] Hoàn tất gửi thông báo cho đơn hàng #... Tổng số thông báo đã gửi: 1
+      [Luồng: async-task-2] [AUDIT LOG] Người dùng '...' thực hiện hành động: UPDATE_ORDER_STATUS...
+      ```
+
+---
+
+#### Kịch bản TC-MT02: Tự động quét kho định kỳ phát hiện hàng sắp hết & lô hàng cận hạn sử dụng (`@Scheduled`)
+- **Mục tiêu nghiệp vụ**: Hệ thống tự động đóng vai trò "nhân viên trực kho tự động", định kỳ quét toàn bộ kho hàng để phát hiện sớm các mặt hàng có tồn kho dưới ngưỡng an toàn (`< 10`) và các lô hàng thực phẩm sắp hết hạn sử dụng (còn `< 7 ngày` hoặc đã quá hạn) để cảnh báo cho Quản trị viên.
+- **File xử lý chính**: [`ScheduledInventoryTask.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/task/ScheduledInventoryTask.java).
+- **Điều kiện tiên quyết**: Server Spring Boot vừa khởi động (tác vụ tự động kích hoạt lần đầu sau `20 giây` kể từ khi bật Server, và lặp lại mỗi `5 phút`).
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. Khởi chạy Server bằng lệnh `.\mvnw.cmd spring-boot:run`.
+  2. Đợi đúng `20 giây` sau khi Server báo `Started GroceryShopApplication`.
+  3. Quan sát cửa sổ Console Log của Server.
+- **Kết quả kỳ vọng (Expected Result)**:
+  - **Về mặt nghiệp vụ**: Không cần bất kỳ thao tác bấm nút nào từ người dùng, hệ thống tự động liệt kê chính xác danh sách các mặt hàng đang có tồn kho thấp (ví dụ: tồn kho `1`, ngưỡng tối thiểu `10`) và các lô hàng (`product_batches`) cận date/hết hạn trong CSDL SQL Server.
+  - **Về mặt kỹ thuật (Quan sát trên Console Log)**:
+    - Log in ra từ luồng lập lịch riêng biệt (`scheduled-scan-1`):
+      ```text
+      [Luồng: scheduled-scan-1] [ĐỊNH KỲ] Bắt đầu quét kiểm tra tự động cảnh báo kho hàng...
+      [Luồng: scheduled-scan-1] [CẢNH BÁO TỒN THẤP] Phát hiện ... sản phẩm có tồn kho dưới 10 đơn vị:
+         -> Sản phẩm: '...' | Tồn hiện tại: 1 | Tồn tối thiểu: 10
+      [Luồng: scheduled-scan-1] [CẢNH BÁO HẠN DÙNG] Phát hiện 16 lô sản phẩm cận date (dưới 7 ngày) hoặc hết hạn:
+         -> Lô: '...' | SP: '...' | HSD: ... | SL còn lại: ...
+      [Luồng: scheduled-scan-1] [ĐỊNH KỲ] Quét kiểm tra kho hàng hoàn tất.
+      ```
+
+---
+
+### 14.2. NHÓM 2: KỊCH BẢN KIỂM THỬ XỬ LÝ ĐỒNG THỜI (CONCURRENCY CONTROL – Tiêu chí 5.2)
+
+#### Kịch bản TC-CC01: Chống bán lố / Chống âm kho khi 20 khách hàng cùng đặt mua 1 sản phẩm chỉ còn 10 món trong kho (Pessimistic Write Lock)
+- **Mục tiêu nghiệp vụ**: Chứng minh khi có đợt cao điểm (Flash Sale) nhiều khách hàng cùng bấm thanh toán một mặt hàng sắp hết kho tại cùng một mili-giây, hệ thống chỉ bán đúng số lượng hàng đang có thực trong kho, tuyệt đối **không bán lố đơn hàng** và **không để tồn kho bị âm (< 0)** mà không cần sửa đổi cấu trúc bảng CSDL.
+- **File xử lý chính**:
+  - [`InventoryRepository.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/repository/InventoryRepository.java) – Phương thức `findByProductIdForUpdate(Long productId)` với `@Lock(LockModeType.PESSIMISTIC_WRITE)`.
+  - [`OrderService.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/service/OrderService.java) – Khóa dòng tồn kho trong Transaction khi tạo đơn hàng.
+  - [`ConcurrencyAndMultiThreadingTest.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/test/java/com/groceryshop/concurrency/ConcurrencyAndMultiThreadingTest.java).
+- **Dữ liệu đầu vào (Input)**:
+  - Mặt hàng kiểm thử có số lượng tồn kho ban đầu: **`currentStock = 10`**.
+  - Số lượng khách hàng mua đồng thời: **`20 luồng (20 Threads)`** dùng `CountDownLatch` để xuất phát cùng một thời điểm, mỗi khách đặt mua `1 sản phẩm`.
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. Mở Terminal tại thư mục gốc dự án và chạy lệnh kiểm thử tự động:
+     ```powershell
+     .\mvnw.cmd test -Dtest=ConcurrencyAndMultiThreadingTest#testConcurrentOrderCreationPreventsNegativeStock
+     ```
+  2. Quan sát bảng tổng kết kết quả in ra trên màn hình Terminal.
+- **Kết quả kỳ vọng (Expected Result)**:
+  - **10 luồng đầu tiên** lấy được khóa Pessimistic Lock lần lượt trừ kho từ `10 -> 9 -> 8 -> ... -> 0` và tạo thành công **đúng 10 đơn hàng**.
+  - **10 luồng tiếp theo** vào sau khi kho đã về `0` sẽ nhận ngoại lệ nghiệp vụ `"Số lượng sản phẩm trong kho không đủ"` và bị từ chối giao dịch (**10 đơn thất bại**).
+  - **Tồn kho cuối cùng trong CSDL**: Bằng **`0`** (tuyệt đối không bị âm `-10`).
+  - Kết quả in trên Console:
+    ```text
+    === KẾT QUẢ KIỂM THỬ ĐẶT HÀNG ĐỒNG THỜI (PESSIMISTIC LOCK) ===
+    Tồn kho ban đầu   : 10
+    Số luồng mua hàng : 20 (mỗi luồng mua 1 sản phẩm)
+    Số đơn thành công : 10
+    Số đơn bị từ chối : 10 (do hết hàng)
+    Tồn kho cuối cùng : 0
+    ```
+
+---
+
+#### Kịch bản TC-CC02: So sánh lỗi thất thoát dữ liệu (Race Condition) giữa biến đếm thường (`int`) và biến nguyên tử (`AtomicInteger`)
+- **Mục tiêu nghiệp vụ**: Chứng minh sự cần thiết của cơ chế đồng bộ hóa luồng (`AtomicInteger`) khi thống kê bộ đếm lượt truy cập / số lượng thông báo / số phiên làm việc của nhiều người dùng cùng lúc.
+- **File xử lý chính**: [`ConcurrencyAndMultiThreadingTest.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/test/java/com/groceryshop/concurrency/ConcurrencyAndMultiThreadingTest.java).
+- **Dữ liệu đầu vào (Input)**: `50 luồng` chạy song song, mỗi luồng tăng biến đếm `1.000 lần` (Tổng kỳ vọng = `50.000`).
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. Chạy lệnh kiểm thử:
+     ```powershell
+     .\mvnw.cmd test -Dtest=ConcurrencyAndMultiThreadingTest#testRaceConditionVsAtomicCounter
+     ```
+- **Kết quả kỳ vọng (Expected Result)**:
+  - Biến `unsafeCounter` (không đồng bộ) bị ghi đè giữa các luồng nên kết quả luôn nhỏ hơn `50.000` (bị mất hàng nghìn lượt đếm).
+  - Biến `atomicCounter` (`AtomicInteger`) bảo toàn chính xác tuyệt đối **`50.000 / 50.000`** lượt đếm.
+
+---
+
+### 14.3. NHÓM 3: KỊCH BẢN KIỂM THỬ LẬP TRÌNH MẠNG CLIENT–SERVER ĐA LUỒNG (Tiêu chí 5.3 & 5.4)
+
+#### Kịch bản TC-NET01: Nhân viên dùng Phần mềm Máy trạm Đồ họa (Java Swing GUI Client) tra cứu dữ liệu thời gian thực
+- **Mục tiêu nghiệp vụ**: Kiểm thử chương trình máy trạm độc lập kết nối qua giao thức TCP Socket tới Server cổng `9090` để nhân viên thu ngân/thủ kho tra cứu nhanh danh sách mặt hàng, cảnh báo tồn kho thấp và trạng thái đơn hàng thật trong SQL Server.
+- **File xử lý chính**:
+  - Server: [`MiniMartSocketServer.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/socket/MiniMartSocketServer.java) (Cổng `9090`).
+  - Client GUI: [`MiniMartGuiClient.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/socket-client/MiniMartGuiClient.java).
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. Đảm bảo Server Spring Boot đang chạy (cổng `8080` cho Web và cổng `9090` cho Socket Server).
+  2. Khởi chạy chương trình Giao diện Đồ họa Client bằng lệnh:
+     ```powershell
+     java socket-client/MiniMartGuiClient.java
+     ```
+     *(Hoặc chạy file `run-client.bat` và chọn phím `1`)*.
+  3. Trên cửa sổ **"MiniMart Socket Client – Hệ Thống Tra Cứu Kho & Đơn Hàng Đa Luồng"**:
+     - Bấm nút **`PING`** → Kiểm tra kết nối và xem tên luồng Server đang phục vụ.
+     - Bấm nút **`PRODUCTS`** → Lấy danh sách sản phẩm và số lượng tồn kho thực tế từ SQL Server.
+     - Bấm nút **`LOW_STOCK`** → Lấy danh sách các mặt hàng đang có tồn kho báo động (`< 10`).
+     - Bấm nút **`PRODUCT 1`** hoặc **`ORDER 1`** → Tra cứu chi tiết sản phẩm mã `#1` và đơn hàng mã `#1`.
+- **Kết quả kỳ vọng (Expected Result)**:
+  - Cửa sổ GUI hiển thị tiếng Việt có dấu rõ nét 100%, phản hồi dữ liệu trực tiếp từ SQL Server trong vòng vài mili-giây kèm tên luồng xử lý của Server (ví dụ: `PONG | Server đang hoạt động tốt | Luồng xử lý: socket-worker-1`).
+
+---
+
+#### Kịch bản TC-NET02: Kiểm thử Đa luồng nhiều Máy trạm (Multi-Client) kết nối và truy vấn đồng thời vào Socket Server
+- **Mục tiêu nghiệp vụ**: Chứng minh khi nhiều nhân viên tại các quầy thu ngân/kho khác nhau cùng mở phần mềm Client và bấm tra cứu tại cùng một thời điểm, Socket Server cổng `9090` sử dụng `ExecutorService` phân bổ mỗi Client cho một luồng `socket-worker-*` riêng biệt để phục vụ song song, không làm treo hay chặn (block) bất kỳ máy trạm nào.
+- **File xử lý chính**: [`MiniMartSocketServer.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/main/java/com/groceryshop/socket/MiniMartSocketServer.java), [`MiniMartGuiClient.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/socket-client/MiniMartGuiClient.java), [`SocketServerMultiClientTest.java`](file:///d:/NAM%20CUOI/CNJAVA/DO_AN_CONGNGHEJAVA/src/test/java/com/groceryshop/socket/SocketServerMultiClientTest.java).
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  - **Cách 1 (Demo trực quan bằng 1 nút bấm trên Giao diện Đồ họa Swing)**:
+    1. Trên cửa sổ `MiniMartGuiClient`, bấm vào nút màu cam **"⚡ DEMO 3 CLIENT ĐA LUỒNG CÙNG LÚC"**.
+    2. Hệ thống lập tức khởi tạo 3 luồng Client độc lập (`Client-1`, `Client-2`, `Client-3`) cùng mở kết nối TCP đến cổng `9090` tại cùng một thời điểm để gửi các lệnh `PING`, `LOW_STOCK`, `PRODUCTS`.
+  - **Cách 2 (Chạy kiểm thử JUnit tự động với 5 Client đồng thời)**:
+    ```powershell
+    .\mvnw.cmd test -Dtest=SocketServerMultiClientTest
+    ```
+- **Kết quả kỳ vọng (Expected Result)**:
+  - Cả 3 Client (trên GUI) hoặc 5 Client (trong JUnit Test) đều nhận được phản hồi đồng thời mà không cần chờ nhau.
+  - Trong khung nhật ký hiển thị rõ mỗi Client được một luồng Worker khác nhau của Server phục vụ:
+    - `[Client #1]` → Phục vụ bởi `socket-worker-1`
+    - `[Client #2]` → Phục vụ bởi `socket-worker-2`
+    - `[Client #3]` → Phục vụ bởi `socket-worker-3`
+  - Sau khi hoàn tất truy vấn, kết nối được đóng an toàn (`QUIT`), không rò rỉ tài nguyên mạng.
+
+---
+
+#### Kịch bản TC-NET03: Kiểm thử Client Console, Client HTTP (`HttpURLConnection`) và Dashboard giám sát cổng 9090 trên Trình duyệt
+- **Mục tiêu nghiệp vụ**: Chứng minh tính đa năng của hệ thống mạng Client–Server: hỗ trợ cả giao thức TCP Socket thuần qua Terminal, giao thức HTTP REST qua `HttpURLConnection`, và tự động nhận diện trình duyệt Web truy cập vào cổng `9090` để trả về bảng Dashboard UTF-8.
+- **Các bước thực hiện kiểm thử (Test Steps)**:
+  1. **Kiểm thử trên Trình duyệt Web**: Mở `http://localhost:9090` trên trình duyệt → Quan sát bảng **MiniMart TCP Socket Server – Port 9090** hiển thị trạng thái `ONLINE`, số kết nối, số luồng `socket-worker-*` và danh sách sản phẩm mẫu chuẩn tiếng Việt UTF-8.
+  2. **Kiểm thử Client Console**:
+     ```powershell
+     "PING`nLOW_STOCK`nQUIT" | java socket-client/MiniMartClient.java
+     ```
+  3. **Kiểm thử Client HTTP (`HttpURLConnection`)**:
+     ```powershell
+     java socket-client/MiniMartHttpClient.java
+     ```
+- **Kết quả kỳ vọng (Expected Result)**:
+  - Cả 3 phương thức kết nối (Browser, TCP Console Client, HTTP Client) đều trả về dữ liệu tiếng Việt UTF-8 chuẩn xác, khớp 100% với dữ liệu trên giao diện React SPA (`http://localhost:8080`).
+
+---
+
+## PHẦN 15: TÓM TẮT CÁC KỊCH BẢN BẰNG SƠ ĐỒ LUỒNG (FLOWCHART & SEQUENCE DIAGRAM)
+
+### 15.1. Sơ đồ Luồng 1: Đa luồng Bất đồng bộ (`@Async`) & Tác vụ Định kỳ (`@Scheduled`) – Tiêu chí 5.1
+
+```mermaid
+flowchart TD
+    subgraph ASYNC["1A. LUỒNG ĐẶT HÀNG & DUYỆT ĐƠN BẤT ĐỒNG BỘ (@Async)"]
+        U["Khách hàng / Admin bấm Đặt hàng hoặc Cập nhật đơn"] --> MAIN["Luồng chính HTTP (http-nio-8080-exec-*)"]
+        MAIN --> DB1["Kiểm tra & Lưu đơn hàng vào SQL Server"]
+        DB1 --> RESP["Trả kết quả NGAY LẬP TỨC về giao diện React SPA (< 100ms)"]
+        DB1 -. "Bàn giao ngầm (Không chặn luồng chính)" .-> POOL["ThreadPoolTaskExecutor (AsyncConfig)"]
+        POOL --> T1["Luồng phụ async-task-1: Tạo & Gửi thông báo đơn hàng"]
+        POOL --> T2["Luồng phụ async-task-2: Ghi nhật ký Audit Log"]
+        T1 --> ATOM1["Tăng bộ đếm an toàn AtomicInteger"]
+    end
+
+    subgraph SCHED["1B. LUỒNG TUẦN TRA KHO TỰ ĐỘNG ĐỊNH KỲ (@Scheduled)"]
+        TIMER["Bộ định thời Spring Scheduler (Mỗi 5 phút / Initial 20s)"] --> SCAN["Luồng nền scheduled-scan-1 (ScheduledInventoryTask)"]
+        SCAN --> Q1["Quét bảng Inventory: Lọc SP có currentStock < 10"]
+        SCAN --> Q2["Quét bảng ProductBatch: Lọc lô hàng HSD <= 7 ngày"]
+        Q1 --> LOGW["Xuất báo cáo CẢNH BÁO TỒN THẤP & CẬN DATE ra Console Log"]
+        Q2 --> LOGW
+    end
+```
+
+---
+
+### 15.2. Sơ đồ Luồng 2: Xử lý Đồng thời – Khóa Bi quan Chống Âm Kho (`@Lock(PESSIMISTIC_WRITE)`) – Tiêu chí 5.2
+
+```mermaid
+flowchart TD
+    START["Tình huống: Kho chỉ còn 10 sản phẩm\n20 Khách hàng (20 Threads) cùng bấm MUA tại cùng 1 mili-giây"] --> LOCK_QUEUE["Đi vào OrderService.createOrder (@Transactional)\nGọi InventoryRepository.findByProductIdForUpdate"]
+    LOCK_QUEUE --> SQL_LOCK["SQL Server thiết lập Khóa Bi Quan (PESSIMISTIC_WRITE / UPDLOCK)\nXếp hàng tuần tự từng luồng một"]
+
+    SQL_LOCK --> CHECK{"Kiểm tra tồn kho hiện tại:\ncurrentStock >= số lượng mua?"}
+
+    CHECK -- "Đúng (Luồng Khách #1 đến #10:\nTồn kho từ 10 giảm dần về 1)" --> DEDUCT["Trừ tồn kho: currentStock = currentStock - 1\nLưu Order vào CSDL"]
+    DEDUCT --> UNLOCK1["Commit Transaction & Mở khóa cho luồng kế tiếp"]
+    UNLOCK1 --> OK["KẾT QUẢ NHÓM 1:\nĐúng 10 Đơn hàng THÀNH CÔNG\nTồn kho về 0"]
+
+    CHECK -- "Sai (Luồng Khách #11 đến #20:\nLúc này currentStock đã bằng 0)" --> REJECT["Ném ngoại lệ: 'Số lượng sản phẩm trong kho không đủ'\nRollback Transaction & Mở khóa"]
+    REJECT --> FAIL["KẾT QUẢ NHÓM 2:\n10 Đơn hàng BỊ TỪ CHỐI AN TOÀN\nTuyệt đối KHÔNG bị âm kho (-10)"]
+```
+
+---
+
+### 15.3. Sơ đồ Luồng 3: Lập trình Mạng Client–Server Đa luồng (Cổng 9090) – Tiêu chí 5.3 & 5.4
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C1 as Máy trạm Nhân viên 1 (Client #1)
+    participant C2 as Máy trạm Nhân viên 2 (Client #2)
+    participant C3 as Máy trạm Nhân viên 3 (Client #3)
+    participant L as Luồng Lễ tân (server-listener :9090)
+    participant W as ThreadPool (socket-worker-1..N)
+    participant DB as SQL Server (supermarket_db1)
+
+    Note over C1,C3: 3 Nhân viên tại 3 quầy bấm tra cứu CÙNG MỘT LÚC
+    C1->>L: Kết nối TCP + Gửi lệnh "PING"
+    L->>W: Cử luồng riêng socket-worker-1 phục vụ Client #1
+    C2->>L: Kết nối TCP + Gửi lệnh "LOW_STOCK"
+    L->>W: Cử luồng riêng socket-worker-2 phục vụ Client #2
+    C3->>L: Kết nối TCP + Gửi lệnh "PRODUCTS"
+    L->>W: Cử luồng riêng socket-worker-3 phục vụ Client #3
+
+    Note over L,W: Cả 3 luồng socket-worker-1, 2, 3 chạy SONG SONG (Không chờ nhau)
+    par Xử lý song song trên 3 luồng Worker
+        W-->>C1: [socket-worker-1] Trả về "PONG | Server đang hoạt động tốt"
+    and
+        W->>DB: [socket-worker-2] Truy vấn mặt hàng tồn kho < 10
+        DB-->>W: Danh sách mặt hàng sắp hết
+        W-->>C2: [socket-worker-2] Trả kết quả UTF-8 về Client #2
+    and
+        W->>DB: [socket-worker-3] Truy vấn danh sách sản phẩm & giá bán
+        DB-->>W: Danh sách sản phẩm
+        W-->>C3: [socket-worker-3] Trả kết quả UTF-8 về Client #3
+    end
+
+    C1->>W: Gửi lệnh "QUIT"
+    C2->>W: Gửi lệnh "QUIT"
+    C3->>W: Gửi lệnh "QUIT"
+    Note over W: Đóng Socket an toàn (try-with-resources), thu hồi luồng về Pool
+```

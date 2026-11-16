@@ -10,6 +10,11 @@ import com.groceryshop.mapper.EntityMapper;
 import com.groceryshop.repository.CategoryRepository;
 import com.groceryshop.repository.CouponRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -30,6 +35,23 @@ public class CouponService {
         return couponRepository.findAll().stream()
                 .map(EntityMapper::toCouponDTO)
                 .collect(Collectors.toList());
+    }
+
+    public Page<CouponDTO> getPaged(String keyword, String sortBy, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.ASC, "id");
+        if ("newest".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "id");
+        } else if ("code_asc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.ASC, "code");
+        } else if ("code_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "code");
+        } else if ("value_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "discountValue");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), size, sort);
+        String kw = keyword == null ? "" : keyword.trim();
+        return couponRepository.findByCodeContainingIgnoreCaseOrDescriptionContainingIgnoreCase(kw, kw, pageable)
+                .map(EntityMapper::toCouponDTO);
     }
 
     public List<CouponDTO> getActivePublicCoupons() {
@@ -111,10 +133,24 @@ public class CouponService {
     }
 
     @Transactional
+    public CouponDTO toggleCouponStatus(Long id) {
+        Coupon coupon = couponRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy coupon với id: " + id));
+        boolean current = coupon.getIsActive() == null || coupon.getIsActive();
+        coupon.setIsActive(!current);
+        return EntityMapper.toCouponDTO(couponRepository.save(coupon));
+    }
+
+    @Transactional
     public void deleteCoupon(Long id) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy coupon với id: " + id));
-        couponRepository.delete(coupon);
+        try {
+            couponRepository.delete(coupon);
+            couponRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BadRequestException("Không thể xóa mã giảm giá này vì đã được áp dụng trong đơn hàng");
+        }
     }
 
     public BigDecimal calculateDiscount(String code, BigDecimal orderAmount) {

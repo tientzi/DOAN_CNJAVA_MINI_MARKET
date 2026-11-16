@@ -82,7 +82,8 @@ public class DeliveryController {
     @PostMapping("/reassign")
     public ResponseEntity<?> reassignOrder(@RequestBody Map<String, Object> payload) {
         Long orderId = Long.valueOf(payload.get("orderId").toString());
-        Long newShipperId = Long.valueOf(payload.get("newShipperId").toString());
+        Object shipperObj = payload.get("newShipperId") != null ? payload.get("newShipperId") : payload.get("shipperId");
+        Long newShipperId = Long.valueOf(shipperObj.toString());
         return ResponseEntity.ok(deliveryService.reassignOrder(orderId, newShipperId));
     }
 }

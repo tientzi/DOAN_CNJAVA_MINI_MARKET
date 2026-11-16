@@ -8,8 +8,48 @@ import {
 } from 'lucide-react'
 import './Loyalty.css'
 
+const GUEST_LOYALTY_DEFAULT = {
+  fullName: 'Khách vãng lai',
+  membershipTier: 'BRONZE',
+  currentTier: 'BRONZE',
+  loyaltyPoints: 0,
+  nextTier: 'SILVER',
+  pointsToNextTier: 100,
+  progressPercentage: 0,
+  allTiers: [
+    {
+      tierKey: 'BRONZE',
+      minPoints: 0,
+      discountPercent: 0,
+      isCurrent: true,
+      benefits: ['Tích lũy 1% giá trị đơn hàng (1 điểm mỗi 100.000đ)', 'Áp dụng các mã voucher khuyến mãi công khai']
+    },
+    {
+      tierKey: 'SILVER',
+      minPoints: 100,
+      discountPercent: 2,
+      isCurrent: false,
+      benefits: ['Tích lũy 1% + Giảm ngay 2% trên mọi đơn hàng', 'Quà tặng sinh nhật thành viên MiniMart', 'Ưu tiên nhận thông báo flash sale']
+    },
+    {
+      tierKey: 'GOLD',
+      minPoints: 500,
+      discountPercent: 5,
+      isCurrent: false,
+      benefits: ['Tích lũy 1.5% + Giảm ngay 5% trên mọi đơn hàng', 'Giảm 30% phí vận chuyển cho mọi đơn', 'Ưu tiên đóng gói và chuẩn bị hàng siêu tốc', 'Voucher tri ân định kỳ hàng tháng']
+    },
+    {
+      tierKey: 'DIAMOND',
+      minPoints: 1000,
+      discountPercent: 8,
+      isCurrent: false,
+      benefits: ['Tích lũy 2% + Giảm ngay 8% trên mọi đơn hàng', 'Miễn phí vận chuyển 100% cho mọi đơn', 'Đường dây nóng hỗ trợ VIP 24/7', 'Quà tri ân đặc quyền cuối năm']
+    }
+  ]
+}
+
 const Loyalty = () => {
-  const { user } = useContext(AuthContext)
+  const { user, token, updateUser } = useContext(AuthContext)
   const [loyaltyData, setLoyaltyData] = useState(null)
   const [coupons, setCoupons] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,20 +59,35 @@ const Loyalty = () => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [loyaltyRes, couponsRes] = await Promise.all([
-          api.get('/api/users/loyalty-info'),
-          api.get('/api/public/coupons')
-        ])
-        setLoyaltyData(loyaltyRes.data)
-        setCoupons(couponsRes.data || [])
+        const hasSession = Boolean(token || localStorage.getItem('token'))
+        if (hasSession) {
+          const [loyaltyRes, couponsRes] = await Promise.all([
+            api.get('/api/users/loyalty-info'),
+            api.get('/api/public/coupons')
+          ])
+          setLoyaltyData(loyaltyRes.data)
+          setCoupons(couponsRes.data || [])
+          if (loyaltyRes.data && updateUser) {
+            updateUser({
+              fullName: loyaltyRes.data.fullName,
+              membershipTier: loyaltyRes.data.membershipTier || loyaltyRes.data.currentTier || 'BRONZE',
+              loyaltyPoints: loyaltyRes.data.loyaltyPoints ?? 0
+            })
+          }
+        } else {
+          const couponsRes = await api.get('/api/public/coupons')
+          setLoyaltyData(GUEST_LOYALTY_DEFAULT)
+          setCoupons(couponsRes.data || [])
+        }
       } catch (err) {
         console.error('Lỗi khi tải thông tin loyalty:', err)
+        setLoyaltyData(GUEST_LOYALTY_DEFAULT)
       } finally {
         setLoading(false)
       }
     }
     fetchData()
-  }, [])
+  }, [token])
 
   const handleCopyCode = (code) => {
     navigator.clipboard.writeText(code)

@@ -1,9 +1,9 @@
 # TỔNG HỢP TOÀN BỘ QUY TRÌNH NGHIỆP VỤ HỆ THỐNG SIÊU THỊ TIỆN LỢI MINIMART
 
 **Dự án**: Siêu thị tiện lợi MiniMart (Hệ thống Bán hàng Đa kênh & Điều phối Giao hàng)  
-**Công nghệ**: Backend Java Spring Boot 3 + Frontend React Vite  
+**Công nghệ**: Backend Java Spring Boot 3 (Java Concurrency + JPA/SQL Server + ZIP/SHA-256) + Frontend React Vite  
 **Cơ sở dữ liệu**: SQL Server / JPA Hibernate  
-**Tài liệu chuẩn hóa**: Quy trình nghiệp vụ thuần túy (Business Process Management - BPM)  
+**Tài liệu chuẩn hóa**: Quy trình nghiệp vụ tổng hợp toàn hệ thống (đã gộp đầy đủ các quy trình mở rộng & cập nhật mới nhất)  
 
 ---
 
@@ -28,6 +28,13 @@
    - [3.9. Phân hệ Hỗ trợ Trực tuyến & Trợ lý Ảo Thông minh (Support & AI Bot)](#39-phân-hệ-hỗ-trợ-trực-tuyến--trợ-lý-ảo-thông-minh-support--ai-bot)
    - [3.10. Phân hệ Quản lý Tài khoản & Phân quyền Người dùng (User & Security)](#310-phân-hệ-quản-lý-tài-khoản--phân-quyền-người-dùng-user--security)
    - [3.11. Phân hệ Báo cáo Thống kê & Phân tích Hoạt động Kinh doanh (Analytics & Reports)](#311-phân-hệ-báo-cáo-thống-kê--phân-tích-hoạt-động-kinh-doanh-analytics--reports)
+4. [PHẦN IV: CÁC QUY TRÌNH NGHIỆP VỤ MỞ RỘNG & NÂNG CẤP HỆ THỐNG](#phần-iv-các-quy-trình-nghiệp-vụ-mở-rộng--nâng-cấp-hệ-thống)
+   - [4.1. Quy trình Khóa ghi Hệ thống & Chống gửi trùng Đơn hàng (Write-Lock & Idempotency)](#41-quy-trình-khóa-ghi-hệ-thống--chống-gửi-trùng-đơn-hàng)
+   - [4.2. Quy trình Hàng đợi Xử lý Đơn hàng Đa luồng & Dead Letter Queue (Priority Queue & DLQ)](#42-quy-trình-hàng-đợi-xử-lý-đơn-hàng-đa-luồng--dead-letter-queue)
+   - [4.3. Quy trình Thanh toán Online 2 Tầng: Đếm ngược 10s, Lưu `UNPAID` & Tự hủy quá hạn 30s](#43-quy-trình-thanh-toán-online-2-tầng-đếm-ngược-10s-lưu-unpaid--tự-hủy-quá-hạn-30s)
+   - [4.4. Quy trình Sao lưu & Phục hồi Dữ liệu Toàn vẹn (Backup & Restore ZIP + SHA-256)](#44-quy-trình-sao-lưu--phục-hồi-dữ-liệu-toàn-vẹn)
+   - [4.5. Quy trình Giỏ hàng Chọn lọc, Thanh toán Từng phần & Đồng bộ Hội viên VIP](#45-quy-trình-giỏ-hàng-chọn-lọc-thanh-toán-từng-phần--đồng-bộ-hội-viên-vip)
+   - [4.6. Quy trình Duyệt đơn, Điều phối Giao hàng & Chuẩn hóa Dữ liệu Vận hành](#46-quy-trình-duyệt-đơn-điều-phối-giao-hàng--chuẩn-hóa-dữ-liệu-vận-hành)
 
 ---
 
@@ -753,19 +760,200 @@ flowchart TD
 
 ---
 
+## PHẦN IV: CÁC QUY TRÌNH NGHIỆP VỤ MỞ RỘNG & NÂNG CẤP HỆ THỐNG
+
+### 4.1. Quy trình Khóa ghi Hệ thống & Chống gửi trùng Đơn hàng
+
+#### 4.1.1. Khóa thao tác ghi toàn cục (`WriteLockFilter` & `SystemActivityService`)
+- **Mục đích**: Ngăn tình trạng xung đột dữ liệu (dirty write / sai lệch khóa ngoại) khi Quản trị viên đang thực hiện Sao lưu (Backup) hoặc Phục hồi (Restore) cơ sở dữ liệu SQL Server.
+- **Cơ chế hoạt động**:
+  1. Trước khi Backup/Restore chạy, `BackupService` gọi `SystemActivityService` kích hoạt cờ khóa ghi (`writeLocked = true`) kèm lý do cụ thể.
+  2. Mọi HTTP request thay đổi dữ liệu (`POST`, `PUT`, `DELETE`, `PATCH`) đi qua `WriteLockFilter` sẽ bị chặn và trả về HTTP **`503 Service Unavailable`** với mã `SYSTEM_WRITE_LOCKED`, ngoại trừ các luồng quản trị thiết yếu (`/api/admin/backups`, `/api/auth/`, `/oauth2/`, `/login/`).
+  3. Các Worker nền (`OrderQueueService` và `PaymentExpiryScheduler`) cũng tự kiểm tra `systemActivityService.isWriteLocked()` để tạm nhường cho đến khi mở khóa.
+  4. Khi Backup/Restore hoàn tất (hoặc gặp lỗi trong khối `catch`), hệ thống tự động giải phóng khóa ghi.
+
+#### 4.1.2. Chống đặt đơn trùng lặp (`IdempotencyService`)
+- **Mục đích**: Chống tạo 2 đơn hàng giống nhau khi người dùng bấm đúp nút "Xác nhận đặt hàng" hoặc mạng chập chờn gửi lại request.
+- **Quy trình xử lý** (`Checkout.jsx` → `OrderController` → `IdempotencyService`):
+  1. Frontend tạo khóa định danh duy nhất `X-Idempotency-Key` (`crypto.randomUUID()`) cho mỗi lần mở phiên thanh toán.
+  2. Backend kiểm tra 2 lớp trong `ConcurrentHashMap`:
+     - **Lớp 1 (`X-Idempotency-Key`, TTL `10 phút`)**: Nếu request cùng key đang xử lý (`inFlight = true`) → ném lỗi chặn gửi trùng; nếu đã hoàn tất (`result != null`) → trả về luôn `OrderDTO` đã tạo trước đó mà không trừ kho lần 2.
+     - **Lớp 2 (User Guard theo `userId + paymentMethod`, TTL `5 giây`)**: Ngăn 1 tài khoản gửi liên tiếp nhiều yêu cầu đặt đơn giống nhau trong vòng 5 giây.
+  3. Mọi lần chặn trùng/trả đơn cũ đều được ghi vào Nhật ký hoạt động (`IDEMPOTENCY`) để Admin theo dõi.
+
+---
+
+### 4.2. Quy trình Hàng đợi Xử lý Đơn hàng Đa luồng & Dead Letter Queue
+
+#### 4.2.1. Kiến trúc Hàng đợi Ưu tiên 3 Cấp độ (`OrderQueueService`)
+Thay vì trừ kho đồng bộ trực tiếp gây nghẽn khi nhiều khách đặt cùng lúc, quy trình đặt hàng được tách thành **2 pha** trên nền `PriorityBlockingQueue`:
+
+1. **Pha 1 — Tiếp nhận nhanh (`submitOrderToQueue` & `enqueueOrder`)**:
+   - Cho phép thêm giỏ hàng vượt tồn kho để kiểm thử hàng đợi quá tải/hết hàng.
+   - Đơn hàng được lưu vào SQL Server với trạng thái ban đầu `CHO_TIEP_NHAN` và xóa các sản phẩm đã chọn khỏi giỏ.
+   - Đóng gói thành `OrderJob` (`JOB-1001`, ...) đưa vào `PriorityBlockingQueue` ở trạng thái `PENDING`.
+   - Bộ so sánh trong hàng đợi phân xử tranh chấp theo **3 cấp**:
+     - **Cấp 1 (`FIFO`)**: Nếu hai đơn gửi cách nhau `> 10ms` → đơn gửi trước xử lý trước.
+     - **Cấp 2 (`VIP_TIER`)**: Nếu hai đơn gửi gần như đồng thời (`<= 10ms`) → ưu tiên hạng thành viên cao hơn (`DIAMOND > GOLD > SILVER > BRONZE`).
+     - **Cấp 3 (`FAIR_LOTTERY`)**: Nếu cùng đợt `<= 10ms` và cùng hạng thành viên → bốc thăm công bằng theo `lotteryScore`.
+2. **Pha 2 — Worker nền xử lý & giữ kho (`@Scheduled(fixedDelay = 300)`)**:
+   - Worker rút lô Job từ hàng đợi, chuyển trạng thái `PROCESSING` (tiến độ `30%`).
+   - Gọi `orderService.processQueuedOrderStock(orderId)` sử dụng khóa bi quan `@Lock(LockModeType.PESSIMISTIC_WRITE)` trên SQL Server để kiểm tra và trừ tồn kho + trừ lô hạn dùng (FIFO) + ghi `InventoryLedger`:
+     - **Đủ kho + Thanh toán COD**: Job chuyển `SUCCEEDED` (`100%`), đơn chuyển `CHO_XAC_NHAN`.
+     - **Đủ kho + Thanh toán Online (`BANK_TRANSFER` / `MOMO`)**: Job chuyển `WAITING_PAYMENT` (`80%`), giữ kho và chờ Admin xác nhận giao dịch.
+     - **Không đủ tồn kho / Lỗi nghiệp vụ**: Đơn chuyển `HUY` (ghi rõ lý do thiếu hàng), Job chuyển sang trạng thái **`FAILED`** (đưa vào **Dead Letter Queue - DLQ**, `deadLetter = true`).
+
+#### 4.2.2. Quản trị Hàng đợi & Xử lý DLQ (`/admin/queue`)
+Tại màn hình `QueueManager.jsx` (`QueueController`):
+- **Theo dõi realtime**: Xem số Job đang chờ (`PENDING`), đang chạy (`PROCESSING`/`RETRYING`), chờ duyệt thanh toán (`WAITING_PAYMENT`), thành công (`SUCCEEDED`), lỗi (`FAILED`/DLQ) và log hoạt động hệ thống.
+- **Tạm dừng / Tiếp tục Worker (`togglePause`)**: Đóng băng Worker để giữ đơn ở `PENDING`, thuận tiện cho việc demo hàng đợi xếp hàng ưu tiên VIP.
+- **Giả lập lỗi DLQ (`simulateFailure`)**: Tạo 1 Job giả lập lỗi để kiểm thử luồng Dead Letter Queue.
+- **Thử lại (`Retry`)**: Với các Job `FAILED` (ví dụ đơn đặt vượt tồn kho), sau khi Admin nhập thêm kho cho sản phẩm, bấm **Retry** sẽ đưa Job trở lại `RETRYING` → `PENDING` vào hàng đợi để trừ kho và kích hoạt lại đơn hàng thành công.
+- **Lưu trữ bền vững**: Trạng thái toàn bộ Job và Activity Log được ghi ra `backups/.queue-jobs.json` và `backups/.activity-logs.json` để không bị mất khi khởi động lại server.
+
+```mermaid
+flowchart TD
+    A["Khách bấm Đặt hàng (/checkout)"] --> B["IdempotencyService: Kiểm tra key 10m + guard 5s"]
+    B --> C["Lưu Order: CHO_TIEP_NHAN & Xóa SP đã chọn khỏi giỏ"]
+    C --> D["Đẩy OrderJob (PENDING) vào PriorityBlockingQueue"]
+    D --> E{"So sánh 3 cấp độ"}
+    E -->|"> 10ms"| E1["FIFO: Ai trước xử lý trước"]
+    E -->|"<= 10ms & khác hạng"| E2["VIP_TIER: DIAMOND > GOLD > SILVER > BRONZE"]
+    E -->|"<= 10ms & cùng hạng"| E3["FAIR_LOTTERY: Bốc thăm ngẫu nhiên"]
+    E1 & E2 & E3 --> F["Worker 300ms rút Job -> PROCESSING (Lock UPDLOCK SQL Server)"]
+    F -->|Đủ tồn kho & COD| G["Job: SUCCEEDED (100%) | Order: CHO_XAC_NHAN"]
+    F -->|Đủ tồn kho & Online| H["Job: WAITING_PAYMENT (80%) | Chờ Admin duyệt"]
+    F -->|Thiếu tồn kho / Lỗi| I["Job: FAILED (DLQ) | Order: HUY"]
+    I -->|"Admin nhập kho + bấm Retry"| D
+```
+
+---
+
+### 4.3. Quy trình Thanh toán Online 2 Tầng: Đếm ngược 10s, Lưu `UNPAID` & Tự hủy quá hạn 30s
+
+Quy trình áp dụng cho phương thức **Chuyển khoản Ngân hàng (VietQR)** (`/uploads/qr_bank.jpg`) và **Ví MoMo** (`/uploads/qr_momo.jpg`):
+
+#### 4.3.1. Tầng 1 — Đếm ngược 10 giây xác nhận tại Checkout / Lịch sử đơn hàng
+1. Khi khách chọn Chuyển khoản hoặc MoMo và bấm đặt hàng tại `Checkout.jsx`, popup QR gọn nhẹ hiện ra với ảnh QR mặc định, thông tin tài khoản, nội dung chuyển khoản và đồng hồ đếm ngược **`10 giây`** (bỏ phần hướng dẫn rườm rà).
+2. **Nhánh A — Khách bấm "Tôi đã chuyển khoản" trong vòng 10 giây**:
+   - Gửi `POST /api/orders` với `paymentStatus = PENDING` → Job giữ kho (`WAITING_PAYMENT`), đơn ở trạng thái `CHO_XAC_NHAN` chờ Admin đối soát duyệt tiền.
+3. **Nhánh B — Hết 10 giây khách không bấm xác nhận**:
+   - Hệ thống tự động gọi `POST /api/orders` với `paymentStatus = UNPAID`.
+   - Đơn hàng vẫn được lưu vào **Lịch sử mua hàng** (`OrderHistory.jsx`) với trạng thái thanh toán **"Chưa thanh toán (`UNPAID`)"**.
+   - Tại Lịch sử đơn hàng, đơn `UNPAID` có **2 nút hành động**:
+     - **"Thanh toán lại" (`POST /api/orders/{id}/retry-payment`)**: Mở lại popup QR đếm ngược 10s cho chính đơn đó; khi khách xác nhận đã chuyển khoản, cập nhật `paymentStatus = PENDING`, reset mốc thời gian `updatedAt` để Admin duyệt.
+     - **"Đặt hàng lại" (`POST /api/orders/{id}/reorder`)**: Hủy đơn `UNPAID` cũ (hoàn kho/coupon nếu có, đánh dấu Job `FAILED`) và đẩy toàn bộ sản phẩm của đơn về lại giỏ hàng `/cart`.
+
+#### 4.3.2. Tầng 2 — Bộ quét tự động hủy đơn quá hạn 30 giây (`PaymentExpiryScheduler`)
+- Để tránh tình trạng đơn Online giữ tồn kho quá lâu mà chưa được duyệt, `PaymentExpiryScheduler` chạy định kỳ mỗi **`2 giây`** (`fixedDelay = 2000`, **không hiện đồng hồ đếm ngược 30s trên giao diện khách**):
+  1. Quét các đơn phát sinh sau thời điểm server khởi động đang ở trạng thái `CHO_XAC_NHAN` với phương thức Online (`BANK_TRANSFER`/`MOMO`) và `paymentStatus = PENDING`.
+  2. Kiểm tra mốc thời gian tham chiếu (`updatedAt` hoặc `createdAt`): nếu đã quá **`30 giây`** mà Admin chưa bấm duyệt:
+     - Chuyển đơn sang `HUY`, `paymentStatus = FAILED`.
+     - Hoàn lại 100% số lượng tồn kho, số lượng từng lô `ProductBatch`, ghi sổ cái hoàn kho và trả lại lượt dùng mã giảm giá (`restoreInventoryAndCoupon`).
+     - Chuyển Queue Job tương ứng sang `FAILED` và ghi log cảnh báo `EXPIRY` vào `SystemActivityService`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Khách hàng
+    participant UI as Checkout / Lịch sử đơn
+    participant API as OrderService & Queue
+    participant Timer as PaymentExpiryScheduler (30s)
+    actor A as Quản trị viên
+
+    U->>UI: Chọn VietQR / MoMo -> Hiện popup QR (Đếm ngược 10s)
+    alt Hết 10s chưa bấm xác nhận
+        UI->>API: Tạo đơn với paymentStatus = UNPAID
+        API-->>UI: Lưu vào Lịch sử mua hàng (Chưa thanh toán)
+        opt Khách thao tác lại tại Lịch sử đơn
+            U->>UI: Bấm "Thanh toán lại" -> Quét QR 10s & xác nhận
+            UI->>API: POST /api/orders/{id}/retry-payment (PENDING)
+        end
+    else Khách bấm "Tôi đã chuyển khoản" trong 10s
+        UI->>API: POST /api/orders (paymentStatus = PENDING)
+        API-->>UI: Chuyển Queue giữ kho (WAITING_PAYMENT)
+    end
+
+    alt Admin duyệt trong vòng 30s
+        A->>API: Duyệt đơn / Duyệt thanh toán
+        API-->>A: Đơn chuyển DA_XAC_NHAN, Job -> SUCCEEDED
+    else Quá 30s Admin chưa duyệt
+        Timer->>API: Tự động hủy đơn (HUY / FAILED) + Hoàn kho & Coupon
+        API-->>UI: Job -> FAILED, ghi Activity Log [EXPIRY 30s]
+    end
+```
+
+---
+
+### 4.4. Quy trình Sao lưu & Phục hồi Dữ liệu Toàn vẹn
+
+Triển khai tại `BackupService`, `BackupController` và giao diện `BackupManager.jsx` (`/admin/backups`), đồng bộ an toàn qua `operationLock` + `WriteLockFilter`:
+
+#### 4.4.1. Quy trình Sao lưu Thủ công 6 Bước (`POST /api/admin/backups/create`)
+1. **Bước 1 — Khóa ghi dữ liệu**: Tạm bật `WriteLock` tránh dữ liệu thay đổi giữa lúc sao lưu.
+2. **Bước 2 — Trích xuất 22 bảng SQL Server**: Đọc toàn bộ bản ghi theo thứ tự cha → con (`roles` → `users` → ... → `customer_messages`).
+3. **Bước 3 — Đóng gói metadata & thống kê**: Ghi `version`, `createdAt`, `stats` (`totalRecords`, `products`, `orders`, `users`, `coupons`, `batches`, `uploadsCount`).
+4. **Bước 4 — Nén thư mục ảnh `uploads/`**: Đưa toàn bộ ảnh sản phẩm, danh mục, QR vào file nén ZIP.
+5. **Bước 5 — Tạo mã kiểm tra toàn vẹn `SHA-256`**: Tính hash SHA-256 trên metadata + dữ liệu 22 bảng để chống sửa đổi/lỗi file.
+6. **Bước 6 — Ghi tệp `.zip` & Mở khóa**: Lưu vào `backups/backup_yyyyMMdd_HHmmss.zip` và giải phóng khóa ghi.
+
+#### 4.4.2. Quy trình Phục hồi Dữ liệu 8 Bước (`restore/{filename}` hoặc `upload-restore`)
+1. **Bước 1 — Kiểm tra tệp & chữ ký SHA-256**: Giải nén kiểm tra `data.json`, đối chiếu mã `SHA-256` trước khi đụng vào DB thật.
+2. **Bước 2 — Tự tạo bản an toàn `pre-restore_*.zip`**: Chụp lại trạng thái hiện tại trước khi ghi đè để luôn có đường lùi nếu xảy ra sự cố.
+3. **Bước 3 — Khóa ghi toàn cục**: Bật khóa ghi qua `WriteLockFilter`.
+4. **Bước 4 — Xóa dữ liệu cũ ngược thứ tự khóa ngoại**: Xóa từ bảng con → bảng cha trong 1 Database Transaction.
+5. **Bước 5 — Phục hồi dữ liệu SQL Server (`IDENTITY_INSERT ON`)**: Chèn lại từng bảng giữ nguyên ID gốc ban đầu và reseed identity.
+6. **Bước 6 — Khôi phục thư mục `uploads/`**: Ghi đè lại đúng bộ ảnh tương ứng với bản sao lưu.
+7. **Bước 7 — Xác minh & đối chiếu số liệu**: So sánh số bản ghi **Trước phục hồi / Trong file sao lưu / Sau phục hồi** lưu vào `backups/.stats-state.json`.
+8. **Bước 8 — Mở khóa hệ thống & Hoàn tất**: Giải phóng khóa ghi và ghi nhật ký `RESTORE`.
+
+---
+
+### 4.5. Quy trình Giỏ hàng Chọn lọc, Thanh toán Từng phần & Đồng bộ Hội viên VIP
+
+#### 4.5.1. Chọn sản phẩm thanh toán & Đếm badge Giỏ hàng theo mặt hàng
+- **Đếm số lượng trên icon Giỏ hàng** (`CartContext.jsx`):
+  - Hiển thị **số lượng từng phần/dòng sản phẩm** (`cart.items.length`) thay vì tổng số lượng món cộng dồn (ví dụ: có 1 sản phẩm A với số lượng 5 món → badge giỏ hàng hiển thị **`1`**).
+- **Chọn lọc thanh toán từng phần** (`Cart.jsx` → `Checkout.jsx` → `OrderService.java`):
+  1. Tại Giỏ hàng, khách có checkbox **"Chọn tất cả"** và checkbox riêng cho từng dòng sản phẩm.
+  2. Tạm tính, tổng thanh toán, mã giảm giá (Coupon) và chiết khấu VIP chỉ tính trên danh sách `selectedProductIds` được chọn.
+  3. Khi gửi `POST /api/orders`, Backend lọc `resolveCheckoutItems(cart, selectedProductIds)` để tạo đơn và trừ kho **đúng các sản phẩm đã chọn**, đồng thời dùng `removeCheckedOutItems` để chỉ xóa các sản phẩm đã đặt khỏi giỏ; những sản phẩm không được tích chọn vẫn được giữ nguyên trong giỏ hàng.
+
+#### 4.5.2. Xử lý Hội viên VIP cho Khách vãng lai & Đồng bộ tài khoản (`Loyalty.jsx`, `AuthContext.jsx`)
+- **Khách vãng lai (chưa đăng nhập)**: Khi mở `/loyalty`, hệ thống không gọi API cần token `/api/users/loyalty-info` (tránh lỗi 401 chuyển hướng về `/login`), mà hiển thị mặc định **Chủ thẻ: Khách vãng lai — Hạng Đồng (`BRONZE`) — `0 PTS` — Tiến độ `0%` (cần 100 điểm lên Hạng Bạc)** kèm bảng so sánh quyền lợi và voucher công khai.
+- **Khách hàng đã đăng nhập**: `AuthController` trả về `fullName`, `membershipTier`, `loyaltyPoints` ngay trong `AuthResponse` và `AuthContext` tự đồng bộ lại từ `/api/users/profile` khi tải trang, đảm bảo thẻ VIP, trang Cá nhân và trang Thanh toán (`-2%` Bạc / `-5%` Vàng / `-8%` Kim Cương) luôn khớp 100% với SQL Server.
+
+---
+
+### 4.6. Quy trình Duyệt đơn, Điều phối Giao hàng & Chuẩn hóa Dữ liệu Vận hành
+
+1. **Duyệt đơn & Điều phối không bị kẹt hộp thoại trình duyệt**:
+   - Thay thế toàn bộ `window.confirm` / `alert` tại `OrderManager.jsx`, `PaymentManager.jsx` và `DeliveryManager.jsx` bằng **React Confirmation Modal** và **Banner thông báo** trực tiếp, đảm bảo các thao tác **Duyệt đơn**, **Phân công Shipper**, **Phân bổ nhanh** và **Điều phối lại** hoạt động ổn định trên mọi trình duyệt.
+   - Sửa lỗi khớp tham số API `POST /api/admin/deliveries/reassign` giữa Frontend (`newShipperId`) và `DeliveryController` (nhận linh hoạt cả `newShipperId` và `shipperId`).
+2. **Tối ưu Popup Quản trị & Đồng bộ Hình ảnh**:
+   - Mở rộng chiều rộng popup trong `AdminPages.css` (`780px` cho Danh mục, `960px` cho Sản phẩm & Mã giảm giá).
+   - Chuẩn hóa toàn bộ hình ảnh sản phẩm trong `uploads/` khớp đúng 100% tên sản phẩm và ảnh QR mặc định (`qr_bank.jpg`, `qr_momo.jpg`).
+3. **Chuẩn hóa Script Database chạy 1 lần (`supermarket_db1.sql`)**:
+   - Đầy đủ 22 bảng (đã bổ sung 7 cột QC của `goods_receipt_items`), `50` đơn hàng lịch sử phân bổ đều theo từng tháng lịch từ `T-6` đến `T-0` bằng `DATEFROMPARTS` bất kể chạy vào ngày nào trong tháng, và giữ Tổn thất quá hạn luôn thấp hơn Doanh thu.
+
+---
+
 ## TỔNG KẾT DANH MỤC CÁC PHÂN HỆ VÀ TRÁCH NHIỆM
 
 | STT | Phân hệ nghiệp vụ | Trách nhiệm chính trong hệ thống | Đối tượng tương tác chính |
 | :---: | :--- | :--- | :--- |
-| **1** | **Mua sắm & Giỏ hàng** | Khám phá sản phẩm, kiểm tra tồn kho khả dụng tức thời, quản lý mặt hàng trong giỏ hàng. | Khách hàng |
+| **1** | **Mua sắm & Giỏ hàng** | Khám phá sản phẩm, badge giỏ hàng theo số mặt hàng, chọn lọc sản phẩm thanh toán từng phần. | Khách hàng |
 | **2** | **Đặt hàng & Xử lý đơn** | Tạo đơn hàng, khấu trừ chiết khấu hội viên và voucher, trừ kho FIFO theo lô hạn dùng, duyệt đơn. | Khách hàng, Quản trị viên |
-| **3** | **Điều phối & Giao hàng** | Tự động phân bổ đơn theo địa bàn quận huyện (Tân Phú, Tân Bình, Quận 12), giao hàng, thu tiền COD. | Quản trị viên, Shipper |
+| **3** | **Điều phối & Giao hàng** | Tự động phân bổ đơn theo địa bàn quận huyện (Tân Phú, Tân Bình, Quận 12), giao hàng, điều phối lại, thu COD. | Quản trị viên, Shipper |
 | **4** | **Quản lý Lô & Hạn dùng** | Theo dõi hạn sử dụng, xả kho cận date giá ưu đãi, khóa cấm bán và xuất hủy hàng hết hạn. | Quản lý kho |
 | **5** | **Nhập kho & Kiểm định QC** | Lập phiếu nhập từ nhà cung cấp, kiểm định chất lượng đạt/lỗi, tự động tạo lô hàng mới và tăng tồn kho. | Quản lý kho, Thủ kho |
 | **6** | **Thương hiệu & Ngành hàng**| Phân loại hàng hóa theo cây danh mục, quản lý nhãn hiệu đối tác kinh doanh. | Quản trị viên, Khách hàng |
 | **7** | **Khuyến mãi & Mã giảm giá**| Tạo chiến dịch ưu đãi, kiểm tra 6 tiêu chí hợp lệ khi áp dụng voucher, quản lý số lượt sử dụng. | Quản trị viên, Khách hàng |
-| **8** | **Khách hàng thân thiết** | Tích lũy 1 điểm cho mỗi 100.000đ thanh toán, tự động nâng hạng thẻ (Đồng, Bạc, Vàng, Kim Cương). | Khách hàng |
+| **8** | **Khách hàng thân thiết** | Hỗ trợ mặc định Đồng/0 điểm cho khách vãng lai, tích điểm 100.000đ = 1 điểm và đồng bộ hạng thẻ VIP realtime. | Khách hàng |
 | **9** | **Đánh giá & Phản hồi** | Khách hàng chấm điểm và viết nhận xét sản phẩm, quản trị viên kiểm duyệt nội dung công khai. | Khách hàng, Quản trị viên |
 | **10**| **Hỗ trợ & Trợ lý ảo AI** | Trợ lý ảo AI tư vấn sản phẩm 24/7, tiếp nhận và phản hồi tin nhắn hỗ trợ trực tiếp giữa khách và admin. | Khách hàng, Quản trị viên |
-| **11**| **Tài khoản & Bảo mật** | Đăng ký, đăng nhập bảo mật (BCrypt + JWT), đăng nhập Google OAuth2, phân quyền truy cập. | Toàn bộ người dùng |
-| **12**| **Báo cáo & Thống kê** | Phân tích doanh thu, tỷ lệ đơn hàng, hiệu suất nhân viên giao hàng, báo cáo tổn thất vốn hàng hủy. | Quản trị viên, Ban quản lý |
+| **11**| **Tài khoản & Bảo mật** | Đăng ký, đăng nhập bảo mật (JWT), đăng nhập Google OAuth2, phân quyền truy cập, đồng bộ hồ sơ. | Toàn bộ người dùng |
+| **12**| **Báo cáo & Thống kê** | Phân tích doanh thu 6 tháng, tỷ lệ đơn hàng, hiệu suất nhân viên giao hàng, báo cáo tổn thất vốn hàng hủy. | Quản trị viên, Ban quản lý |
+| **13**| **Hàng đợi & Chống trùng** | Chống gửi trùng `IdempotencyService`, hàng đợi 3 cấp độ `PriorityBlockingQueue`, xử lý DLQ & Retry. | Khách hàng, Quản trị viên |
+| **14**| **Thanh toán Online 2 tầng**| Đếm ngược 10s tại QR (chuyển `UNPAID` + Thanh toán lại/Đặt lại) và tự hủy hoàn kho sau 30s chưa duyệt. | Khách hàng, Quản trị viên |
+| **15**| **Sao lưu & Phục hồi** | Khóa ghi toàn cục `WriteLockFilter`, nén ZIP 22 bảng + `uploads/` + SHA-256, phục hồi có bản an toàn `pre-restore`. | Quản trị viên |

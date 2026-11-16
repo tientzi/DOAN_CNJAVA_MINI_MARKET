@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CartContext } from '../contexts/CartContext'
 import { AuthContext } from '../contexts/AuthContext'
 import api from '../services/api'
-import { MapPin, Plus, CheckCircle, Wallet, Tag, QrCode, X, Copy, Check, Smartphone, Banknote, CreditCard, Info } from 'lucide-react'
+import { MapPin, Plus, CheckCircle, Wallet, Tag, QrCode, X, Copy, Check, Smartphone, Banknote, CreditCard, Info, Clock } from 'lucide-react'
 import './Checkout.css'
 
 export const DISTRICT_WARDS = {
@@ -98,9 +98,15 @@ const DEFAULT_METHODS = [
 ]
 
 const Checkout = () => {
-  const { cart, cartSubtotal, clearCart } = useContext(CartContext)
+  const { cart, computeSubtotal, fetchCart, selectedProductIds } = useContext(CartContext)
   const { user } = useContext(AuthContext)
   const navigate = useNavigate()
+
+  const checkoutItems = (cart?.items || []).filter(item =>
+    !selectedProductIds || selectedProductIds.length === 0 || selectedProductIds.includes(item.productId)
+  )
+  const checkoutSubtotal = computeSubtotal ? computeSubtotal(checkoutItems) : 0
+  const checkoutProductIds = checkoutItems.map(i => i.productId)
 
   // Addresses
   const [addresses, setAddresses] = useState([])
@@ -138,6 +144,13 @@ const Checkout = () => {
   const [qrOrderInfo, setQrOrderInfo] = useState('')
   const [copiedSTK, setCopiedSTK] = useState(false)
   const [qrConfirming, setQrConfirming] = useState(false)
+  const [qrCountdown, setQrCountdown] = useState(10)
+  const qrAutoSubmittedRef = useRef(false)
+  const idempotencyKeyRef = useRef(
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  )
 
   const fetchAddresses = async () => {
     try {
@@ -254,7 +267,7 @@ const Checkout = () => {
     setCouponError(''); setCouponSuccess(''); setDiscountAmount(0); setAppliedCoupon('')
     if (!couponCode.trim()) return
     try {
-      const itemsPayload = (cart?.items || []).map(item => ({
+      const itemsPayload = checkoutItems.map(item => ({
         productId: item.productId,
         categoryId: item.categoryId,
         price: item.productSalePrice != null ? item.productSalePrice : item.productPrice,
@@ -262,7 +275,7 @@ const Checkout = () => {
       }))
       const response = await api.post('/api/public/coupons/apply', {
         code: couponCode.trim(),
-        amount: cartSubtotal,
+        amount: checkoutSubtotal,
         items: itemsPayload
       })
       setDiscountAmount(response.data.discountAmount)
@@ -273,7 +286,7 @@ const Checkout = () => {
     }
   }
 
-  const submitOrder = async () => {
+  const submitOrder = async (paymentStatusOverride = null, extraNote = '') => {
     const addr = addresses.find(a => a.id === selectedAddressId)
     if (!addr) {
       setError('Vui lòng chọn hoặc thêm địa chỉ nhận hàng')
@@ -281,6 +294,9 @@ const Checkout = () => {
     }
     const fullAddrString = `${addr.detailAddress}, ${addr.ward}, ${addr.district}, ${addr.province}`
     const effectivePayment = paymentMethod || 'COD'
+    const combinedNote = extraNote
+      ? (note ? `${note} | ${extraNote}` : extraNote)
+      : note
     setLoading(true)
     try {
       await api.post('/api/orders', {
@@ -288,14 +304,24 @@ const Checkout = () => {
         shippingPhone: addr.receiverPhone,
         shippingAddress: fullAddrString,
         paymentMethod: effectivePayment,
+        paymentStatus: paymentStatusOverride || 'PENDING',
         couponCode: appliedCoupon || null,
-        note
+        note: combinedNote,
+        selectedProductIds: checkoutProductIds
+      }, {
+        headers: {
+          'X-Idempotency-Key': idempotencyKeyRef.current
+        }
       })
-      clearCart()
-      navigate('/orders?success=true')
+      await fetchCart()
+      navigate(paymentStatusOverride === 'UNPAID' ? '/orders?unpaid=true' : '/orders?success=true')
     } catch (err) {
       setError(err.response?.data?.error || 'Đã xảy ra lỗi khi tạo đơn hàng.')
       setShowQRModal(false)
+      // Tạo key mới nếu request trước thất bại để user sửa lỗi và bấm đặt lại được
+      idempotencyKeyRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`
     } finally {
       setLoading(false)
       setQrConfirming(false)
@@ -316,8 +342,8 @@ const Checkout = () => {
     tierPercentage = 8
     tierName = 'Kim Cương'
   }
-  tierDiscount = (cartSubtotal * tierPercentage) / 100
-  const finalTotal = Math.max(0, cartSubtotal - discountAmount - tierDiscount)
+  tierDiscount = (checkoutSubtotal * tierPercentage) / 100
+  const finalTotal = Math.max(0, checkoutSubtotal - discountAmount - tierDiscount)
 
   const handlePlaceOrder = async () => {
     setError('')
@@ -334,15 +360,35 @@ const Checkout = () => {
         : `MINIMART DH${randCode}`
       setQrOrderInfo(transferSyntax)
       setActiveQRConfig(currentMethod)
+      setQrCountdown(10)
+      qrAutoSubmittedRef.current = false
       setShowQRModal(true)
     } else {
       await submitOrder()
     }
   }
 
+  // Đếm ngược 10 giây tại Modal QR: nếu khách không bấm xác nhận -> tự ghi nhận đơn ở trạng thái Chưa thanh toán (UNPAID)
+  useEffect(() => {
+    if (!showQRModal || qrConfirming) return
+    if (qrCountdown <= 0) {
+      if (!qrAutoSubmittedRef.current) {
+        qrAutoSubmittedRef.current = true
+        setQrConfirming(true)
+        submitOrder('UNPAID', 'Chưa xác nhận chuyển khoản (quá 10s)')
+      }
+      return
+    }
+    const timer = setTimeout(() => {
+      setQrCountdown(prev => prev - 1)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [showQRModal, qrCountdown, qrConfirming])
+
   const handleQRConfirm = async () => {
+    qrAutoSubmittedRef.current = true
     setQrConfirming(true)
-    await submitOrder()
+    await submitOrder('PENDING')
   }
 
   const handleCopySTK = () => {
@@ -592,7 +638,7 @@ const Checkout = () => {
           <div className="checkout-summary-card glass">
             <h3>Chi tiết đơn hàng</h3>
             <div className="order-items-preview">
-              {cart.items.map(item => {
+              {checkoutItems.map(item => {
                 const isMultiBatchSplit = item.hasMultiBatch && item.saleBatchQuantity > 0 && item.quantity > item.saleBatchQuantity
                 const saleQty = item.saleBatchQuantity || 0
                 const normalQty = item.quantity - saleQty
@@ -644,7 +690,7 @@ const Checkout = () => {
             <div className="summary-details-box">
               <div className="summary-row">
                 <span>Tổng tiền hàng</span>
-                <span>{cartSubtotal.toLocaleString()}đ</span>
+                <span>{checkoutSubtotal.toLocaleString()}đ</span>
               </div>
               {discountAmount > 0 && (
                 <div className="summary-row">
@@ -704,29 +750,26 @@ const Checkout = () => {
 
             {/* QR Body */}
             <div className="qr-modal-body">
-              {/* Amount badge */}
               <div className="qr-amount-badge">
-                <span className="qr-amount-label">Số tiền cần chuyển</span>
+                <span className="qr-amount-label">Số tiền thanh toán</span>
                 <span className="qr-amount-value">{finalTotal.toLocaleString()}<small>đ</small></span>
               </div>
 
-              {/* QR Image */}
               <div className="qr-image-wrapper">
                 <img
-                  src={activeQRConfig.qrCodeUrl || '/uploads/vietqr.png'}
+                  src={
+                    activeQRConfig.qrCodeUrl ||
+                    (activeQRConfig.methodCode === 'MOMO' ? '/uploads/qr_momo.jpg' : '/uploads/qr_bank.jpg')
+                  }
                   alt={`Mã QR ${activeQRConfig.methodName}`}
                   className="qr-image"
-                  onError={(e) => { 
-                    e.target.onerror = null;
-                    const quickQR = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                      `${activeQRConfig.accountNumber || '0336174371'}|${activeQRConfig.accountHolder || 'NGUYEN TIEN TAI'}|${finalTotal}|${qrOrderInfo}`
-                    )}`;
-                    e.target.src = quickQR;
+                  onError={(e) => {
+                    e.target.onerror = null
+                    e.target.src = activeQRConfig.methodCode === 'MOMO' ? '/uploads/qr_momo.jpg' : '/uploads/qr_bank.jpg'
                   }}
                 />
               </div>
 
-              {/* Bank Info */}
               <div className="qr-bank-info">
                 <div className="qr-bank-row">
                   <span className="qr-bank-label">Ngân hàng / Ví</span>
@@ -736,8 +779,8 @@ const Checkout = () => {
                   <span className="qr-bank-label">Số tài khoản / SĐT</span>
                   <div className="qr-stk-row">
                     <span className="qr-bank-value qr-stk">{activeQRConfig.accountNumber}</span>
-                    <button className="qr-copy-btn" onClick={handleCopySTK}>
-                      {copiedSTK ? <Check size={14} /> : <Copy size={14} />}
+                    <button className="qr-copy-btn" onClick={handleCopySTK} type="button">
+                      {copiedSTK ? <Check size={13} /> : <Copy size={13} />}
                       {copiedSTK ? 'Đã chép' : 'Sao chép'}
                     </button>
                   </div>
@@ -747,27 +790,29 @@ const Checkout = () => {
                   <span className="qr-bank-value">{activeQRConfig.accountHolder}</span>
                 </div>
                 <div className="qr-bank-row">
-                  <span className="qr-bank-label">Nội dung chuyển khoản</span>
+                  <span className="qr-bank-label">Nội dung CK</span>
                   <span className="qr-bank-value qr-note">{qrOrderInfo}</span>
                 </div>
               </div>
 
-              <p className="qr-instruction">
-                📱 Mở App Ngân hàng hoặc Ví điện tử → Quét mã QR hoặc Chuyển tiền với nội dung trên, sau đó bấm <strong>Tôi đã chuyển khoản thành công</strong> bên dưới.
-              </p>
+              <div className={`qr-countdown-pill ${qrCountdown <= 3 ? 'urgent' : ''}`}>
+                <Clock size={15} />
+                <span>Xác nhận trong <strong>{qrCountdown}s</strong></span>
+              </div>
             </div>
 
             {/* Footer actions */}
             <div className="qr-modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowQRModal(false)}>
+              <button className="btn btn-outline" onClick={() => setShowQRModal(false)} type="button">
                 Quay lại
               </button>
               <button
                 className="btn btn-primary qr-confirm-btn"
                 onClick={handleQRConfirm}
                 disabled={qrConfirming}
+                type="button"
               >
-                {qrConfirming ? 'Đang xử lý...' : '✅ Tôi đã chuyển khoản thành công'}
+                {qrConfirming ? 'Đang xử lý...' : 'Tôi đã chuyển khoản'}
               </button>
             </div>
           </div>

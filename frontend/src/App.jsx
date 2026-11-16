@@ -20,6 +20,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import Forbidden from './pages/Forbidden'
+import NotFound from './pages/NotFound'
 import OAuthCallback from './pages/OAuthCallback'
 import Profile from './pages/Profile'
 import Loyalty from './pages/Loyalty'
@@ -37,6 +38,8 @@ import PaymentManager from './pages/admin/PaymentManager'
 import ReportManager from './pages/admin/ReportManager'
 import UserManager from './pages/admin/UserManager'
 import ReviewManager from './pages/admin/ReviewManager'
+import QueueManager from './pages/admin/QueueManager'
+import BackupManager from './pages/admin/BackupManager'
 
 // Shipper Pages
 import ShipperDashboard from './pages/shipper/ShipperDashboard'
@@ -124,6 +127,8 @@ function App() {
               <Route path="reports" element={<ReportManager />} />
               <Route path="users" element={<UserManager />} />
               <Route path="reviews" element={<ReviewManager />} />
+              <Route path="queue" element={<QueueManager />} />
+              <Route path="backups" element={<BackupManager />} />
             </Route>
 
             {/* Protected Shipper Layout */}
@@ -139,7 +144,7 @@ function App() {
             </Route>
 
             {/* Fallback Catch-All Route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </CartProvider>

@@ -32,6 +32,10 @@ public class PaymentConfigService {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private OrderQueueService orderQueueService;
+
     public List<PaymentMethodConfig> getPublicPaymentMethods() {
         return paymentMethodConfigRepository.findByIsEnabledTrue();
     }
@@ -126,6 +130,9 @@ public class PaymentConfigService {
             order.setUpdatedAt(LocalDateTime.now());
             orderRepository.save(order);
         }
+        if (order != null) {
+            orderQueueService.markOrderPaymentSucceeded(order.getId());
+        }
 
         Map<String, Object> res = new HashMap<>();
         res.put("message", isCod ? "Đã duyệt đơn hàng Tiền mặt (COD) thành công!" : "Đã duyệt thanh toán QR thành công!");
@@ -151,6 +158,7 @@ public class PaymentConfigService {
 
             // Tự động hoàn lại tồn kho, lô hàng và mã giảm giá
             orderService.restoreInventoryAndCoupon(order, null, "Từ chối thanh toán đơn #" + order.getId() + ": " + finalReason);
+            orderQueueService.markOrderCancelledOrExpired(order.getId(), "Từ chối thanh toán: " + finalReason);
         }
 
         Map<String, Object> res = new HashMap<>();

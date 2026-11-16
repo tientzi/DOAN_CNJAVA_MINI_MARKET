@@ -215,12 +215,16 @@
 
 .admin-popup-form {
   width: 100%;
-  max-width: 600px;
+  max-width: 780px;
   padding: 2rem;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
   animation: slideUp 0.3s ease-out;
+}
+
+.admin-popup-form.form-large {
+  max-width: 960px;
 }
 
 .admin-popup-form h3 {

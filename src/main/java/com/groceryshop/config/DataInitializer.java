@@ -375,13 +375,13 @@ public class DataInitializer implements CommandLineRunner {
         // 2. Chuyển khoản ngân hàng qua mã QR
         PaymentMethodConfig bank = PaymentMethodConfig.builder()
                 .methodKey("BANK_TRANSFER")
-                .name("Chuyển khoản QR Ngân hàng (Vietcombank)")
+                .name("Chuyển khoản QR Ngân hàng (MBBank)")
                 .description("Quét mã VietQR tiện lợi, xác nhận chuyển khoản để hoàn tất đơn hàng nhanh chóng.")
                 .isEnabled(true)
-                .bankName("Vietcombank - CN Hà Nội")
-                .accountNumber("9988776655")
-                .accountHolder("NGUYEN TIEN TAI - MINIMART")
-                .qrCodeUrl("/uploads/maqr.jpg")
+                .bankName("MBBank (Ngân hàng Quân Đội)")
+                .accountNumber("0336174371")
+                .accountHolder("NGUYEN TIEN TAI")
+                .qrCodeUrl("/uploads/qr_bank.jpg")
                 .transferSyntax("MINIMART [MÃ ĐƠN HÀNG]")
                 .build();
         paymentConfigRepository.save(bank);
@@ -395,7 +395,7 @@ public class DataInitializer implements CommandLineRunner {
                 .bankName("Ví điện tử MoMo")
                 .accountNumber("0336174371")
                 .accountHolder("NGUYEN TIEN TAI")
-                .qrCodeUrl("/uploads/maqr.jpg")
+                .qrCodeUrl("/uploads/qr_momo.jpg")
                 .transferSyntax("MOMO [MÃ ĐƠN HÀNG]")
                 .build();
         paymentConfigRepository.save(momo);
@@ -519,75 +519,19 @@ public class DataInitializer implements CommandLineRunner {
                 "15 Quốc Lộ 1A, Phường An Phú Đông, Quận 12, TP. Hồ Chí Minh"
         };
 
-        // Phân bổ 50 đơn qua 6 tháng:
-        // T10/2025: 8 đơn
-        // T11/2025: 8 đơn
-        // T12/2025: 10 đơn
-        // T01/2026: 9 đơn
-        // T02/2026: 7 đơn
-        // T03/2026: 8 đơn
+        // Phân bổ đều 50 đơn qua 7 tháng gần nhất (từ tháng hiện tại lùi về 6 tháng trước)
         LocalDateTime[] dates = new LocalDateTime[50];
-        // T10/2025 (8 đơn)
-        dates[0] = LocalDateTime.of(2025, 10, 3, 9, 15);
-        dates[1] = LocalDateTime.of(2025, 10, 7, 14, 30);
-        dates[2] = LocalDateTime.of(2025, 10, 11, 10, 0);
-        dates[3] = LocalDateTime.of(2025, 10, 15, 16, 45);
-        dates[4] = LocalDateTime.of(2025, 10, 19, 11, 20);
-        dates[5] = LocalDateTime.of(2025, 10, 22, 18, 10);
-        dates[6] = LocalDateTime.of(2025, 10, 26, 13, 5);
-        dates[7] = LocalDateTime.of(2025, 10, 30, 20, 0);
-
-        // T11/2025 (8 đơn)
-        dates[8] = LocalDateTime.of(2025, 11, 2, 8, 40);
-        dates[9] = LocalDateTime.of(2025, 11, 6, 12, 15);
-        dates[10] = LocalDateTime.of(2025, 11, 10, 17, 30);
-        dates[11] = LocalDateTime.of(2025, 11, 14, 15, 10);
-        dates[12] = LocalDateTime.of(2025, 11, 18, 10, 50);
-        dates[13] = LocalDateTime.of(2025, 11, 21, 19, 25);
-        dates[14] = LocalDateTime.of(2025, 11, 25, 14, 5);
-        dates[15] = LocalDateTime.of(2025, 11, 29, 11, 35);
-
-        // T12/2025 (10 đơn - Mùa giáng sinh & mua sắm cao điểm)
-        dates[16] = LocalDateTime.of(2025, 12, 2, 9, 0);
-        dates[17] = LocalDateTime.of(2025, 12, 5, 14, 15);
-        dates[18] = LocalDateTime.of(2025, 12, 9, 16, 40);
-        dates[19] = LocalDateTime.of(2025, 12, 13, 11, 20);
-        dates[20] = LocalDateTime.of(2025, 12, 16, 18, 50);
-        dates[21] = LocalDateTime.of(2025, 12, 20, 10, 10);
-        dates[22] = LocalDateTime.of(2025, 12, 23, 15, 30);
-        dates[23] = LocalDateTime.of(2025, 12, 24, 20, 15);
-        dates[24] = LocalDateTime.of(2025, 12, 28, 13, 45);
-        dates[25] = LocalDateTime.of(2025, 12, 31, 17, 0);
-
-        // T01/2026 (9 đơn - Tết Nguyên Đán cận kề)
-        dates[26] = LocalDateTime.of(2026, 1, 3, 10, 0);
-        dates[27] = LocalDateTime.of(2026, 1, 7, 14, 20);
-        dates[28] = LocalDateTime.of(2026, 1, 11, 16, 45);
-        dates[29] = LocalDateTime.of(2026, 1, 15, 11, 30);
-        dates[30] = LocalDateTime.of(2026, 1, 18, 18, 15);
-        dates[31] = LocalDateTime.of(2026, 1, 21, 9, 40);
-        dates[32] = LocalDateTime.of(2026, 1, 24, 15, 10);
-        dates[33] = LocalDateTime.of(2026, 1, 27, 12, 0);
-        dates[34] = LocalDateTime.of(2026, 1, 30, 17, 30);
-
-        // T02/2026 (7 đơn)
-        dates[35] = LocalDateTime.of(2026, 2, 3, 9, 20);
-        dates[36] = LocalDateTime.of(2026, 2, 7, 14, 40);
-        dates[37] = LocalDateTime.of(2026, 2, 12, 11, 10);
-        dates[38] = LocalDateTime.of(2026, 2, 16, 16, 35);
-        dates[39] = LocalDateTime.of(2026, 2, 20, 18, 0);
-        dates[40] = LocalDateTime.of(2026, 2, 24, 13, 15);
-        dates[41] = LocalDateTime.of(2026, 2, 27, 10, 45);
-
-        // T03/2026 (8 đơn)
-        dates[42] = LocalDateTime.of(2026, 3, 2, 11, 0);
-        dates[43] = LocalDateTime.of(2026, 3, 6, 15, 20);
-        dates[44] = LocalDateTime.of(2026, 3, 10, 9, 30);
-        dates[45] = LocalDateTime.of(2026, 3, 14, 17, 45);
-        dates[46] = LocalDateTime.of(2026, 3, 18, 14, 10);
-        dates[47] = LocalDateTime.of(2026, 3, 22, 12, 35);
-        dates[48] = LocalDateTime.of(2026, 3, 26, 19, 0);
-        dates[49] = LocalDateTime.of(2026, 3, 30, 16, 15);
+        java.time.YearMonth currentYm = java.time.YearMonth.now();
+        LocalDate todayDate = LocalDate.now();
+        int[] slotInMonth = new int[7];
+        for (int idx = 0; idx < 50; idx++) {
+            int monthOffset = idx % 7; // 0 = 6 tháng trước, ..., 6 = tháng hiện tại
+            java.time.YearMonth ym = currentYm.minusMonths(6 - monthOffset);
+            int slot = slotInMonth[monthOffset]++;
+            int maxDay = ym.equals(currentYm) ? Math.max(1, todayDate.getDayOfMonth() - 1) : ym.lengthOfMonth();
+            int day = Math.min(maxDay, 2 + (slot * 3));
+            dates[idx] = LocalDateTime.of(ym.getYear(), ym.getMonthValue(), day, 9 + ((idx * 3) % 10), (idx * 7) % 60);
+        }
 
         // Tỷ lệ trạng thái: 42 HOAN_THANH, 3 DA_GIAO, 3 HUY, 2 GIAO_THAT_BAI
         for (int i = 0; i < 50; i++) {

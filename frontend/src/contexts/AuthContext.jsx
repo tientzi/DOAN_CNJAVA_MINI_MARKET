@@ -14,6 +14,24 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && storedUser) {
       setToken(storedToken)
       setUser(JSON.parse(storedUser))
+      // Đồng bộ lại thông tin mới nhất (fullName, membershipTier, loyaltyPoints) từ server
+      api.get('/api/users/profile')
+        .then(res => {
+          const p = res.data
+          setUser(prev => {
+            if (!prev) return prev
+            const synced = {
+              ...prev,
+              fullName: p.fullName || prev.fullName,
+              email: p.email || prev.email,
+              membershipTier: p.membershipTier || 'BRONZE',
+              loyaltyPoints: p.loyaltyPoints ?? 0
+            }
+            localStorage.setItem('user', JSON.stringify(synced))
+            return synced
+          })
+        })
+        .catch(() => {})
     }
     setLoading(false)
   }, [])
@@ -21,9 +39,17 @@ export const AuthProvider = ({ children }) => {
   const login = async (usernameOrEmail, password, rememberMe) => {
     try {
       const response = await api.post('/api/auth/login', { usernameOrEmail, password, rememberMe })
-      const { accessToken, role, id, username, email } = response.data
+      const { accessToken, role, id, username, email, fullName, membershipTier, loyaltyPoints } = response.data
       
-      const userData = { id, username, email, role }
+      const userData = {
+        id,
+        username,
+        email,
+        role,
+        fullName: fullName || username,
+        membershipTier: membershipTier || 'BRONZE',
+        loyaltyPoints: loyaltyPoints ?? 0
+      }
       
       setToken(accessToken)
       setUser(userData)
@@ -47,7 +73,9 @@ export const AuthProvider = ({ children }) => {
       username, 
       email, 
       role,
-      avatarUrl: avatarUrl || null
+      avatarUrl: avatarUrl || null,
+      membershipTier: 'BRONZE',
+      loyaltyPoints: 0
     }
     
     setToken(accessToken)
@@ -55,6 +83,23 @@ export const AuthProvider = ({ children }) => {
     
     localStorage.setItem('token', accessToken)
     localStorage.setItem('user', JSON.stringify(userData))
+
+    api.get('/api/users/profile')
+      .then(res => {
+        const p = res.data
+        setUser(prev => {
+          if (!prev) return prev
+          const synced = {
+            ...prev,
+            fullName: p.fullName || prev.fullName,
+            membershipTier: p.membershipTier || 'BRONZE',
+            loyaltyPoints: p.loyaltyPoints ?? 0
+          }
+          localStorage.setItem('user', JSON.stringify(synced))
+          return synced
+        })
+      })
+      .catch(() => {})
     
     return userData
   }

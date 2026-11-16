@@ -233,13 +233,9 @@ export const ProductCard = ({ product, onQuickView, onAddToCart, successMsg, err
       </Link>
 
       <div className="card-footer-action">
-        {!isOutOfStock ? (
-          <button className="btn btn-primary quick-buy-btn" onClick={onAddToCart}>
-            <ShoppingCart size={16} /> Thêm giỏ hàng
-          </button>
-        ) : (
-          <button className="btn btn-outline quick-buy-btn" disabled>Hết hàng</button>
-        )}
+        <button className="btn btn-primary quick-buy-btn" onClick={onAddToCart}>
+          <ShoppingCart size={16} /> Thêm giỏ hàng
+        </button>
       </div>
 
       {successMsg && <div className="card-alert card-success">{successMsg}</div>}

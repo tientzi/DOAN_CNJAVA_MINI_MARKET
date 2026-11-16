@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { 
   Truck, MapPin, CheckCircle2, AlertTriangle, RefreshCw, 
-  User, Phone, Calendar, ArrowRight, ShieldCheck, Clock, Check, Zap, Download, Printer
+  User, Phone, Zap, Download, Printer, Package, X
 } from 'lucide-react'
 import { exportToCSV, printDocument } from '../../utils/exportUtils'
 import './AdminPages.css'
@@ -20,11 +20,18 @@ const DeliveryManager = () => {
   const [targetShipperId, setTargetShipperId] = useState('')
   const [assigning, setAssigning] = useState(false)
 
-  // Reassign modal
+  // Reassign modal & Feedback / Confirm modal
   const [reassignModalOrder, setReassignModalOrder] = useState(null)
   const [reassignShipperId, setReassignShipperId] = useState('')
   const [reassigning, setReassigning] = useState(false)
   const [autoDispatching, setAutoDispatching] = useState(false)
+  const [notice, setNotice] = useState(null) // { type: 'success'|'error', text: string }
+  const [confirmModal, setConfirmModal] = useState(null) // { type: 'ASSIGN'|'AUTO', title, message }
+
+  const showNotice = (type, text) => {
+    setNotice({ type, text })
+    setTimeout(() => setNotice(null), 5000)
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -91,31 +98,37 @@ const DeliveryManager = () => {
   }
 
   // Assign batch
-  const handleAssign = async () => {
+  const handleAssign = () => {
     if (selectedOrderIds.length === 0) {
-      alert('Vui lòng chọn ít nhất 1 đơn hàng để phân công!')
+      showNotice('error', 'Vui lòng chọn ít nhất 1 đơn hàng để phân công!')
       return
     }
     if (!targetShipperId) {
-      alert('Vui lòng chọn Shipper nhận đơn!')
+      showNotice('error', 'Vui lòng chọn Shipper nhận đơn!')
       return
     }
 
-    const targetShipper = shippers.find(s => s.id === Number(targetShipperId))
-    const confirmMsg = `Xác nhận phân công ${selectedOrderIds.length} đơn hàng cho Shipper "${targetShipper?.fullName || targetShipper?.username}"?`
-    if (!window.confirm(confirmMsg)) return
+    const targetShipper = shippers.find(s => Number(s.id) === Number(targetShipperId))
+    setConfirmModal({
+      type: 'ASSIGN',
+      title: 'Xác nhận phân công giao hàng',
+      message: `Phân công ${selectedOrderIds.length} đơn hàng đã chọn cho Shipper "${targetShipper?.fullName || targetShipper?.username}"?`
+    })
+  }
 
+  const executeAssign = async () => {
+    setConfirmModal(null)
     setAssigning(true)
     try {
       await api.post('/api/admin/deliveries/assign', {
         orderIds: selectedOrderIds,
         shipperId: Number(targetShipperId)
       })
-      alert(`✅ Đã phân công thành công ${selectedOrderIds.length} đơn hàng!`)
+      showNotice('success', `Đã phân công thành công ${selectedOrderIds.length} đơn hàng cho Shipper.`)
       setSelectedOrderIds([])
       await fetchData()
     } catch (err) {
-      alert(err.response?.data?.error || 'Lỗi khi phân công đơn hàng')
+      showNotice('error', err.response?.data?.error || 'Lỗi khi phân công đơn hàng')
     } finally {
       setAssigning(false)
     }
@@ -128,37 +141,44 @@ const DeliveryManager = () => {
     try {
       await api.post('/api/admin/deliveries/reassign', {
         orderId: reassignModalOrder.id,
-        shipperId: Number(reassignShipperId)
+        newShipperId: Number(reassignShipperId)
       })
-      alert(`✅ Đã điều phối lại đơn #${reassignModalOrder.id} cho Shipper thành công!`)
+      showNotice('success', `Đã điều phối lại đơn #${reassignModalOrder.id} cho Shipper thành công.`)
       setReassignModalOrder(null)
       await fetchData()
     } catch (err) {
-      alert(err.response?.data?.error || 'Lỗi khi điều phối lại đơn hàng')
+      showNotice('error', err.response?.data?.error || 'Lỗi khi điều phối lại đơn hàng')
     } finally {
       setReassigning(false)
     }
   }
 
   // Auto dispatch by area
-  const handleAutoDispatch = async () => {
+  const handleAutoDispatch = () => {
     if (unassignedOrders.length === 0) {
-      alert('Không có đơn hàng nào chờ phân bổ!')
+      showNotice('error', 'Không có đơn hàng nào chờ phân bổ!')
       return
     }
     const areaName = selectedDistrict === 'ALL' ? 'toàn bộ các khu vực' : selectedDistrict
-    if (!window.confirm(`Hệ thống sẽ tự động quét và phân chia nhanh các đơn hàng chưa gán cho các Shipper phụ trách ${areaName}. Xác nhận thực hiện?`)) return
+    setConfirmModal({
+      type: 'AUTO',
+      title: 'Phân bổ nhanh theo khu vực',
+      message: `Hệ thống sẽ tự động quét và phân chia nhanh các đơn hàng chưa gán cho Shipper phụ trách ${areaName}.`
+    })
+  }
 
+  const executeAutoDispatch = async () => {
+    setConfirmModal(null)
     setAutoDispatching(true)
     try {
       const res = await api.post('/api/admin/deliveries/auto-dispatch', {
         district: selectedDistrict
       })
-      alert(`✅ ${res.data?.message || 'Đã phân bổ nhanh thành công!'}`)
+      showNotice('success', res.data?.message || 'Đã phân bổ nhanh thành công!')
       setSelectedOrderIds([])
       await fetchData()
     } catch (err) {
-      alert(err.response?.data?.error || 'Lỗi khi phân bổ nhanh theo khu vực')
+      showNotice('error', err.response?.data?.error || 'Lỗi khi phân bổ nhanh theo khu vực')
     } finally {
       setAutoDispatching(false)
     }
@@ -266,26 +286,56 @@ const DeliveryManager = () => {
         </div>
       </div>
 
+      {/* Feedback Banner */}
+      {notice && (
+        <div
+          className="no-print"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            marginBottom: '16px',
+            background: notice.type === 'success' ? '#ecfdf5' : '#fef2f2',
+            border: `1px solid ${notice.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+            color: notice.type === 'success' ? '#065f46' : '#991b1b',
+            fontWeight: 600,
+            fontSize: '0.9rem'
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            {notice.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+            {notice.text}
+          </span>
+          <button
+            onClick={() => setNotice(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Shipper Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '25px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginBottom: '20px' }}>
         {shippers.map(s => (
-          <div key={s.id} className="admin-card" style={{ padding: '16px 20px', borderLeft: `5px solid ${getDistrictBadgeColor(s.assignedDistrict)}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div key={s.id} className="admin-card" style={{ padding: '14px 18px', borderLeft: `4px solid ${getDistrictBadgeColor(s.assignedDistrict)}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <User size={18} color="#0284c7" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem' }}>
+                  <User size={16} color="#0284c7" />
                   <strong>{s.fullName}</strong>
                 </div>
-                <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
-                  <Phone size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                  {s.phone}
+                <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Phone size={12} /> {s.phone}
                 </div>
-                <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>
-                  Khu vực: <span style={{ fontWeight: '700', color: getDistrictBadgeColor(s.assignedDistrict) }}>{s.assignedDistrict}</span>
+                <div style={{ marginTop: '6px', fontSize: '0.82rem', color: '#475569' }}>
+                  Phụ trách: <span style={{ fontWeight: 700, color: getDistrictBadgeColor(s.assignedDistrict) }}>{s.assignedDistrict}</span>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>{s.activeOrdersCount}</span>
+              <div style={{ textAlign: 'right', paddingLeft: '12px' }}>
+                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>{s.activeOrdersCount}</span>
                 <div style={{ fontSize: '0.75rem', color: '#64748b' }}>đơn đang giao</div>
               </div>
             </div>
@@ -294,18 +344,20 @@ const DeliveryManager = () => {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
         <button
           onClick={() => setActiveTab('ASSIGN')}
           className={`btn ${activeTab === 'ASSIGN' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
-          📦 Đơn Chờ Phân Công ({unassignedOrders.length})
+          <Package size={16} /> Đơn chờ phân công ({unassignedOrders.length})
         </button>
         <button
           onClick={() => setActiveTab('TRACKING')}
           className={`btn ${activeTab === 'TRACKING' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
-          🚚 Đang Giao & Giao Thất Bại ({trackingOrders.length})
+          <Truck size={16} /> Đang giao & Thất bại ({trackingOrders.length})
         </button>
       </div>
 
@@ -315,11 +367,12 @@ const DeliveryManager = () => {
         /* Tab 1: Assign Orders */
         <div>
           {/* Action ToolBar */}
-          <div className="admin-card" style={{ marginBottom: '20px', padding: '16px 20px', background: '#f8fafc' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="admin-card" style={{ marginBottom: '16px', padding: '14px 18px', background: '#f8fafc' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
               {/* District Filter */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: '600', fontSize: '0.9rem', color: '#475569' }}>Lọc theo khu vực:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MapPin size={16} color="#475569" />
+                <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#475569' }}>Khu vực:</span>
                 <select
                   value={selectedDistrict}
                   onChange={(e) => {
@@ -327,12 +380,12 @@ const DeliveryManager = () => {
                     setSelectedOrderIds([])
                   }}
                   className="admin-select"
-                  style={{ minWidth: '180px', fontWeight: '600' }}
+                  style={{ minWidth: '190px', fontWeight: 600 }}
                 >
-                  <option value="ALL">📍 Tất cả khu vực ({unassignedOrders.length})</option>
-                  <option value="Quận Tân Phú">🏢 Quận Tân Phú ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận Tân Phú').length})</option>
-                  <option value="Quận Tân Bình">✈️ Quận Tân Bình ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận Tân Bình').length})</option>
-                  <option value="Quận 12">🌳 Quận 12 ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận 12').length})</option>
+                  <option value="ALL">Tất cả khu vực ({unassignedOrders.length})</option>
+                  <option value="Quận Tân Phú">Quận Tân Phú ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận Tân Phú').length})</option>
+                  <option value="Quận Tân Bình">Quận Tân Bình ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận Tân Bình').length})</option>
+                  <option value="Quận 12">Quận 12 ({unassignedOrders.filter(o => o.detectedDistrict === 'Quận 12').length})</option>
                 </select>
               </div>
 
@@ -345,12 +398,12 @@ const DeliveryManager = () => {
                   value={targetShipperId}
                   onChange={(e) => setTargetShipperId(e.target.value)}
                   className="admin-select"
-                  style={{ minWidth: '220px', fontWeight: '600' }}
+                  style={{ minWidth: '230px', fontWeight: 600 }}
                 >
                   <option value="">-- Chọn Shipper nhận đơn --</option>
                   {shippers.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.fullName} ({s.assignedDistrict} - Đang giao: {s.activeOrdersCount})
+                      {s.fullName} ({s.assignedDistrict} - {s.activeOrdersCount} đơn)
                     </option>
                   ))}
                 </select>
@@ -359,27 +412,9 @@ const DeliveryManager = () => {
                   onClick={handleAssign}
                   disabled={selectedOrderIds.length === 0 || !targetShipperId || assigning}
                   className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Truck size={16} /> {assigning ? 'Đang phân công...' : 'Phân công cho Shipper'}
-                </button>
-
-                <button
-                  onClick={handleAutoDispatch}
-                  disabled={autoDispatching || unassignedOrders.length === 0}
-                  className="btn"
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px',
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
-                    color: '#b45309',
-                    fontWeight: 700
-                  }}
-                  title="Tự động phân chia các đơn hàng chưa gán cho shipper theo khu vực"
-                >
-                  <Zap size={16} color="#d97706" /> {autoDispatching ? 'Đang chia...' : '⚡ Phân bổ nhanh'}
                 </button>
               </div>
             </div>
@@ -437,10 +472,13 @@ const DeliveryManager = () => {
                                 borderRadius: '6px', 
                                 fontWeight: '700',
                                 fontSize: '0.82rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
                                 border: `1px solid ${getDistrictBadgeColor(order.detectedDistrict)}40`
                               }}
                             >
-                              📍 {order.detectedDistrict || 'Chưa xác định'}
+                              <MapPin size={12} /> {order.detectedDistrict || 'Chưa xác định'}
                             </span>
                           </td>
                           <td>{order.shippingName}</td>
@@ -452,7 +490,7 @@ const DeliveryManager = () => {
                                 {isCod ? `${(order.finalAmount || 0).toLocaleString()}đ (Thu COD)` : '0đ (Đã TT QR)'}
                               </strong>
                               <span style={{ fontSize: '0.75rem', color: isCod ? '#0369a1' : '#15803d', fontWeight: 600 }}>
-                                {isCod ? '🚚 Đã duyệt COD' : '✓ Đã duyệt tiền QR'}
+                                {isCod ? 'Đã duyệt COD' : 'Đã duyệt QR'}
                               </span>
                             </div>
                           </td>
@@ -541,6 +579,27 @@ const DeliveryManager = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Confirm Modal (thay thế window.confirm) */}
+      {confirmModal && (
+        <div className="admin-form-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmModal(null)}>
+          <div className="admin-popup-form glass" style={{ maxWidth: '460px' }}>
+            <h3 style={{ marginBottom: '12px' }}>{confirmModal.title}</h3>
+            <p style={{ color: '#475569', fontSize: '0.94rem', marginBottom: '20px', lineHeight: 1.5 }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button onClick={() => setConfirmModal(null)} className="btn btn-outline">Hủy</button>
+              <button
+                onClick={confirmModal.type === 'ASSIGN' ? executeAssign : executeAutoDispatch}
+                className="btn btn-primary"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,5 +1,6 @@
 package com.groceryshop.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Getter
@@ -9,7 +10,10 @@ import lombok.*;
 @Builder
 public class CategoryDTO {
     private Long id;
+
+    @NotBlank(message = "Tên danh mục không được để trống")
     private String name;
+
     private String description;
     private String image;
     private Boolean isActive;

@@ -6,6 +6,10 @@ import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.repository.SupplierRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,23 @@ public class SupplierService {
 
     @Autowired
     private com.groceryshop.repository.GoodsReceiptRepository goodsReceiptRepository;
+
+    public Page<SupplierDTO> getPaged(String keyword, String sortBy, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.ASC, "id");
+        if ("name_asc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.ASC, "name");
+        } else if ("name_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "name");
+        } else if ("newest".equalsIgnoreCase(sortBy) || "id_desc".equalsIgnoreCase(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "id");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            return supplierRepository.findByNameContainingIgnoreCase(keyword.trim(), pageable)
+                    .map(this::toDTO);
+        }
+        return supplierRepository.findAll(pageable).map(this::toDTO);
+    }
 
     public List<SupplierDTO> getAllSuppliers() {
         return supplierRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
