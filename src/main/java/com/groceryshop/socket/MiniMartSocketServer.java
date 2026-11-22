@@ -143,21 +143,29 @@ public class MiniMartSocketServer implements CommandLineRunner {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8), true)
             ) {
-                // Kiểm tra nhanh xem client có gửi HTTP request từ trình duyệt hay không
-                socket.setSoTimeout(150);
+                // Kiểm tra xem client có gửi HTTP request từ trình duyệt hay không (500ms để kịp nhận request từ Firefox/Chrome)
+                socket.setSoTimeout(500);
                 String firstLine = null;
                 try {
                     firstLine = reader.readLine();
                 } catch (SocketTimeoutException ignored) {
-                    // Timeout ngắn -> Đây là Socket Client thông thường
+                    // Timeout ngắn -> Đây là TCP Socket Client thông thường (đang chờ tín hiệu READY)
                 }
 
                 // Đặt timeout cho mỗi client (60 giây) để client treo không giữ luồng mãi (Tiêu chí 5.4)
                 socket.setSoTimeout(CLIENT_IDLE_TIMEOUT_MS);
 
                 // 1. Nếu là Trình duyệt Web (HTTP Request)
-                if (firstLine != null && (firstLine.startsWith("GET ") || firstLine.startsWith("POST ") || firstLine.startsWith("HEAD "))) {
-                    serveHttpDashboard(writer, threadName);
+                if (firstLine != null && (firstLine.startsWith("GET ") || firstLine.startsWith("POST ") || firstLine.startsWith("HEAD ") || firstLine.startsWith("OPTIONS "))) {
+                    // Đọc hết phần header HTTP trước khi phản hồi để trình duyệt không bị reset kết nối
+                    try {
+                        socket.setSoTimeout(300);
+                        String hdr;
+                        while ((hdr = reader.readLine()) != null && !hdr.isEmpty()) {
+                            // consume HTTP headers
+                        }
+                    } catch (SocketTimeoutException ignored) {}
+                    serveHttpDashboard(socket.getOutputStream(), threadName);
                     return;
                 }
 
@@ -176,6 +184,13 @@ public class MiniMartSocketServer implements CommandLineRunner {
                 // B4 (Slide 25): Trao đổi dữ liệu với client theo vòng lặp
                 while ((line = reader.readLine()) != null) {
                     String command = line.replace("\uFEFF", "").trim();
+                    if (command.isEmpty()) {
+                        continue;
+                    }
+                    // Nếu trình duyệt mở kết nối chờ sẵn (speculative pre-connect) rồi mới gửi HTTP GET sau >500ms
+                    if (command.matches("^(GET|POST|HEAD|OPTIONS)\\s+.*\\s+HTTP/1\\.[01]$")) {
+                        break;
+                    }
                     log.info("[{}] [Luồng: {}] Nhận lệnh: '{}'", clientInfo, threadName, command);
 
                     if (command.equalsIgnoreCase("QUIT") || command.equalsIgnoreCase("EXIT")) {
@@ -203,47 +218,53 @@ public class MiniMartSocketServer implements CommandLineRunner {
             }
         }
 
-        private void serveHttpDashboard(PrintWriter writer, String threadName) {
+        private void serveHttpDashboard(OutputStream out, String threadName) throws IOException {
             int activeCount = connectedClientsCount.get();
             int totalProducts = 0;
             try {
                 totalProducts = (int) productRepository.count();
             } catch (Exception ignored) {}
 
-            writer.print("HTTP/1.1 200 OK\r\n");
-            writer.print("Content-Type: text/html; charset=UTF-8\r\n");
-            writer.print("Connection: close\r\n");
-            writer.print("\r\n");
+            String html = "<!DOCTYPE html>\n"
+                    + "<html lang=\"vi\">\n"
+                    + "<head>\n"
+                    + "    <meta charset=\"UTF-8\">\n"
+                    + "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+                    + "    <title>MiniMart - Socket Server (Cổng 9090)</title>\n"
+                    + "    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\">\n"
+                    + "    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css\" rel=\"stylesheet\">\n"
+                    + "</head>\n"
+                    + "<body class=\"bg-light py-5\">\n"
+                    + "<div class=\"container\" style=\"max-width: 820px;\">\n"
+                    + "    <div class=\"card shadow-sm border-0 p-4 p-md-5\">\n"
+                    + "        <h3 class=\"fw-bold mb-2 text-success\"><i class=\"bi bi-hdd-network-fill me-2\"></i>MiniMart Socket Server (Cổng 9090)</h3>\n"
+                    + "        <p class=\"text-muted\">FixedThreadPool(50) | Timeout: 60s | Luồng hiện tại: <code>" + threadName + "</code></p>\n"
+                    + "        <div class=\"row g-3 mb-4\">\n"
+                    + "            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">Cổng TCP</small><strong class=\"fs-5\">9090</strong></div></div>\n"
+                    + "            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">connectedClientsCount</small><strong class=\"fs-5 text-primary\">" + activeCount + " Client</strong></div></div>\n"
+                    + "            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">Sản phẩm trong DB</small><strong class=\"fs-5 text-success\">" + totalProducts + " SP</strong></div></div>\n"
+                    + "        </div>\n"
+                    + "        <div class=\"d-flex gap-2\">\n"
+                    + "            <a href=\"http://localhost:8080/admin\" class=\"btn btn-primary\">Quản trị (React)</a>\n"
+                    + "            <a href=\"http://localhost:8080/admin/queue\" class=\"btn btn-success\">Hàng đợi Đơn hàng</a>\n"
+                    + "            <a href=\"http://localhost:8080/\" class=\"btn btn-outline-secondary\">Cửa hàng</a>\n"
+                    + "        </div>\n"
+                    + "    </div>\n"
+                    + "</div>\n"
+                    + "</body>\n"
+                    + "</html>\n";
 
-            writer.println("<!DOCTYPE html>");
-            writer.println("<html lang=\"vi\">");
-            writer.println("<head>");
-            writer.println("    <meta charset=\"UTF-8\">");
-            writer.println("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-            writer.println("    <title>MiniMart - Socket Server (Cổng 9090)</title>");
-            writer.println("    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\">");
-            writer.println("    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css\" rel=\"stylesheet\">");
-            writer.println("</head>");
-            writer.println("<body class=\"bg-light py-5\">");
-            writer.println("<div class=\"container\" style=\"max-width: 820px;\">");
-            writer.println("    <div class=\"card shadow-sm border-0 p-4 p-md-5\">");
-            writer.println("        <h3 class=\"fw-bold mb-2 text-success\"><i class=\"bi bi-hdd-network-fill me-2\"></i>MiniMart Socket Server (Cổng 9090)</h3>");
-            writer.println("        <p class=\"text-muted\">FixedThreadPool(50) | Timeout: 60s | Luồng hiện tại: <code>" + threadName + "</code></p>");
-            writer.println("        <div class=\"row g-3 mb-4\">");
-            writer.println("            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">Cổng TCP</small><strong class=\"fs-5\">9090</strong></div></div>");
-            writer.println("            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">connectedClientsCount</small><strong class=\"fs-5 text-primary\">" + activeCount + " Client</strong></div></div>");
-            writer.println("            <div class=\"col-sm-4\"><div class=\"p-3 bg-light rounded text-center border\"><small class=\"text-muted d-block\">Sản phẩm trong DB</small><strong class=\"fs-5 text-success\">" + totalProducts + " SP</strong></div></div>");
-            writer.println("        </div>");
-            writer.println("        <div class=\"d-flex gap-2\">");
-            writer.println("            <a href=\"http://localhost:8080/admin/mvc/products\" class=\"btn btn-success\">Quản trị (Thymeleaf)</a>");
-            writer.println("            <a href=\"http://localhost:8080/admin\" class=\"btn btn-primary\">Quản trị (React)</a>");
-            writer.println("            <a href=\"http://localhost:8080/\" class=\"btn btn-outline-secondary\">Cửa hàng</a>");
-            writer.println("        </div>");
-            writer.println("    </div>");
-            writer.println("</div>");
-            writer.println("</body>");
-            writer.println("</html>");
-            writer.flush();
+            byte[] bodyBytes = html.getBytes(StandardCharsets.UTF_8);
+            String headers = "HTTP/1.1 200 OK\r\n"
+                    + "Content-Type: text/html; charset=UTF-8\r\n"
+                    + "Content-Length: " + bodyBytes.length + "\r\n"
+                    + "Cache-Control: no-store\r\n"
+                    + "Connection: close\r\n"
+                    + "\r\n";
+
+            out.write(headers.getBytes(StandardCharsets.US_ASCII));
+            out.write(bodyBytes);
+            out.flush();
         }
 
         private void handleCommand(String command, PrintWriter writer, String threadName) {
