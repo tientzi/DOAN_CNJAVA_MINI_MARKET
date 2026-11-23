@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+.metals
+target/
+frontend/node_modules/
+backups/*.zip
+*.docx
+*.pptx
+*.pdf
+*.bat
+plans/

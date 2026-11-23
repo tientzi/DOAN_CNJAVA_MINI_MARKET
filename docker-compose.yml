@@ -1,0 +1,73 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: minimart-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD:-MiniMart@2026!}"
+      TZ: "Asia/Ho_Chi_Minh"
+    ports:
+      # Chỉ mở ra ngoài nếu muốn kết nối SSMS từ xa; có thể bỏ dòng dưới nếu muốn bảo mật hơn
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: minimart-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD:-MiniMart@2026!}"
+    volumes:
+      - ./supermarket_db1.sql:/init/supermarket_db1.sql:ro
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        EXISTS=$$(/opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$SA_PASSWORD" -C -h -1 -W -Q "SET NOCOUNT ON; SELECT CASE WHEN DB_ID(N'supermarket_db1') IS NULL THEN 0 ELSE 1 END" | tr -d '[:space:]')
+        if [ "$$EXISTS" = "0" ]; then
+          echo ">> Khoi tao CSDL supermarket_db1 tu /init/supermarket_db1.sql ..."
+          /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$SA_PASSWORD" -C -i /init/supermarket_db1.sql
+          echo ">> Khoi tao CSDL thanh cong!"
+        else
+          echo ">> CSDL supermarket_db1 da ton tai, bo qua buoc khoi tao de giu nguyen du lieu."
+        fi
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: minimart-app
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=supermarket_db1;encrypt=true;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: "sa"
+      SPRING_DATASOURCE_PASSWORD: "${SA_PASSWORD:-MiniMart@2026!}"
+      SPRING_JPA_SHOW_SQL: "false"
+      APP_OAUTH2_AUTHORIZED_REDIRECT_URI: "${PUBLIC_BASE_URL:-http://localhost:8080}/oauth2/callback"
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: "${PUBLIC_BASE_URL:-http://localhost:8080}/login/oauth2/code/google"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-your-client-id}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-your-client-secret}"
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backups:/app/backups
+
+volumes:
+  mssql_data:
